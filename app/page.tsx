@@ -332,10 +332,10 @@ export default function BesmayaDesktop() {
 
       <div className="desktop-icons absolute top-8 left-8 flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 gap-5 h-max">
         <div
-          className={`desktop-icon flex-col ${selectedIcon === "conciertos" ? "selected" : ""}`}
+          className={`desktop-icon ${selectedIcon === "conciertos" ? "selected" : ""}`}
           onClick={() => handleIconClick("conciertos")}
         >
-          <img className="text-center font-sans" src="/icons/conciertos.png" alt="Conciertos" width={48} height={48} />
+          <img src="/icons/conciertos.png" alt="Conciertos" width={48} height={48} />
           <span>La gira de Nadie</span>
         </div>
 
