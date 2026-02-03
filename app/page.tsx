@@ -10,7 +10,7 @@ interface WindowState {
   x: number
   y: number
   width: number
-  height: number
+  height: number | "auto"
   isMinimized: boolean
   zIndex: number
 }
@@ -41,9 +41,8 @@ export default function BesmayaDesktop() {
   const [lastClickedIcon, setLastClickedIcon] = useState<string | null>(null)
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
   const [isUnderConstruction, setIsUnderConstruction] = useState(false)
-  const [showWelcomePopup, setShowWelcomePopup] = useState(true)
-  const [showAlbumPopup, setShowAlbumPopup] = useState(true)
   const [isDesktop, setIsDesktop] = useState(false)
+  const [initialWindowsCreated, setInitialWindowsCreated] = useState(false)
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -83,7 +82,7 @@ export default function BesmayaDesktop() {
             ? {
                 ...windowItem,
                 x: Math.max(0, Math.min(window.innerWidth - windowItem.width, dragState.startWindowX + deltaX)),
-                y: Math.max(0, Math.min(window.innerHeight - windowItem.height - 40, dragState.startWindowY + deltaY)),
+                y: Math.max(0, Math.min(window.innerHeight - (typeof windowItem.height === "number" ? windowItem.height : 400) - 40, dragState.startWindowY + deltaY)),
               }
             : windowItem,
         ),
@@ -106,9 +105,49 @@ export default function BesmayaDesktop() {
   }, [dragState])
 
   useEffect(() => {
-    setWindows([])
-    setNextZIndex(101)
-  }, [])
+    if (initialWindowsCreated) return
+
+    const screenWidth = typeof window !== "undefined" ? window.innerWidth : 1024
+    const screenHeight = typeof window !== "undefined" ? window.innerHeight : 768
+
+    // Dimensiones basadas en max-w-sm (~384px) de los popups originales
+    const feedWidth = 384
+    const albumWidth = 384
+    // Alturas estimadas para calcular posición centrada (imagen + botón + padding)
+    const feedEstimatedHeight = 550
+    const albumEstimatedHeight = 460
+
+    const initialWindows: WindowState[] = [
+      {
+        id: "welcome-poster",
+        title: "FEED",
+        content: <WelcomePosterContent />,
+        // Centrado + translate(-130px, -80px) en desktop
+        x: isDesktop ? screenWidth / 2 - feedWidth / 2 - 130 : screenWidth / 2 - feedWidth / 2 - 30,
+        y: isDesktop ? screenHeight / 2 - feedEstimatedHeight / 2 - 80 : screenHeight / 2 - feedEstimatedHeight / 2 - 80,
+        width: feedWidth,
+        height: "auto",
+        isMinimized: false,
+        zIndex: 101,
+      },
+      {
+        id: "album",
+        title: "La vida de Nadie",
+        content: <AlbumContent />,
+        // Centrado + translate(130px, 120px) en desktop
+        x: isDesktop ? screenWidth / 2 - albumWidth / 2 + 130 : screenWidth / 2 - albumWidth / 2 + 30,
+        y: isDesktop ? screenHeight / 2 - albumEstimatedHeight / 2 + 120 : screenHeight / 2 - albumEstimatedHeight / 2 + 120,
+        width: albumWidth,
+        height: "auto",
+        isMinimized: false,
+        zIndex: 102,
+      },
+    ]
+
+    setWindows(initialWindows)
+    setNextZIndex(103)
+    setInitialWindowsCreated(true)
+  }, [isDesktop, initialWindowsCreated])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -226,14 +265,6 @@ export default function BesmayaDesktop() {
     setIsStartMenuOpen(!isStartMenuOpen)
   }
 
-  const closeWelcomePopup = () => {
-    setShowWelcomePopup(false)
-  }
-
-  const closeAlbumPopup = () => {
-    setShowAlbumPopup(false)
-  }
-
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement
@@ -257,78 +288,6 @@ export default function BesmayaDesktop() {
         alt="Windows XP Bliss Wallpaper"
         className="absolute inset-0 w-full h-full object-cover -z-10"
       />
-
-      {showWelcomePopup && (
-        <div className="fixed inset-0 flex items-center justify-center z-[9998] pointer-events-none">
-          <div
-            className="bg-white rounded-lg shadow-2xl max-w-sm mx-4 w-full max-h-[90vh] overflow-hidden pointer-events-auto relative"
-            style={{ transform: isDesktop ? "translate(-130px, -80px)" : "translate(-30px, -80px)" }}
-          >
-            {/* Close button */}
-            <div className="flex justify-end p-2">
-              <button
-                onClick={closeWelcomePopup}
-                className="bg-red-500 hover:bg-red-600 text-white text-sm font-bold w-6 h-6 flex items-center justify-center rounded-sm border border-red-600 shadow-sm transition-colors duration-150"
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Poster image */}
-            <div className="px-4 pb-2">
-              <img src="FEED.png" alt="Besmaya Madrid Concert" className="w-full h-auto rounded-lg" />
-            </div>
-
-            {/* Entradas button */}
-            <div className="p-4">
-              <a
-                href="/conciertos"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-center block transition-colors duration-200"
-                onClick={closeWelcomePopup}
-              >
-                entradas
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showAlbumPopup && (
-        <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
-          <div
-            className="bg-white rounded-lg shadow-2xl max-w-sm mx-4 w-full max-h-[90vh] overflow-hidden pointer-events-auto relative"
-            style={{ transform: isDesktop ? "translate(130px, 120px)" : "translate(30px, 120px)" }}
-          >
-            {/* Close button */}
-            <div className="flex justify-end p-2">
-              <button
-                onClick={closeAlbumPopup}
-                className="bg-red-500 hover:bg-red-600 text-white text-sm font-bold w-6 h-6 flex items-center justify-center rounded-sm border border-red-600 shadow-sm transition-colors duration-150"
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Album image */}
-            <div className="px-4 pb-2">
-              <img src="/album-lavida.png" alt="La vida de Nadie - Besmaya" className="w-full h-auto rounded-lg" />
-            </div>
-
-            {/* Comprar ahora button */}
-            <div className="p-4">
-              <a
-                href="https://acqustic-platform.sumupstore.com/producto/la-vida-de-nadie-besmaya"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-center block transition-colors duration-200"
-                onClick={closeAlbumPopup}
-              >
-                comprar ahora
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="desktop-icons absolute top-8 left-8 flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 gap-5 h-max">
         <div
@@ -754,6 +713,36 @@ function PaintContent() {
           ))}
         </div>
       </div>
+    </div>
+  )
+}
+
+function WelcomePosterContent() {
+  return (
+    <div className="flex flex-col items-center p-2">
+      <img src="FEED.png" alt="Besmaya Madrid Concert" className="w-full h-auto rounded-lg mb-4" />
+      <a
+        href="/conciertos"
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-center block transition-colors duration-200"
+      >
+        entradas
+      </a>
+    </div>
+  )
+}
+
+function AlbumContent() {
+  return (
+    <div className="flex flex-col items-center p-2">
+      <img src="/album-lavida.png" alt="La vida de Nadie - Besmaya" className="w-full h-auto rounded-lg mb-4" />
+      <a
+        href="https://acqustic-platform.sumupstore.com/producto/la-vida-de-nadie-besmaya"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-center block transition-colors duration-200"
+      >
+        comprar ahora
+      </a>
     </div>
   )
 }
