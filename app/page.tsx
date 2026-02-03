@@ -138,8 +138,8 @@ export default function BesmayaDesktop() {
     let windowHeight = 400
 
     if (id === "musica") {
-      windowWidth = 480
-      windowHeight = 320
+      windowWidth = 306
+      windowHeight = 388
     }
     if (id === "welcome") {
       windowWidth = 420
@@ -335,7 +335,9 @@ export default function BesmayaDesktop() {
           className={`desktop-icon ${selectedIcon === "conciertos" ? "selected" : ""}`}
           onClick={() => handleIconClick("conciertos")}
         >
-          <img src="/icons/conciertos.png" alt="Conciertos" width={48} height={48} />
+          <div className="desktop-icon-image-wrapper icon-conciertos">
+            <img src="/icons/conciertos.png" alt="Conciertos" />
+          </div>
           <span>La gira de Nadie</span>
         </div>
 
@@ -343,7 +345,9 @@ export default function BesmayaDesktop() {
           className={`desktop-icon ${selectedIcon === "merchan" ? "selected" : ""}`}
           onClick={() => handleIconClick("merchan")}
         >
-          <img src="/icons/merchan.png" alt="Merchan" width={32} height={48} />
+          <div className="desktop-icon-image-wrapper icon-merchan">
+            <img src="/icons/merchan.png" alt="Merchan" />
+          </div>
           <span>Tienda</span>
         </div>
 
@@ -351,7 +355,9 @@ export default function BesmayaDesktop() {
           className={`desktop-icon ${selectedIcon === "musica" ? "selected" : ""}`}
           onClick={() => handleIconClick("musica")}
         >
-          <img src="/icons/musica.png" alt="Música" width={48} height={48} />
+          <div className="desktop-icon-image-wrapper">
+            <img src="/icons/musica.png" alt="Música" />
+          </div>
           <span>Música</span>
         </div>
 
@@ -359,7 +365,9 @@ export default function BesmayaDesktop() {
           className={`desktop-icon ${selectedIcon === "videos" ? "selected" : ""}`}
           onClick={() => handleIconClick("videos")}
         >
-          <img src="/icons/videos.png" alt="Videos" width={48} height={48} />
+          <div className="desktop-icon-image-wrapper">
+            <img src="/icons/videos.png" alt="Videos" />
+          </div>
           <span>Videos</span>
         </div>
 
@@ -367,7 +375,9 @@ export default function BesmayaDesktop() {
           className={`desktop-icon hidden ${selectedIcon === "bio" ? "selected" : ""}`}
           onClick={() => handleIconClick("bio")}
         >
-          <img src="/icons/bio.png" alt="Bio" width={48} height={48} />
+          <div className="desktop-icon-image-wrapper">
+            <img src="/icons/bio.png" alt="Bio" />
+          </div>
           <span>Bio</span>
         </div>
       </div>
@@ -402,7 +412,7 @@ export default function BesmayaDesktop() {
                 </button>
               </div>
             </div>
-            <div className="window-content">{windowItem.content}</div>
+            <div className={windowItem.id === "musica" ? "window-content-musica" : "window-content"}>{windowItem.content}</div>
           </div>
         ))}
 
@@ -608,22 +618,13 @@ function UnderConstructionPage({ onToggle }: { onToggle: () => void }) {
 
 function MusicaContent() {
   return (
-    <div className="h-full bg-gray-200 p-2">
-      <div className="h-full flex flex-col">
-        <iframe
-          src="https://open.spotify.com/embed/track/2QACvOCPzkQ9SWNOy16Sgn?utm_source=generator&theme=0"
-          width="100%"
-          height="100%"
-          frameBorder="0"
-          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-          loading="lazy"
-          className="rounded border-2 border-gray-400"
-          style={{
-            background: "#f0f0f0",
-          }}
-        ></iframe>
-      </div>
-    </div>
+    <iframe
+      src="https://open.spotify.com/embed/playlist/0iXYV9B7pvlsZKqJEfOk5V?utm_source=generator&theme=0"
+      frameBorder="0"
+      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+      loading="lazy"
+      className="block w-full h-full"
+    ></iframe>
   )
 }
 
