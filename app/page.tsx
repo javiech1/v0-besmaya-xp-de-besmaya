@@ -335,7 +335,9 @@ export default function BesmayaDesktop() {
           className={`desktop-icon ${selectedIcon === "conciertos" ? "selected" : ""}`}
           onClick={() => handleIconClick("conciertos")}
         >
-          <img src="/icons/conciertos.png" alt="Conciertos" width={48} height={48} />
+          <div className="desktop-icon-image-wrapper icon-conciertos">
+            <img src="/icons/conciertos.png" alt="Conciertos" />
+          </div>
           <span>La gira de Nadie</span>
         </div>
 
@@ -343,7 +345,9 @@ export default function BesmayaDesktop() {
           className={`desktop-icon ${selectedIcon === "merchan" ? "selected" : ""}`}
           onClick={() => handleIconClick("merchan")}
         >
-          <img src="/icons/merchan.png" alt="Merchan" width={32} height={48} />
+          <div className="desktop-icon-image-wrapper icon-merchan">
+            <img src="/icons/merchan.png" alt="Merchan" />
+          </div>
           <span>Tienda</span>
         </div>
 
@@ -351,7 +355,9 @@ export default function BesmayaDesktop() {
           className={`desktop-icon ${selectedIcon === "musica" ? "selected" : ""}`}
           onClick={() => handleIconClick("musica")}
         >
-          <img src="/icons/musica.png" alt="Música" width={48} height={48} />
+          <div className="desktop-icon-image-wrapper">
+            <img src="/icons/musica.png" alt="Música" />
+          </div>
           <span>Música</span>
         </div>
 
@@ -359,7 +365,9 @@ export default function BesmayaDesktop() {
           className={`desktop-icon ${selectedIcon === "videos" ? "selected" : ""}`}
           onClick={() => handleIconClick("videos")}
         >
-          <img src="/icons/videos.png" alt="Videos" width={48} height={48} />
+          <div className="desktop-icon-image-wrapper">
+            <img src="/icons/videos.png" alt="Videos" />
+          </div>
           <span>Videos</span>
         </div>
 
@@ -367,7 +375,9 @@ export default function BesmayaDesktop() {
           className={`desktop-icon hidden ${selectedIcon === "bio" ? "selected" : ""}`}
           onClick={() => handleIconClick("bio")}
         >
-          <img src="/icons/bio.png" alt="Bio" width={48} height={48} />
+          <div className="desktop-icon-image-wrapper">
+            <img src="/icons/bio.png" alt="Bio" />
+          </div>
           <span>Bio</span>
         </div>
       </div>
