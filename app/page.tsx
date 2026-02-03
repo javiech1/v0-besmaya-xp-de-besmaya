@@ -45,6 +45,7 @@ export default function BesmayaDesktop() {
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
   const [isUnderConstruction, setIsUnderConstruction] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
+  const [isDesktopDetermined, setIsDesktopDetermined] = useState(false)
   const [initialWindowsCreated, setInitialWindowsCreated] = useState(false)
   const [spotifyPrefetched, setSpotifyPrefetched] = useState(false)
   const [concertsPreloaded, setConcertsPreloaded] = useState(false)
@@ -53,6 +54,7 @@ export default function BesmayaDesktop() {
   useEffect(() => {
     const checkScreenSize = () => {
       setIsDesktop(window.innerWidth >= 768)
+      setIsDesktopDetermined(true)
     }
     checkScreenSize()
     window.addEventListener("resize", checkScreenSize)
@@ -111,6 +113,8 @@ export default function BesmayaDesktop() {
   }, [dragState])
 
   useEffect(() => {
+    // Wait until isDesktop has been properly determined
+    if (!isDesktopDetermined) return
     if (initialWindowsCreated) return
 
     const screenWidth = typeof window !== "undefined" ? window.innerWidth : 1024
@@ -128,8 +132,8 @@ export default function BesmayaDesktop() {
         id: "welcome-poster",
         title: "FEED",
         content: <WelcomePosterContent />,
-        // Centrado + translate(-130px, -80px) en desktop
-        x: isDesktop ? screenWidth / 2 - feedWidth / 2 - 130 : screenWidth / 2 - feedWidth / 2 - 30,
+        // Centrado + translate(-200px, -80px) en desktop
+        x: isDesktop ? screenWidth / 2 - feedWidth / 2 - 200 : screenWidth / 2 - feedWidth / 2 - 30,
         y: isDesktop ? screenHeight / 2 - feedEstimatedHeight / 2 - 80 : screenHeight / 2 - feedEstimatedHeight / 2 - 80,
         width: feedWidth,
         height: "auto",
@@ -140,8 +144,8 @@ export default function BesmayaDesktop() {
         id: "album",
         title: "La vida de Nadie",
         content: <AlbumContent />,
-        // Centrado + translate(130px, 120px) en desktop
-        x: isDesktop ? screenWidth / 2 - albumWidth / 2 + 130 : screenWidth / 2 - albumWidth / 2 + 30,
+        // Centrado + translate(200px, 120px) en desktop
+        x: isDesktop ? screenWidth / 2 - albumWidth / 2 + 200 : screenWidth / 2 - albumWidth / 2 + 30,
         y: isDesktop ? screenHeight / 2 - albumEstimatedHeight / 2 + 120 : screenHeight / 2 - albumEstimatedHeight / 2 + 120,
         width: albumWidth,
         height: "auto",
@@ -153,7 +157,7 @@ export default function BesmayaDesktop() {
     setWindows(initialWindows)
     setNextZIndex(103)
     setInitialWindowsCreated(true)
-  }, [isDesktop, initialWindowsCreated])
+  }, [isDesktop, isDesktopDetermined, initialWindowsCreated])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -249,7 +253,17 @@ export default function BesmayaDesktop() {
         window.open("https://merchandtour.com/besmaya/", "_blank")
         break
       case "musica":
-        openWindow("musica", "Música", <MusicaContent />)
+        if (!isDesktop) {
+          // En móvil, abrir directamente en Spotify
+          const playlistId = "0iXYV9B7pvlsZKqJEfOk5V"
+          window.location.href = `spotify:playlist:${playlistId}`
+          // Fallback al web player si no tiene la app
+          setTimeout(() => {
+            window.location.href = `https://open.spotify.com/playlist/${playlistId}`
+          }, 500)
+        } else {
+          openWindow("musica", "Música", <MusicaContent />)
+        }
         break
       case "bio":
         openWindow("bio", "Bio", <BioContent />)
