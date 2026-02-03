@@ -373,10 +373,10 @@ body {
     object-fit: contain !important;
   }
 
-  /* Made conciertos icon 20% bigger than other icons */
+  /* Made conciertos icon wider to accommodate horizontal image, same height for text alignment */
   .desktop-icon:first-child img {
     width: 115px !important;
-    height: 115px !important;
+    height: 96px !important;
   }
 
   .desktop-icon span {
