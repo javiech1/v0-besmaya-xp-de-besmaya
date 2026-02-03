@@ -1,0 +1,802 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* XP-specific styles and custom properties */
+:root {
+  --xp-blue-start: #2f6adf;
+  --xp-blue-end: #1741a6;
+  --xp-blue-border: #0b2f7d;
+  --xp-green-start: #73d216;
+  --xp-green-end: #4e9a06;
+  --xp-window-bg: #f0f0f0;
+  --xp-panel-bg: #e8f1fd;
+  --xp-taskbar-bg: #245edb;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
+}
+
+@theme inline {
+  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Tahoma", sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  /* Updated background to use new custom Bliss wallpaper with yellow figure */
+  background: url("/xp-bliss-custom.jpg") center / cover no-repeat;
+  background-color: #5a9fd4;
+}
+
+/* XP Window Styles */
+.window {
+  position: absolute;
+  min-width: 300px;
+  min-height: 200px;
+  background: #ece9d8;
+  box-shadow: inset -1px -1px #00138c, inset 1px 1px #0831d9, inset -2px -2px #001ea0, inset 2px 2px #166aee, inset -3px
+    -3px #003bda, inset 3px 3px #0855dd;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 640px) {
+  .window {
+    left: 5vw !important;
+    top: 10vh !important;
+    width: 95vw !important;
+    max-width: 95vw !important;
+    min-width: unset !important;
+    height: auto !important;
+    max-height: none !important;
+    transform: none !important;
+  }
+
+  .window-content {
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 4px !important;
+    height: fit-content !important;
+    min-height: unset !important;
+  }
+
+  /* Make Spotify embeds responsive on mobile */
+  .window-content iframe {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 200px !important;
+    min-height: 200px !important;
+    max-height: 200px !important;
+    display: block !important;
+  }
+}
+
+@media (min-width: 641px) {
+  .window {
+    max-width: 90vw;
+    max-height: 80vh;
+  }
+}
+
+.window-header {
+  height: 30px;
+  background: linear-gradient(
+    to bottom,
+    #4d8cff 0%,
+    #3875f0 15%,
+    #2968e8 30%,
+    #1f5ce0 45%,
+    #1850d8 60%,
+    #1244d0 75%,
+    #0d38c8 90%,
+    #082cc0 100%
+  );
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: move;
+  border-radius: 6px 6px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.window-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.window-controls {
+  display: flex;
+  gap: 2px;
+}
+
+.window-control {
+  width: 21px;
+  height: 21px;
+  background: linear-gradient(to bottom, #ffffff 0%, #f8f8f8 25%, #f0f0f0 50%, #e8e8e8 75%, #e0e0e0 100%);
+  border: 1px solid #c0c0c0;
+  border-top-color: #ffffff;
+  border-left-color: #ffffff;
+  border-right-color: #808080;
+  border-bottom-color: #808080;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  color: #000000;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.window-control.close {
+  background: linear-gradient(to bottom, #ff6b6b 0%, #ff5252 25%, #f44336 50%, #e53935 75%, #d32f2f 100%);
+  border: 1px solid #c62828;
+  border-top-color: #ff8a80;
+  border-left-color: #ff8a80;
+  border-right-color: #b71c1c;
+  border-bottom-color: #b71c1c;
+  color: white;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.window-control.close:hover {
+  background: linear-gradient(to bottom, #ff8a80 0%, #ff6b6b 25%, #ff5252 50%, #f44336 75%, #e53935 100%);
+}
+
+.window-control.close:active {
+  background: linear-gradient(to bottom, #d32f2f 0%, #e53935 25%, #f44336 50%, #ff5252 75%, #ff6b6b 100%);
+  border-top-color: #b71c1c;
+  border-left-color: #b71c1c;
+  border-right-color: #ff8a80;
+  border-bottom-color: #ff8a80;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.window-control:hover {
+  background: linear-gradient(to bottom, #ffffff 0%, #fcfcfc 25%, #f8f8f8 50%, #f0f0f0 75%, #e8e8e8 100%);
+}
+
+.window-control:active {
+  background: linear-gradient(to bottom, #e0e0e0 0%, #e8e8e8 25%, #f0f0f0 50%, #f8f8f8 75%, #ffffff 100%);
+  border-top-color: #808080;
+  border-left-color: #808080;
+  border-right-color: #ffffff;
+  border-bottom-color: #ffffff;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.window-content {
+  flex: 1;
+  background: #ece9d8;
+  padding: 8px;
+  box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #dfdfdf, inset -2px -2px gray, inset 2px 2px #fff;
+  margin: 3px;
+  overflow: auto;
+}
+
+/* Desktop Icons */
+.desktop-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 120px;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.desktop-icon:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.desktop-icon.selected {
+  background-color: rgba(0, 100, 200, 0.3);
+}
+
+.desktop-icon img {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 4px;
+  /* Added object-fit contain to prevent stretching of non-square icons */
+  object-fit: contain;
+}
+
+.desktop-icon span {
+  color: white;
+  font-size: 11px;
+  text-align: center;
+  /* Removed enhanced text shadow and dark background - back to simple shadow */
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  line-height: 1.2;
+}
+
+/* Desktop-only styling for bigger icons centered vertically */
+@media (min-width: 641px) {
+  .desktop-icons {
+    display: flex !important;
+    flex-direction: row !important;
+    /* Changed from center alignment to top-left positioning */
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    height: auto !important;
+    padding: 20px 40px !important;
+    gap: 48px !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+  }
+
+  .desktop-icon {
+    width: 160px !important;
+    padding: 12px !important;
+  }
+
+  /* Reduced icon size from 192px to 96px so all icons are visible */
+  .desktop-icon img {
+    width: 96px !important;
+    height: 96px !important;
+    margin-bottom: 8px !important;
+    margin-right: 16px !important;
+    /* Added object-fit contain to prevent stretching of non-square icons on desktop */
+    object-fit: contain !important;
+  }
+
+  /* Made conciertos icon 20% bigger than other icons */
+  .desktop-icon:first-child img {
+    width: 115px !important;
+    height: 115px !important;
+  }
+
+  .desktop-icon span {
+    font-size: 14px !important;
+    font-weight: bold !important;
+    /* Removed enhanced text shadow and dark background - back to simple shadow */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+  .desktop-icons {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 16px !important;
+    padding: 20px !important;
+  }
+
+  .desktop-icon {
+    width: 100% !important;
+    max-width: 300px !important;
+    flex-direction: row !important;
+    padding: 16px !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+  }
+
+  .desktop-icon img {
+    width: 64px !important;
+    height: 64px !important;
+    margin-bottom: 0 !important;
+    margin-right: 16px !important;
+    /* Added object-fit contain to prevent stretching of non-square icons on mobile */
+    object-fit: contain !important;
+  }
+
+  .desktop-icon span {
+    font-size: 16px !important;
+    text-align: left !important;
+    /* Removed enhanced text shadow and dark background - back to simple shadow */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+  }
+}
+
+/* Taskbar */
+.xp-taskbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  /* Softer taskbar gradient with more natural blue transitions */
+  background: linear-gradient(to bottom, #4a7bc8 0%, #3f6bc7 25%, #345bb6 50%, #294ba5 75%, #1e3b94 100%);
+  border-top: 1px solid #6a9bd8;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  z-index: 1000;
+  /* Enhanced subtle inner highlight for softer taskbar appearance */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.xp-start-btn {
+  height: 32px;
+  padding: 0 16px;
+  /* Softer Start button gradient with more natural green transitions */
+  background: linear-gradient(to bottom, #8ae234 0%, #73d216 25%, #6bc113 50%, #5eb211 75%, #4e9a06 100%);
+  border: 1px solid #4e9a06;
+  border-top-color: #9ae244;
+  border-left-color: #9ae244;
+  border-right-color: #346604;
+  border-bottom-color: #346604;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  /* Added subtle inner glow for authentic Start button appearance */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.xp-taskbar-buttons {
+  flex: 1;
+  display: flex;
+  gap: 2px;
+}
+
+.xp-taskbar-btn {
+  /* Fixed taskbar button sizing to be consistent */
+  height: 32px;
+  min-width: 120px;
+  max-width: 160px;
+  padding: 0 12px;
+  /* Softer taskbar button gradient with more natural blue transitions */
+  background: linear-gradient(to bottom, #6a9bd8 0%, #5a8bd8 25%, #4a7bc8 50%, #3a6bb8 75%, #2a5ba8 100%);
+  border: 1px solid #2f5bb7;
+  border-top-color: #7aabf8;
+  border-left-color: #7aabf8;
+  border-right-color: #1a4fb8;
+  border-bottom-color: #1a4fb8;
+  border-radius: 4px;
+  color: white;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  /* Added subtle inner glow for softer taskbar button appearance */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Placeholder image styles */
+.placeholder-img {
+  background: linear-gradient(45deg, #e0e0e0, #f0f0f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-size: 12px;
+}
+
+/* CD Player Styles */
+.cd-player-container {
+  background: #ece9d8;
+  font-family: "Tahoma", sans-serif;
+  font-size: 11px;
+}
+
+.cd-album-art {
+  /* Made album art smaller for compact CD Player window */
+  width: 120px;
+  height: 120px;
+  background: #f0c0c0;
+  border: 2px inset #ece9d8;
+  box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px gray, inset 2px 2px #dfdfdf;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cd-info-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Reduced margin for more compact layout */
+  margin-bottom: 6px;
+}
+
+.cd-label {
+  font-weight: bold;
+  /* Reduced label width for compact layout */
+  min-width: 40px;
+  color: #000;
+  font-size: 10px;
+}
+
+.cd-input {
+  flex: 1;
+  /* Made input fields smaller for compact layout */
+  height: 20px;
+  background: white;
+  border: 2px inset #ece9d8;
+  box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px gray;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  font-size: 10px;
+  position: relative;
+}
+
+.cd-input span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #000;
+}
+
+.cd-dropdown-btn {
+  /* Made dropdown button smaller for compact layout */
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(to bottom, #ffffff 0%, #f0f0f0 50%, #e0e0e0 100%);
+  border: 1px outset #c0c0c0;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 7px;
+  color: #000;
+  margin-left: 4px;
+}
+
+.cd-dropdown-btn:active {
+  border: 1px inset #c0c0c0;
+  background: linear-gradient(to bottom, #e0e0e0 0%, #f0f0f0 50%, #ffffff 100%);
+}
+
+.cd-progress-container {
+  /* Reduced padding for compact layout */
+  padding: 0 6px;
+}
+
+.cd-progress-bar {
+  /* Made progress bar smaller for compact layout */
+  height: 16px;
+  background: white;
+  border: 2px inset #ece9d8;
+  box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px gray;
+  position: relative;
+  margin: 6px 0;
+}
+
+.cd-progress-fill {
+  height: 100%;
+  background: linear-gradient(to right, #0066cc 0%, #0080ff 50%, #0066cc 100%);
+  transition: width 0.3s ease;
+}
+
+.cd-progress-handle {
+  position: absolute;
+  top: -2px;
+  /* Made progress handle smaller for compact layout */
+  width: 10px;
+  height: 20px;
+  background: linear-gradient(to bottom, #ffffff 0%, #f0f0f0 50%, #e0e0e0 100%);
+  border: 1px outset #c0c0c0;
+  cursor: pointer;
+  transform: translateX(-50%);
+}
+
+.cd-controls {
+  display: flex;
+  justify-content: center;
+  /* Reduced gap and padding for compact layout */
+  gap: 6px;
+  padding: 12px 0;
+}
+
+.cd-control-btn {
+  /* Made control buttons smaller for compact layout */
+  width: 32px;
+  height: 26px;
+  background: linear-gradient(to bottom, #ffffff 0%, #f8f8f8 25%, #f0f0f0 50%, #e8e8e8 75%, #e0e0e0 100%);
+  border: 2px outset #c0c0c0;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  color: #000;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.cd-control-btn:hover {
+  background: linear-gradient(to bottom, #ffffff 0%, #fcfcfc 25%, #f8f8f8 50%, #f0f0f0 75%, #e8e8e8 100%);
+}
+
+.cd-control-btn:active {
+  border: 2px inset #c0c0c0;
+  background: linear-gradient(to bottom, #e0e0e0 0%, #e8e8e8 25%, #f0f0f0 50%, #f8f8f8 75%, #ffffff 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.cd-play-btn {
+  /* Made play button slightly wider but still compact */
+  width: 38px;
+  background: linear-gradient(to bottom, #90ee90 0%, #7dd87d 25%, #6bc26b 50%, #59ac59 75%, #479647 100%);
+  border-color: #479647;
+}
+
+.cd-play-btn:hover {
+  background: linear-gradient(to bottom, #a0ffa0 0%, #90ee90 25%, #7dd87d 50%, #6bc26b 75%, #59ac59 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.cd-play-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.cd-spotify-link {
+  display: inline-block;
+  /* Made Spotify link smaller for compact layout */
+  padding: 6px 12px;
+  background: linear-gradient(to bottom, #1db954 0%, #1ed760 50%, #1db954 100%);
+  color: white;
+  text-decoration: none;
+  border-radius: 16px;
+  font-size: 10px;
+  font-weight: bold;
+  border: 1px solid #169c46;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.cd-spotify-link:hover {
+  background: linear-gradient(to bottom, #1ed760 0%, #1db954 50%, #169c46 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.cd-spotify-link:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Start Menu */
+.start-menu {
+  position: fixed;
+  bottom: 40px;
+  left: 0;
+  width: 400px;
+  height: 450px;
+  background: white;
+  border: 2px solid #0831d9;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  overflow: hidden;
+}
+
+.start-menu-layout {
+  display: flex;
+  height: 100%;
+}
+
+.start-menu-sidebar {
+  width: 140px;
+  background: linear-gradient(to bottom, #4a7bc8 0%, #3f6bc7 25%, #345bb6 50%, #294ba5 75%, #1e3b94 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 16px 8px;
+  border-right: 1px solid #0831d9;
+}
+
+.start-menu-user {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.start-menu-avatar {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  border: 2px solid white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.start-menu-items {
+  flex: 1;
+  background: white;
+  padding: 8px;
+  overflow-y: auto;
+}
+
+.start-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+  margin-bottom: 2px;
+}
+
+.start-menu-item:hover {
+  background: linear-gradient(to right, #3875f0 0%, #5a8bd8 100%);
+  color: white;
+}
+
+.start-menu-item img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.start-menu-item span {
+  font-size: 11px;
+  font-weight: normal;
+}
+
+@media (max-width: 640px) {
+  .start-menu {
+    width: 100%;
+    max-width: 100vw;
+    height: 400px;
+  }
+
+  .start-menu-sidebar {
+    width: 100px;
+  }
+
+  .start-menu-item {
+    padding: 12px;
+  }
+
+  .start-menu-item span {
+    font-size: 12px;
+  }
+}
