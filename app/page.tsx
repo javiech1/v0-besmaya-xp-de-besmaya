@@ -254,13 +254,8 @@ export default function BesmayaDesktop() {
         break
       case "musica":
         if (!isDesktop) {
-          // En móvil, abrir directamente en Spotify
-          const playlistId = "0iXYV9B7pvlsZKqJEfOk5V"
-          window.location.href = `spotify:playlist:${playlistId}`
-          // Fallback al web player si no tiene la app
-          setTimeout(() => {
-            window.location.href = `https://open.spotify.com/playlist/${playlistId}`
-          }, 500)
+          // En móvil, abrir Spotify (app si instalada, o web player)
+          window.location.href = "https://open.spotify.com/playlist/0iXYV9B7pvlsZKqJEfOk5V"
         } else {
           openWindow("musica", "Música", <MusicaContent />)
         }
