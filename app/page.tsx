@@ -791,9 +791,21 @@ function PaintContent() {
 }
 
 function WelcomePosterContent() {
+  const [isLoaded, setIsLoaded] = useState(false)
+
   return (
     <div className="flex flex-col items-center p-2">
-      <img src="FEED.png" alt="Besmaya Madrid Concert" className="w-full h-auto rounded-lg mb-4" />
+      <div className="relative w-full mb-4">
+        {!isLoaded && (
+          <div className="w-full aspect-[3/4] bg-gray-300 animate-pulse rounded-lg" />
+        )}
+        <img
+          src="FEED.png"
+          alt="Besmaya Madrid Concert"
+          className={`w-full h-auto rounded-lg transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'}`}
+          onLoad={() => setIsLoaded(true)}
+        />
+      </div>
       <Link
         href="/conciertos"
         prefetch={true}
@@ -806,9 +818,21 @@ function WelcomePosterContent() {
 }
 
 function AlbumContent() {
+  const [isLoaded, setIsLoaded] = useState(false)
+
   return (
     <div className="flex flex-col items-center p-2">
-      <img src="/album-lavida.png" alt="La vida de Nadie - Besmaya" className="w-full h-auto rounded-lg mb-4" />
+      <div className="relative w-full mb-4">
+        {!isLoaded && (
+          <div className="w-full aspect-square bg-gray-300 animate-pulse rounded-lg" />
+        )}
+        <img
+          src="/album-lavida.png"
+          alt="La vida de Nadie - Besmaya"
+          className={`w-full h-auto rounded-lg transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'}`}
+          onLoad={() => setIsLoaded(true)}
+        />
+      </div>
       <a
         href="https://acqustic-platform.sumupstore.com/producto/la-vida-de-nadie-besmaya"
         target="_blank"
