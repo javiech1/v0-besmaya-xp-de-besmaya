@@ -325,11 +325,19 @@ body {
   background-color: rgba(0, 100, 200, 0.3);
 }
 
-.desktop-icon img {
+/* Container for icon image with fixed height for consistent alignment */
+.desktop-icon-image-wrapper {
   width: 48px;
   height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 4px;
-  /* Added object-fit contain to prevent stretching of non-square icons */
+}
+
+.desktop-icon img {
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
 }
 
@@ -363,20 +371,38 @@ body {
     padding: 12px !important;
   }
 
-  /* Reduced icon size from 192px to 96px so all icons are visible */
-  .desktop-icon img {
+  /* Fixed height container for consistent icon alignment */
+  .desktop-icon-image-wrapper {
     width: 96px !important;
     height: 96px !important;
     margin-bottom: 8px !important;
-    margin-right: 16px !important;
-    /* Added object-fit contain to prevent stretching of non-square icons on desktop */
+  }
+
+  .desktop-icon img {
+    max-width: 100% !important;
+    max-height: 100% !important;
     object-fit: contain !important;
   }
 
-  /* Made conciertos icon wider to accommodate horizontal image, same height for text alignment */
-  .desktop-icon:first-child img {
+  /* Individual icon adjustments for equal visual height */
+  .desktop-icon-image-wrapper.icon-conciertos { width: 115px !important; }
+  .desktop-icon-image-wrapper.icon-merchan { width: 55px !important; }
+
+  .desktop-icon-image-wrapper.icon-conciertos img,
+  .desktop-icon-image-wrapper.icon-videos img {
+    max-width: none !important;
+    max-height: none !important;
+  }
+
+  .desktop-icon-image-wrapper.icon-conciertos img {
     width: 115px !important;
     height: 96px !important;
+    object-fit: fill !important;
+  }
+
+  .desktop-icon-image-wrapper.icon-videos img {
+    width: 115px !important;
+    height: 115px !important;
   }
 
   .desktop-icon span {
@@ -405,12 +431,17 @@ body {
     border-radius: 8px !important;
   }
 
-  .desktop-icon img {
+  .desktop-icon-image-wrapper {
     width: 64px !important;
     height: 64px !important;
     margin-bottom: 0 !important;
     margin-right: 16px !important;
-    /* Added object-fit contain to prevent stretching of non-square icons on mobile */
+    flex-shrink: 0 !important;
+  }
+
+  .desktop-icon img {
+    max-width: 100% !important;
+    max-height: 100% !important;
     object-fit: contain !important;
   }
 
