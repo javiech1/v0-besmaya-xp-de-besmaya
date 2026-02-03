@@ -1,7 +1,10 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { createClient } from "@/lib/supabase/client"
 
 interface WindowState {
   id: string
@@ -43,6 +46,9 @@ export default function BesmayaDesktop() {
   const [isUnderConstruction, setIsUnderConstruction] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
   const [initialWindowsCreated, setInitialWindowsCreated] = useState(false)
+  const [spotifyPrefetched, setSpotifyPrefetched] = useState(false)
+  const [concertsPreloaded, setConcertsPreloaded] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -209,18 +215,18 @@ export default function BesmayaDesktop() {
     setNextZIndex((prev) => prev + 1)
   }
 
-  const closeWindow = (id: string) => {
+  const closeWindow = useCallback((id: string) => {
     setWindows((prev) => prev.filter((w) => w.id !== id))
-  }
+  }, [])
 
-  const minimizeWindow = (id: string) => {
+  const minimizeWindow = useCallback((id: string) => {
     setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, isMinimized: true } : w)))
-  }
+  }, [])
 
-  const focusWindow = (id: string) => {
+  const focusWindow = useCallback((id: string) => {
     setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, zIndex: nextZIndex } : w)))
     setNextZIndex((prev) => prev + 1)
-  }
+  }, [nextZIndex])
 
   const startDrag = (e: React.MouseEvent, windowId: string) => {
     const windowItem = windows.find((w) => w.id === windowId)
@@ -249,7 +255,7 @@ export default function BesmayaDesktop() {
         openWindow("bio", "Bio", <BioContent />)
         break
       case "conciertos":
-        window.location.href = "/conciertos"
+        router.push("/conciertos")
         break
       case "videos":
         window.open("https://www.youtube.com/@BESMAYA", "_blank")
@@ -264,6 +270,32 @@ export default function BesmayaDesktop() {
   const toggleStartMenu = () => {
     setIsStartMenuOpen(!isStartMenuOpen)
   }
+
+  const prefetchSpotify = useCallback(() => {
+    if (!spotifyPrefetched) {
+      setSpotifyPrefetched(true)
+    }
+  }, [spotifyPrefetched])
+
+  const prefetchConciertos = useCallback(async () => {
+    router.prefetch('/conciertos')
+
+    if (concertsPreloaded) return
+    setConcertsPreloaded(true)
+
+    try {
+      const supabase = createClient()
+      const { data } = await supabase.from("concerts").select("*")
+      if (data) {
+        localStorage.setItem('concerts_cache', JSON.stringify({
+          data,
+          timestamp: Date.now()
+        }))
+      }
+    } catch {
+      // Silent fail - conciertos page will fetch if needed
+    }
+  }, [router, concertsPreloaded])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -293,6 +325,7 @@ export default function BesmayaDesktop() {
         <div
           className={`desktop-icon ${selectedIcon === "conciertos" ? "selected" : ""}`}
           onClick={() => handleIconClick("conciertos")}
+          onMouseEnter={prefetchConciertos}
         >
           <div className="desktop-icon-image-wrapper icon-conciertos">
             <img src="/icons/conciertos.png" alt="Conciertos" />
@@ -313,6 +346,7 @@ export default function BesmayaDesktop() {
         <div
           className={`desktop-icon ${selectedIcon === "musica" ? "selected" : ""}`}
           onClick={() => handleIconClick("musica")}
+          onMouseEnter={prefetchSpotify}
         >
           <div className="desktop-icon-image-wrapper">
             <img src="/icons/musica.png" alt="Música" />
@@ -413,8 +447,9 @@ export default function BesmayaDesktop() {
               <div
                 className="start-menu-item flex items-center space-x-2 mb-2 cursor-pointer"
                 onClick={() => {
-                  window.location.href = "/conciertos"
+                  router.push("/conciertos")
                 }}
+                onMouseEnter={prefetchConciertos}
               >
                 <img src="/icons/conciertos.png" alt="Conciertos" width={32} height={32} />
                 <span>La gira de Nadie</span>
@@ -458,6 +493,23 @@ export default function BesmayaDesktop() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Hidden Spotify prefetch iframe */}
+      {spotifyPrefetched && (
+        <iframe
+          src="https://open.spotify.com/embed/playlist/0iXYV9B7pvlsZKqJEfOk5V?utm_source=generator&theme=0"
+          style={{
+            position: 'absolute',
+            width: '1px',
+            height: '1px',
+            opacity: 0,
+            pointerEvents: 'none',
+            visibility: 'hidden'
+          }}
+          tabIndex={-1}
+          aria-hidden="true"
+        />
       )}
 
       <div className="xp-taskbar flex items-center justify-between px-4 py-2 bg-gray-800 text-white">
@@ -576,14 +628,26 @@ function UnderConstructionPage({ onToggle }: { onToggle: () => void }) {
 }
 
 function MusicaContent() {
+  const [isLoaded, setIsLoaded] = useState(false)
+
   return (
-    <iframe
-      src="https://open.spotify.com/embed/playlist/0iXYV9B7pvlsZKqJEfOk5V?utm_source=generator&theme=0"
-      frameBorder="0"
-      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-      loading="lazy"
-      className="block w-full h-full"
-    ></iframe>
+    <div className="relative w-full h-full">
+      {/* Skeleton loader */}
+      {!isLoaded && (
+        <div className="absolute inset-0 bg-[#121212] flex flex-col items-center justify-center">
+          <div className="w-16 h-16 rounded-full bg-[#1DB954]/30 mb-3 animate-pulse" />
+          <div className="w-24 h-3 bg-gray-700 rounded mb-2 animate-pulse" />
+          <div className="w-16 h-2 bg-gray-800 rounded animate-pulse" />
+        </div>
+      )}
+      <iframe
+        src="https://open.spotify.com/embed/playlist/0iXYV9B7pvlsZKqJEfOk5V?utm_source=generator&theme=0"
+        frameBorder="0"
+        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+        className={`block w-full h-full transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        onLoad={() => setIsLoaded(true)}
+      />
+    </div>
   )
 }
 
@@ -721,12 +785,13 @@ function WelcomePosterContent() {
   return (
     <div className="flex flex-col items-center p-2">
       <img src="FEED.png" alt="Besmaya Madrid Concert" className="w-full h-auto rounded-lg mb-4" />
-      <a
+      <Link
         href="/conciertos"
+        prefetch={true}
         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-center block transition-colors duration-200"
       >
         entradas
-      </a>
+      </Link>
     </div>
   )
 }

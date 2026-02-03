@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, type MouseEvent } from "react"
+import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -63,8 +63,41 @@ function sortConcertsChronologically(concerts: Concert[]): Concert[] {
 export default function ConciertosPage() {
   const [time, setTime] = useState("")
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
-  const [concerts, setConcerts] = useState<Concert[]>(fallbackConcerts)
-  const [isLoading, setIsLoading] = useState(true)
+  const [concerts, setConcerts] = useState<Concert[]>(() => {
+    // Try to load from cache first
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('concerts_cache')
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached)
+          // Use cache if less than 5 minutes old
+          if (Date.now() - timestamp < 5 * 60 * 1000) {
+            return sortConcertsChronologically(data)
+          }
+        }
+      } catch {
+        // Ignore cache errors
+      }
+    }
+    return sortConcertsChronologically(fallbackConcerts)
+  })
+  const [isLoading, setIsLoading] = useState(() => {
+    // Skip loading if we have cached data
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('concerts_cache')
+        if (cached) {
+          const { timestamp } = JSON.parse(cached)
+          if (Date.now() - timestamp < 5 * 60 * 1000) {
+            return false
+          }
+        }
+      } catch {
+        // Ignore cache errors
+      }
+    }
+    return true
+  })
   const router = useRouter()
 
   const supabase = createClient()
@@ -109,7 +142,17 @@ export default function ConciertosPage() {
         console.log("Database not ready, using fallback data:", error.message)
         setConcerts(sortConcertsChronologically(fallbackConcerts))
       } else {
-        setConcerts(sortConcertsChronologically(data || fallbackConcerts))
+        const sortedData = sortConcertsChronologically(data || fallbackConcerts)
+        setConcerts(sortedData)
+        // Save to cache
+        try {
+          localStorage.setItem('concerts_cache', JSON.stringify({
+            data: data || fallbackConcerts,
+            timestamp: Date.now()
+          }))
+        } catch {
+          // Ignore storage errors
+        }
       }
     } catch (error) {
       console.log("Error fetching concerts, using fallback data:", error)
@@ -129,8 +172,45 @@ export default function ConciertosPage() {
 
   if (isLoading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center">
-        <div className="text-xl">Loading concerts...</div>
+      <div className="h-screen w-screen relative overflow-hidden">
+        <img
+          src="/xp-bliss-custom.jpg"
+          alt="Windows XP Bliss Wallpaper"
+          className="absolute inset-0 w-full h-full object-cover -z-10"
+        />
+        <div className="absolute inset-0 pb-10 p-8">
+          <div className="h-full bg-white border-2 border-gray-400 shadow-2xl overflow-auto">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-3 border-b border-blue-400">
+              <h1 className="font-bold text-center text-2xl">LA GIRA DE NADIE</h1>
+            </div>
+            <div className="p-3 md:p-6">
+              <div className="grid gap-3 md:gap-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="bg-gray-50 border border-gray-300 rounded p-3 md:p-4 animate-pulse">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
+                        <div className="h-5 w-16 bg-gray-300 rounded" />
+                        <div className="h-6 w-24 bg-gray-300 rounded" />
+                        <div className="h-4 w-32 bg-gray-200 rounded" />
+                      </div>
+                      <div className="h-10 w-24 bg-green-200 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="xp-taskbar">
+          <button className="xp-start-btn" disabled>
+            <img src="/icons/sistema-operativo.png" alt="Start" width={16} height={16} className="mr-1" />
+            start
+          </button>
+          <div className="xp-taskbar-buttons">
+            <button className="xp-taskbar-btn active">La gira de Nadie - Tour Dates</button>
+          </div>
+          <div className="xp-clock text-white">--:--</div>
+        </div>
       </div>
     )
   }
