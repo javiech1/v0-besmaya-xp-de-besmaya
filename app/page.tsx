@@ -138,8 +138,8 @@ export default function BesmayaDesktop() {
     let windowHeight = 400
 
     if (id === "musica") {
-      windowWidth = 480
-      windowHeight = 320
+      windowWidth = 306
+      windowHeight = 388
     }
     if (id === "welcome") {
       windowWidth = 420
@@ -412,7 +412,7 @@ export default function BesmayaDesktop() {
                 </button>
               </div>
             </div>
-            <div className="window-content">{windowItem.content}</div>
+            <div className={windowItem.id === "musica" ? "window-content-musica" : "window-content"}>{windowItem.content}</div>
           </div>
         ))}
 
@@ -618,22 +618,13 @@ function UnderConstructionPage({ onToggle }: { onToggle: () => void }) {
 
 function MusicaContent() {
   return (
-    <div className="h-full bg-gray-200 p-2">
-      <div className="h-full flex flex-col">
-        <iframe
-          src="https://open.spotify.com/embed/track/2QACvOCPzkQ9SWNOy16Sgn?utm_source=generator&theme=0"
-          width="100%"
-          height="100%"
-          frameBorder="0"
-          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-          loading="lazy"
-          className="rounded border-2 border-gray-400"
-          style={{
-            background: "#f0f0f0",
-          }}
-        ></iframe>
-      </div>
-    </div>
+    <iframe
+      src="https://open.spotify.com/embed/playlist/0iXYV9B7pvlsZKqJEfOk5V?utm_source=generator&theme=0"
+      frameBorder="0"
+      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+      loading="lazy"
+      className="block w-full h-full"
+    ></iframe>
   )
 }
 
