@@ -586,7 +586,7 @@ export default function BesmayaDesktop() {
                 }}
                 title={w.title}
               >
-                <span className="text-xs">📄</span>
+                <span className="text-xs">{w.id === 'welcome-poster' ? '🎫' : w.id === 'album' ? '💿' : '📄'}</span>
               </button>
             ))}
           </div>
@@ -886,19 +886,19 @@ function WelcomePosterContent() {
     <div className="flex flex-col items-center p-0 sm:p-2">
       <div className="relative w-full mb-1 sm:mb-4">
         {!isLoaded && (
-          <div className="w-full aspect-[3/4] bg-gray-300 animate-pulse rounded-lg" />
+          <div className="w-full aspect-[3/4] bg-gray-300 animate-pulse rounded-none sm:rounded-lg" />
         )}
         <img
           src="FEED.png"
           alt="Besmaya Madrid Concert"
-          className={`w-full h-auto rounded-lg transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'}`}
+          className={`w-full h-auto rounded-none sm:rounded-lg transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'}`}
           onLoad={() => setIsLoaded(true)}
         />
       </div>
       <Link
         href="/conciertos"
         prefetch={true}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-center block transition-colors duration-200"
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-lg text-center block transition-colors duration-200 text-sm sm:text-base"
       >
         entradas
       </Link>
@@ -913,12 +913,12 @@ function AlbumContent() {
     <div className="flex flex-col items-center p-0 sm:p-2">
       <div className="relative w-full mb-1 sm:mb-4">
         {!isLoaded && (
-          <div className="w-full aspect-square bg-gray-300 animate-pulse rounded-lg" />
+          <div className="w-full aspect-square bg-gray-300 animate-pulse rounded-none sm:rounded-lg" />
         )}
         <img
           src="/album-lavida.png"
           alt="La vida de Nadie - Besmaya"
-          className={`w-full h-auto rounded-lg transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'}`}
+          className={`w-full h-auto rounded-none sm:rounded-lg transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'}`}
           onLoad={() => setIsLoaded(true)}
         />
       </div>
@@ -926,7 +926,7 @@ function AlbumContent() {
         href="https://acqustic-platform.sumupstore.com/producto/la-vida-de-nadie-besmaya"
         target="_blank"
         rel="noopener noreferrer"
-        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-center block transition-colors duration-200"
+        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-lg text-center block transition-colors duration-200 text-sm sm:text-base"
       >
         comprar ahora
       </a>
