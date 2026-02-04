@@ -203,16 +203,17 @@ body {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3) !important;
 }
 
-/* Primera ventana (FEED) - izquierda */
-.mobile-window-welcome-poster {
+/* Album - izquierda */
+.mobile-window-album {
   left: 8px !important;
   right: auto !important;
 }
 
-/* Segunda ventana (Album) - derecha */
-.mobile-window-album {
+/* FEED (cartel) - derecha con más altura */
+.mobile-window-welcome-poster {
   left: auto !important;
   right: 8px !important;
+  max-height: 55vh !important;
 }
 
 .mobile-window-initial .window-header {
@@ -235,17 +236,26 @@ body {
   max-height: calc(48vh - 32px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 4px !important;
+  padding: 2px !important;
 }
 
 /* Ajustar contenido de ventanas iniciales */
 .mobile-window-initial .window-content img {
-  max-height: calc(48vh - 80px) !important;
+  max-height: calc(48vh - 60px) !important;
   width: auto !important;
   max-width: 100% !important;
   object-fit: contain !important;
   margin: 0 auto !important;
   display: block !important;
+}
+
+/* Contenido más grande para el cartel (FEED) */
+.mobile-window-welcome-poster .window-content {
+  max-height: calc(55vh - 32px) !important;
+}
+
+.mobile-window-welcome-poster .window-content img {
+  max-height: calc(55vh - 60px) !important;
 }
 
 .mobile-window .window-header {
