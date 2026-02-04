@@ -178,23 +178,22 @@ export default function ConciertosPage() {
           alt="Windows XP Bliss Wallpaper"
           className="absolute inset-0 w-full h-full object-cover -z-10"
         />
-        <div className="absolute inset-0 pb-10 p-8">
+        <div className="absolute inset-0 pb-10 p-2 sm:p-8">
           <div className="h-full bg-white border-2 border-gray-400 shadow-2xl overflow-auto">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-3 border-b border-blue-400">
-              <h1 className="font-bold text-center text-2xl">LA GIRA DE NADIE</h1>
+            <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-2 sm:p-3 border-b border-blue-400">
+              <h1 className="font-bold text-center text-lg sm:text-2xl">LA GIRA DE NADIE</h1>
             </div>
-            <div className="p-3 md:p-6">
-              <div className="grid gap-3 md:gap-4">
+            <div
+              className="p-2 sm:p-3 md:p-6"
+              style={{ containerType: 'inline-size', containerName: 'concert-list' }}
+            >
+              <div className="grid gap-2 sm:gap-3 md:gap-4">
                 {[...Array(5)].map((_, i) => (
-                  <div key={i} className="bg-gray-50 border border-gray-300 rounded p-3 md:p-4 animate-pulse">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-6">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
-                        <div className="h-5 w-16 bg-gray-300 rounded" />
-                        <div className="h-6 w-24 bg-gray-300 rounded" />
-                        <div className="h-4 w-32 bg-gray-200 rounded" />
-                      </div>
-                      <div className="h-10 w-24 bg-green-200 rounded" />
-                    </div>
+                  <div key={i} className="concert-row animate-pulse">
+                    <div className="h-4 w-12 bg-gray-300 rounded" />
+                    <div className="h-4 w-16 bg-gray-300 rounded" />
+                    <div className="h-4 w-20 bg-gray-200 rounded flex-1" />
+                    <div className="h-6 w-14 bg-green-200 rounded" />
                   </div>
                 ))}
               </div>
@@ -224,48 +223,42 @@ export default function ConciertosPage() {
       />
 
       {/* Full screen concert list */}
-      <div className="absolute inset-0 pb-10 p-8">
+      <div className="absolute inset-0 pb-10 p-2 sm:p-8">
         <div className="h-full bg-white border-2 border-gray-400 shadow-2xl overflow-auto">
           {/* Window title bar */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-3 border-b border-blue-400 flex justify-between items-center">
-            <h1 className="font-bold text-center text-2xl flex-1">LA GIRA DE NADIE</h1>
+          <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-2 sm:p-3 border-b border-blue-400 flex justify-between items-center">
+            <h1 className="font-bold text-center text-lg sm:text-2xl flex-1">LA GIRA DE NADIE</h1>
             <button
               onClick={handleClose}
-              className="ml-4 w-6 h-6 bg-red-500 hover:bg-red-600 border border-red-700 rounded-sm flex items-center justify-center text-white font-bold text-sm shadow-sm transition-colors"
+              className="ml-2 sm:ml-4 w-5 h-5 sm:w-6 sm:h-6 bg-red-500 hover:bg-red-600 border border-red-700 rounded-sm flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-sm transition-colors"
               title="Cerrar"
             >
               ×
             </button>
           </div>
 
-          {/* Concert list */}
-          <div className="p-3 md:p-6">
-            <div className="grid gap-3 md:gap-4">
+          {/* Concert list with container query */}
+          <div
+            className="p-2 sm:p-3 md:p-6"
+            style={{ containerType: 'inline-size', containerName: 'concert-list' }}
+          >
+            <div className="grid gap-2 sm:gap-3 md:gap-4">
               {concerts.map((concert) => (
-                <div
-                  key={concert.id}
-                  className="bg-gray-50 border border-gray-300 rounded p-3 md:p-4 hover:bg-blue-50 transition-colors"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
-                      <div className="text-base md:text-lg font-mono font-bold text-gray-800 sm:min-w-[80px]">
-                        {concert.fecha}
-                      </div>
-                      <div className="text-lg md:text-xl font-bold text-black text-center">{concert.ciudad}</div>
-                      <div className="text-sm md:text-lg text-gray-600">{concert.sala}</div>
-                    </div>
-                    <button
-                      className="px-4 py-2 md:px-6 md:py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded border border-green-700 shadow-md transition-colors text-sm md:text-base w-full sm:w-auto"
-                      onClick={() => window.open(concert.link, "_blank")}
-                    >
-                      Tickets
-                    </button>
-                  </div>
+                <div key={concert.id} className="concert-row">
+                  <span className="concert-fecha">{concert.fecha}</span>
+                  <span className="concert-ciudad">{concert.ciudad}</span>
+                  <span className="concert-sala">{concert.sala}</span>
+                  <button
+                    className="concert-btn"
+                    onClick={() => window.open(concert.link, "_blank")}
+                  >
+                    Tickets
+                  </button>
                 </div>
               ))}
             </div>
-            <div className="mt-6 text-center">
-              <p className="text-gray-600 text-sm italic">Muchos más por confirmar</p>
+            <div className="mt-4 sm:mt-6 text-center">
+              <p className="text-gray-600 text-xs sm:text-sm italic">Muchos más por confirmar</p>
             </div>
           </div>
         </div>
