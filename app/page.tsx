@@ -126,7 +126,7 @@ export default function BesmayaDesktop() {
       const initialWindows: WindowState[] = [
         {
           id: "welcome-poster",
-          title: "FEED",
+          title: "La gira de Nadie",
           content: <WelcomePosterContent />,
           x: 0,
           y: 0,
@@ -164,7 +164,7 @@ export default function BesmayaDesktop() {
     const initialWindows: WindowState[] = [
       {
         id: "welcome-poster",
-        title: "FEED",
+        title: "La gira de Nadie",
         content: <WelcomePosterContent />,
         x: screenWidth / 2 - feedWidth / 2 - 200,
         y: screenHeight / 2 - feedEstimatedHeight / 2 - 80,
