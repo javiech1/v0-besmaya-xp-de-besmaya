@@ -16,6 +16,7 @@ interface WindowState {
   height: number | "auto"
   isMinimized: boolean
   zIndex: number
+  isInitial?: boolean
 }
 
 interface DragState {
@@ -53,7 +54,7 @@ export default function BesmayaDesktop() {
 
   useEffect(() => {
     const checkScreenSize = () => {
-      setIsDesktop(window.innerWidth >= 768)
+      setIsDesktop(window.innerWidth >= 640)
       setIsDesktopDetermined(true)
     }
     checkScreenSize()
@@ -120,21 +121,53 @@ export default function BesmayaDesktop() {
     const screenWidth = typeof window !== "undefined" ? window.innerWidth : 1024
     const screenHeight = typeof window !== "undefined" ? window.innerHeight : 768
 
-    // Dimensiones basadas en max-w-sm (~384px) de los popups originales
+    // En móvil: mostrar las 2 ventanas apiladas debajo de los iconos
+    if (!isDesktop) {
+      const initialWindows: WindowState[] = [
+        {
+          id: "welcome-poster",
+          title: "La gira de Nadie",
+          content: <WelcomePosterContent />,
+          x: 0,
+          y: 0,
+          width: screenWidth,
+          height: "auto",
+          isMinimized: false,
+          zIndex: 102,
+          isInitial: true,
+        },
+        {
+          id: "album",
+          title: "La vida de Nadie",
+          content: <AlbumContent />,
+          x: 0,
+          y: 0,
+          width: screenWidth,
+          height: "auto",
+          isMinimized: false,
+          zIndex: 101,
+          isInitial: true,
+        },
+      ]
+      setWindows(initialWindows)
+      setNextZIndex(103)
+      setInitialWindowsCreated(true)
+      return
+    }
+
+    // Desktop: dos ventanas en cascada
     const feedWidth = 384
     const albumWidth = 384
-    // Alturas estimadas para calcular posición centrada (imagen + botón + padding)
     const feedEstimatedHeight = 550
     const albumEstimatedHeight = 460
 
     const initialWindows: WindowState[] = [
       {
         id: "welcome-poster",
-        title: "FEED",
+        title: "La gira de Nadie",
         content: <WelcomePosterContent />,
-        // Centrado + translate(-200px, -80px) en desktop
-        x: isDesktop ? screenWidth / 2 - feedWidth / 2 - 200 : screenWidth / 2 - feedWidth / 2 - 30,
-        y: isDesktop ? screenHeight / 2 - feedEstimatedHeight / 2 - 80 : screenHeight / 2 - feedEstimatedHeight / 2 - 80,
+        x: screenWidth / 2 - feedWidth / 2 - 200,
+        y: screenHeight / 2 - feedEstimatedHeight / 2 - 80,
         width: feedWidth,
         height: "auto",
         isMinimized: false,
@@ -144,9 +177,8 @@ export default function BesmayaDesktop() {
         id: "album",
         title: "La vida de Nadie",
         content: <AlbumContent />,
-        // Centrado + translate(200px, 120px) en desktop
-        x: isDesktop ? screenWidth / 2 - albumWidth / 2 + 200 : screenWidth / 2 - albumWidth / 2 + 30,
-        y: isDesktop ? screenHeight / 2 - albumEstimatedHeight / 2 + 120 : screenHeight / 2 - albumEstimatedHeight / 2 + 120,
+        x: screenWidth / 2 - albumWidth / 2 + 200,
+        y: screenHeight / 2 - albumEstimatedHeight / 2 + 120,
         width: albumWidth,
         height: "auto",
         isMinimized: false,
@@ -233,6 +265,9 @@ export default function BesmayaDesktop() {
   }, [nextZIndex])
 
   const startDrag = (e: React.MouseEvent, windowId: string) => {
+    // Desactivar drag en móvil - las ventanas son fullscreen
+    if (!isDesktop) return
+
     const windowItem = windows.find((w) => w.id === windowId)
     if (!windowItem) return
 
@@ -389,12 +424,15 @@ export default function BesmayaDesktop() {
         .map((windowItem) => (
           <div
             key={windowItem.id}
-            className="window"
-            style={{
+            className={`window ${!isDesktop ? (windowItem.isInitial ? `mobile-window-initial mobile-window-${windowItem.id}` : 'mobile-window') : ''}`}
+            style={isDesktop ? {
               left: windowItem.x,
               top: windowItem.y,
               width: windowItem.width,
               height: windowItem.height,
+              zIndex: windowItem.zIndex,
+              pointerEvents: "auto",
+            } : {
               zIndex: windowItem.zIndex,
               pointerEvents: "auto",
             }}
@@ -521,13 +559,44 @@ export default function BesmayaDesktop() {
         />
       )}
 
-      <div className="xp-taskbar flex items-center justify-between px-4 py-2 bg-gray-800 text-white">
-        <button className="xp-start-btn" disabled>
-          <img src="/icons/sistema-operativo.png" alt="Start" width={16} height={16} className="mr-1" />
-          start
-        </button>
+      <div className="xp-taskbar flex items-center justify-between px-2 sm:px-4 py-2 bg-gray-800 text-white">
+        {/* Grupo izquierdo: Start + indicadores de ventanas */}
+        <div className="flex items-center">
+          <button className="xp-start-btn" onClick={toggleStartMenu}>
+            <img src="/icons/sistema-operativo.png" alt="Start" width={16} height={16} className="mr-1 sm:mr-1" />
+            <span className="hidden sm:inline">start</span>
+          </button>
 
-        <div className="xp-taskbar-buttons flex-1 hidden md:flex overflow-hidden">
+          {/* Indicadores de ventanas en móvil */}
+          {!isDesktop && windows.length > 0 && (
+            <div className="flex gap-1 ml-2">
+              {windows.map((w) => (
+                <button
+                  key={w.id}
+                  className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                    !w.isMinimized ? 'bg-blue-400/80' : 'bg-blue-600/60'
+                  }`}
+                  onClick={() => {
+                    if (w.isMinimized) {
+                      setWindows(prev => prev.map(win =>
+                        win.id === w.id ? {...win, isMinimized: false, zIndex: nextZIndex} : win
+                      ))
+                      setNextZIndex(prev => prev + 1)
+                    } else {
+                      minimizeWindow(w.id)
+                    }
+                  }}
+                  title={w.title}
+                >
+                  <span className="text-xs">{w.id === 'welcome-poster' ? '🎫' : w.id === 'album' ? '💿' : '📄'}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Botones de ventanas - solo desktop */}
+          {isDesktop && (
+          <div className="xp-taskbar-buttons flex-1 flex overflow-hidden ml-2">
           {windows.map((windowItem) => (
             <button
               key={windowItem.id}
@@ -547,13 +616,15 @@ export default function BesmayaDesktop() {
             </button>
           ))}
         </div>
+        )}
+        </div>
 
-        <div className="flex items-center space-x-1 text-white text-xs flex-shrink-0">
+        <div className="flex items-center space-x-2 sm:space-x-1 text-white text-xs flex-shrink-0">
           <a
             href="https://www.instagram.com/somosbesmaya/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-white hover:text-blue-200 cursor-pointer font-bold"
+            className="text-white hover:text-blue-200 cursor-pointer font-bold p-2 sm:p-0"
           >
             IG
           </a>
@@ -561,11 +632,11 @@ export default function BesmayaDesktop() {
             href="https://www.tiktok.com/@somosbesmaya"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-white hover:text-blue-200 cursor-pointer font-bold"
+            className="text-white hover:text-blue-200 cursor-pointer font-bold p-2 sm:p-0"
           >
-            TIKTOK
+            TT
           </a>
-          <span className="text-white">|</span>
+          <span className="text-white hidden sm:inline">|</span>
           <div className="xp-clock text-white">{time}</div>
         </div>
       </div>
@@ -742,6 +813,27 @@ function MerchanContent() {
 }
 
 function PaintContent() {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 640)
+  }, [])
+
+  if (isMobile) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-gray-100">
+        <div className="text-6xl mb-4">🎨</div>
+        <h2 className="text-xl font-bold mb-2">Paint</h2>
+        <p className="text-gray-600">
+          Esta aplicación funciona mejor en un ordenador.
+        </p>
+        <p className="text-gray-500 text-sm mt-4">
+          ¡Visita desde tu PC para dibujar!
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="h-full bg-gray-200 flex flex-col">
       <div className="bg-gray-100 border-b border-gray-300 p-1 flex space-x-2">
@@ -794,22 +886,22 @@ function WelcomePosterContent() {
   const [isLoaded, setIsLoaded] = useState(false)
 
   return (
-    <div className="flex flex-col items-center p-2">
-      <div className="relative w-full mb-4">
+    <div className="flex flex-col items-center p-0 sm:p-2">
+      <div className="relative w-full mb-1 sm:mb-4">
         {!isLoaded && (
-          <div className="w-full aspect-[3/4] bg-gray-300 animate-pulse rounded-lg" />
+          <div className="w-full aspect-[3/4] bg-gray-300 animate-pulse rounded-none sm:rounded-lg" />
         )}
         <img
-          src="FEED.png"
-          alt="Besmaya Madrid Concert"
-          className={`w-full h-auto rounded-lg transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'}`}
+          src="/gira.jpg"
+          alt="La gira de Nadie - Besmaya"
+          className={`w-full h-auto rounded-none sm:rounded-lg transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'}`}
           onLoad={() => setIsLoaded(true)}
         />
       </div>
       <Link
         href="/conciertos"
         prefetch={true}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-center block transition-colors duration-200"
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-lg text-center block transition-colors duration-200 text-sm sm:text-base border-transparent"
       >
         entradas
       </Link>
@@ -821,15 +913,15 @@ function AlbumContent() {
   const [isLoaded, setIsLoaded] = useState(false)
 
   return (
-    <div className="flex flex-col items-center p-2">
-      <div className="relative w-full mb-4">
+    <div className="flex flex-col items-center p-0 sm:p-2">
+      <div className="relative w-full mb-1 sm:mb-4">
         {!isLoaded && (
-          <div className="w-full aspect-square bg-gray-300 animate-pulse rounded-lg" />
+          <div className="w-full aspect-square bg-gray-300 animate-pulse rounded-none sm:rounded-lg" />
         )}
         <img
           src="/album-lavida.png"
           alt="La vida de Nadie - Besmaya"
-          className={`w-full h-auto rounded-lg transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'}`}
+          className={`w-full h-auto rounded-none sm:rounded-lg transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'}`}
           onLoad={() => setIsLoaded(true)}
         />
       </div>
@@ -837,7 +929,7 @@ function AlbumContent() {
         href="https://acqustic-platform.sumupstore.com/producto/la-vida-de-nadie-besmaya"
         target="_blank"
         rel="noopener noreferrer"
-        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-4 rounded-lg text-center block transition-colors duration-200"
+        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-lg text-center block transition-colors duration-200 text-sm sm:text-base border-transparent"
       >
         comprar ahora
       </a>
