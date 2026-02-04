@@ -28,6 +28,9 @@ interface DragState {
   startWindowY: number
 }
 
+// Altura del taskbar XP
+const TASKBAR_HEIGHT = 40
+
 export default function BesmayaDesktop() {
   const [windows, setWindows] = useState<WindowState[]>([])
   const [dragState, setDragState] = useState<DragState>({
@@ -91,7 +94,7 @@ export default function BesmayaDesktop() {
             ? {
                 ...windowItem,
                 x: Math.max(0, Math.min(window.innerWidth - windowItem.width, dragState.startWindowX + deltaX)),
-                y: Math.max(0, Math.min(window.innerHeight - (typeof windowItem.height === "number" ? windowItem.height : 400) - 40, dragState.startWindowY + deltaY)),
+                y: Math.max(0, Math.min(window.innerHeight - (typeof windowItem.height === "number" ? windowItem.height : 600) - TASKBAR_HEIGHT, dragState.startWindowY + deltaY)),
               }
             : windowItem,
         ),
@@ -167,7 +170,7 @@ export default function BesmayaDesktop() {
         title: "La gira de Nadie",
         content: <WelcomePosterContent />,
         x: screenWidth / 2 - feedWidth / 2 - 200,
-        y: screenHeight / 2 - feedEstimatedHeight / 2 - 80,
+        y: Math.min(screenHeight / 2 - feedEstimatedHeight / 2 - 80, screenHeight - feedEstimatedHeight - TASKBAR_HEIGHT),
         width: feedWidth,
         height: "auto",
         isMinimized: false,
@@ -178,7 +181,7 @@ export default function BesmayaDesktop() {
         title: "La vida de Nadie",
         content: <AlbumContent />,
         x: screenWidth / 2 - albumWidth / 2 + 200,
-        y: screenHeight / 2 - albumEstimatedHeight / 2 + 120,
+        y: Math.min(screenHeight / 2 - albumEstimatedHeight / 2 + 120, screenHeight - albumEstimatedHeight - TASKBAR_HEIGHT),
         width: albumWidth,
         height: "auto",
         isMinimized: false,
@@ -240,7 +243,7 @@ export default function BesmayaDesktop() {
       title,
       content,
       x: 100 + windows.length * 30,
-      y: 100 + windows.length * 30,
+      y: Math.min(100 + windows.length * 30, window.innerHeight - windowHeight - TASKBAR_HEIGHT),
       width: windowWidth,
       height: windowHeight,
       isMinimized: false,

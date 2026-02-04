@@ -227,13 +227,13 @@ export default function ConciertosPage() {
           alt="Windows XP Bliss Wallpaper"
           className="absolute inset-0 w-full h-full object-cover -z-10"
         />
-        <div className="absolute inset-0 pb-10 p-2 sm:p-8">
-          <div className="h-full bg-white border-2 border-gray-400 shadow-2xl overflow-auto">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-2 sm:p-3 border-b border-blue-400">
+        <div className="absolute inset-x-0 top-0 bottom-12 sm:bottom-10 p-2 sm:p-8">
+          <div className="h-full bg-white border-2 border-gray-400 shadow-2xl flex flex-col overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-2 sm:p-3 border-b border-blue-400 flex-shrink-0">
               <h1 className="font-bold text-center text-lg sm:text-2xl">LA GIRA DE NADIE</h1>
             </div>
             <div
-              className="p-2 sm:p-3 md:p-6"
+              className="p-2 sm:p-3 md:p-6 flex-1 overflow-auto"
               style={{ containerType: 'inline-size', containerName: 'concert-list' }}
             >
               <div className="grid gap-2 sm:gap-3 md:gap-4">
@@ -272,10 +272,10 @@ export default function ConciertosPage() {
       />
 
       {/* Full screen concert list */}
-      <div className="absolute inset-0 pb-10 p-2 sm:p-8">
-        <div className="h-full bg-white border-2 border-gray-400 shadow-2xl overflow-auto">
+      <div className="absolute inset-x-0 top-0 bottom-12 sm:bottom-10 p-2 sm:p-8">
+        <div className="h-full bg-white border-2 border-gray-400 shadow-2xl flex flex-col overflow-hidden">
           {/* Window title bar */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-2 sm:p-3 border-b border-blue-400 flex justify-between items-center">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-2 sm:p-3 border-b border-blue-400 flex justify-between items-center flex-shrink-0">
             <h1 className="font-bold text-center text-lg sm:text-2xl flex-1">LA GIRA DE NADIE</h1>
             <button
               onClick={handleClose}
@@ -288,11 +288,11 @@ export default function ConciertosPage() {
 
           {/* Tabs and content with container query */}
           <div
-            className="p-2 sm:p-3 md:p-6 pb-0"
+            className="p-2 sm:p-3 md:p-6 pb-0 flex-1 flex flex-col overflow-hidden"
             style={{ containerType: 'inline-size', containerName: 'concert-list' }}
           >
             {/* XP Tabs */}
-            <div className="xp-tabs-container">
+            <div className="xp-tabs-container flex-shrink-0">
               <button
                 className={`xp-tab ${activeTab === 'conciertos' ? 'active' : ''}`}
                 onClick={() => setActiveTab('conciertos')}
@@ -308,7 +308,7 @@ export default function ConciertosPage() {
             </div>
 
             {/* Tab content */}
-            <div className="xp-tab-content">
+            <div className="xp-tab-content flex-1 overflow-auto">
               {/* Panel de Conciertos */}
               <div className={`xp-tab-panel ${activeTab === 'conciertos' ? 'active' : ''}`}>
                 <div className="grid gap-2 sm:gap-3 md:gap-4">
