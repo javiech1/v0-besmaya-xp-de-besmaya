@@ -593,7 +593,8 @@ export default function BesmayaDesktop() {
         )}
 
         {/* Botones de ventanas - solo desktop */}
-        <div className="xp-taskbar-buttons flex-1 hidden sm:flex overflow-hidden">
+        {isDesktop && (
+        <div className="xp-taskbar-buttons flex-1 flex overflow-hidden">
           {windows.map((windowItem) => (
             <button
               key={windowItem.id}
@@ -613,6 +614,7 @@ export default function BesmayaDesktop() {
             </button>
           ))}
         </div>
+        )}
 
         <div className="flex items-center space-x-2 sm:space-x-1 text-white text-xs flex-shrink-0">
           <a
@@ -881,8 +883,8 @@ function WelcomePosterContent() {
   const [isLoaded, setIsLoaded] = useState(false)
 
   return (
-    <div className="flex flex-col items-center p-2">
-      <div className="relative w-full mb-4">
+    <div className="flex flex-col items-center p-0 sm:p-2">
+      <div className="relative w-full mb-1 sm:mb-4">
         {!isLoaded && (
           <div className="w-full aspect-[3/4] bg-gray-300 animate-pulse rounded-lg" />
         )}
@@ -908,8 +910,8 @@ function AlbumContent() {
   const [isLoaded, setIsLoaded] = useState(false)
 
   return (
-    <div className="flex flex-col items-center p-2">
-      <div className="relative w-full mb-4">
+    <div className="flex flex-col items-center p-0 sm:p-2">
+      <div className="relative w-full mb-1 sm:mb-4">
         {!isLoaded && (
           <div className="w-full aspect-square bg-gray-300 animate-pulse rounded-lg" />
         )}
