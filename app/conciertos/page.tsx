@@ -12,6 +12,16 @@ interface Concert {
   link: string
 }
 
+interface Festival {
+  id: string
+  fecha: string
+  ciudad: string
+  sala: string
+  link: string
+}
+
+type TabType = 'conciertos' | 'festivales'
+
 const fallbackConcerts: Concert[] = [
   { id: "1", fecha: "30-ene", ciudad: "Valencia", sala: "Palau Alameda", link: "https://merchandtour.com/besmaya/" },
   { id: "2", fecha: "31-ene", ciudad: "Zaragoza", sala: "Sala Oasis", link: "https://merchandtour.com/besmaya/" },
@@ -24,6 +34,8 @@ const fallbackConcerts: Concert[] = [
   { id: "9", fecha: "19-mar", ciudad: "Pamplona", sala: "Sala Zentral", link: "https://merchandtour.com/besmaya/" },
   { id: "10", fecha: "21-mar", ciudad: "Valladolid", sala: "Sala Lava", link: "https://merchandtour.com/besmaya/" },
 ]
+
+const fallbackFestivals: Festival[] = []
 
 function parseFechaToDate(fecha: string): Date {
   const monthMap: { [key: string]: number } = {
@@ -60,44 +72,22 @@ function sortConcertsChronologically(concerts: Concert[]): Concert[] {
   })
 }
 
+function sortFestivalsChronologically(festivals: Festival[]): Festival[] {
+  return [...festivals].sort((a, b) => {
+    const dateA = parseFechaToDate(a.fecha)
+    const dateB = parseFechaToDate(b.fecha)
+    return dateA.getTime() - dateB.getTime()
+  })
+}
+
 export default function ConciertosPage() {
   const [time, setTime] = useState("")
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
-  const [concerts, setConcerts] = useState<Concert[]>(() => {
-    // Try to load from cache first
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('concerts_cache')
-        if (cached) {
-          const { data, timestamp } = JSON.parse(cached)
-          // Use cache if less than 5 minutes old
-          if (Date.now() - timestamp < 5 * 60 * 1000) {
-            return sortConcertsChronologically(data)
-          }
-        }
-      } catch {
-        // Ignore cache errors
-      }
-    }
-    return sortConcertsChronologically(fallbackConcerts)
-  })
-  const [isLoading, setIsLoading] = useState(() => {
-    // Skip loading if we have cached data
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('concerts_cache')
-        if (cached) {
-          const { timestamp } = JSON.parse(cached)
-          if (Date.now() - timestamp < 5 * 60 * 1000) {
-            return false
-          }
-        }
-      } catch {
-        // Ignore cache errors
-      }
-    }
-    return true
-  })
+  const [activeTab, setActiveTab] = useState<TabType>('conciertos')
+  const [concerts, setConcerts] = useState<Concert[]>(sortConcertsChronologically(fallbackConcerts))
+  const [isLoading, setIsLoading] = useState(true)
+  const [festivals, setFestivals] = useState<Festival[]>([])
+  const [isFestivalsLoading, setIsFestivalsLoading] = useState(true)
   const router = useRouter()
 
   const supabase = createClient()
@@ -120,6 +110,7 @@ export default function ConciertosPage() {
 
   useEffect(() => {
     fetchConcerts()
+    fetchFestivals()
   }, [])
 
   useEffect(() => {
@@ -135,6 +126,22 @@ export default function ConciertosPage() {
   }, [isStartMenuOpen])
 
   const fetchConcerts = async () => {
+    // Try cache first
+    try {
+      const cached = localStorage.getItem('concerts_cache')
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached)
+        if (Date.now() - timestamp < 5 * 60 * 1000) {
+          setConcerts(sortConcertsChronologically(data))
+          setIsLoading(false)
+          return
+        }
+      }
+    } catch {
+      // Ignore cache errors
+    }
+
+    // Fetch from Supabase
     try {
       const { data, error } = await supabase.from("concerts").select("*")
 
@@ -144,7 +151,6 @@ export default function ConciertosPage() {
       } else {
         const sortedData = sortConcertsChronologically(data || fallbackConcerts)
         setConcerts(sortedData)
-        // Save to cache
         try {
           localStorage.setItem('concerts_cache', JSON.stringify({
             data: data || fallbackConcerts,
@@ -159,6 +165,49 @@ export default function ConciertosPage() {
       setConcerts(sortConcertsChronologically(fallbackConcerts))
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchFestivals = async () => {
+    // Try cache first
+    try {
+      const cached = localStorage.getItem('festivals_cache')
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached)
+        if (Date.now() - timestamp < 5 * 60 * 1000) {
+          setFestivals(sortFestivalsChronologically(data))
+          setIsFestivalsLoading(false)
+          return
+        }
+      }
+    } catch {
+      // Ignore cache errors
+    }
+
+    // Fetch from Supabase
+    try {
+      const { data, error } = await supabase.from("festis").select("*")
+
+      if (error) {
+        console.log("Festivals database not ready, using fallback data:", error.message)
+        setFestivals(sortFestivalsChronologically(fallbackFestivals))
+      } else {
+        const sortedData = sortFestivalsChronologically(data || fallbackFestivals)
+        setFestivals(sortedData)
+        try {
+          localStorage.setItem('festivals_cache', JSON.stringify({
+            data: data || fallbackFestivals,
+            timestamp: Date.now()
+          }))
+        } catch {
+          // Ignore storage errors
+        }
+      }
+    } catch (error) {
+      console.log("Error fetching festivals, using fallback data:", error)
+      setFestivals(sortFestivalsChronologically(fallbackFestivals))
+    } finally {
+      setIsFestivalsLoading(false)
     }
   }
 
@@ -237,28 +286,89 @@ export default function ConciertosPage() {
             </button>
           </div>
 
-          {/* Concert list with container query */}
+          {/* Tabs and content with container query */}
           <div
-            className="p-2 sm:p-3 md:p-6"
+            className="p-2 sm:p-3 md:p-6 pb-0"
             style={{ containerType: 'inline-size', containerName: 'concert-list' }}
           >
-            <div className="grid gap-2 sm:gap-3 md:gap-4">
-              {concerts.map((concert) => (
-                <div key={concert.id} className="concert-row">
-                  <span className="concert-fecha">{concert.fecha}</span>
-                  <span className="concert-ciudad">{concert.ciudad}</span>
-                  <span className="concert-sala">{concert.sala}</span>
-                  <button
-                    className="concert-btn"
-                    onClick={() => window.open(concert.link, "_blank")}
-                  >
-                    Tickets
-                  </button>
-                </div>
-              ))}
+            {/* XP Tabs */}
+            <div className="xp-tabs-container">
+              <button
+                className={`xp-tab ${activeTab === 'conciertos' ? 'active' : ''}`}
+                onClick={() => setActiveTab('conciertos')}
+              >
+                Conciertos
+              </button>
+              <button
+                className={`xp-tab ${activeTab === 'festivales' ? 'active' : ''}`}
+                onClick={() => setActiveTab('festivales')}
+              >
+                Festivales
+              </button>
             </div>
-            <div className="mt-4 sm:mt-6 text-center">
-              <p className="text-gray-600 text-xs sm:text-sm italic">Muchos más por confirmar</p>
+
+            {/* Tab content */}
+            <div className="xp-tab-content">
+              {/* Panel de Conciertos */}
+              <div className={`xp-tab-panel ${activeTab === 'conciertos' ? 'active' : ''}`}>
+                <div className="grid gap-2 sm:gap-3 md:gap-4">
+                  {concerts.map((concert) => (
+                    <div key={concert.id} className="concert-row">
+                      <span className="concert-fecha">{concert.fecha}</span>
+                      <span className="concert-ciudad">{concert.ciudad}</span>
+                      <span className="concert-sala">{concert.sala}</span>
+                      <button
+                        className="concert-btn"
+                        onClick={() => window.open(concert.link, "_blank")}
+                      >
+                        Tickets
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 sm:mt-6 text-center">
+                  <p className="text-gray-600 text-xs sm:text-sm italic">Muchos más por confirmar</p>
+                </div>
+              </div>
+
+              {/* Panel de Festivales */}
+              <div className={`xp-tab-panel ${activeTab === 'festivales' ? 'active' : ''}`}>
+                {isFestivalsLoading ? (
+                  <div className="grid gap-2 sm:gap-3 md:gap-4">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="concert-row animate-pulse">
+                        <div className="h-4 w-12 bg-gray-300 rounded" />
+                        <div className="h-4 w-16 bg-gray-300 rounded" />
+                        <div className="h-4 w-20 bg-gray-200 rounded flex-1" />
+                        <div className="h-6 w-14 bg-green-200 rounded" />
+                      </div>
+                    ))}
+                  </div>
+                ) : festivals.length > 0 ? (
+                  <div className="grid gap-2 sm:gap-3 md:gap-4">
+                    {festivals.map((festival) => (
+                      <div key={festival.id} className="concert-row">
+                        <span className="concert-fecha">{festival.fecha}</span>
+                        <span className="concert-ciudad">{festival.ciudad}</span>
+                        <span className="concert-sala">{festival.sala}</span>
+                        <button
+                          className="concert-btn"
+                          onClick={() => window.open(festival.link, "_blank")}
+                        >
+                          Tickets
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600 text-sm">No hay festivales confirmados todavía</p>
+                  </div>
+                )}
+                <div className="mt-4 sm:mt-6 text-center">
+                  <p className="text-gray-600 text-xs sm:text-sm italic">Más festivales por confirmar</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
