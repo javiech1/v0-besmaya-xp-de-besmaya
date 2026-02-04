@@ -892,8 +892,8 @@ function WelcomePosterContent() {
           <div className="w-full aspect-[3/4] bg-gray-300 animate-pulse rounded-none sm:rounded-lg" />
         )}
         <img
-          src="FEED.png"
-          alt="Besmaya Madrid Concert"
+          src="/gira.jpg"
+          alt="La gira de Nadie - Besmaya"
           className={`w-full h-auto rounded-none sm:rounded-lg transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'}`}
           onLoad={() => setIsLoaded(true)}
         />
@@ -901,7 +901,7 @@ function WelcomePosterContent() {
       <Link
         href="/conciertos"
         prefetch={true}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-lg text-center block transition-colors duration-200 text-sm sm:text-base"
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-lg text-center block transition-colors duration-200 text-sm sm:text-base border-transparent"
       >
         entradas
       </Link>
@@ -929,7 +929,7 @@ function AlbumContent() {
         href="https://acqustic-platform.sumupstore.com/producto/la-vida-de-nadie-besmaya"
         target="_blank"
         rel="noopener noreferrer"
-        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-lg text-center block transition-colors duration-200 text-sm sm:text-base"
+        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-lg text-center block transition-colors duration-200 text-sm sm:text-base border-transparent"
       >
         comprar ahora
       </a>
