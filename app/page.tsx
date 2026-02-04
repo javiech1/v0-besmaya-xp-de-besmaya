@@ -567,30 +567,28 @@ export default function BesmayaDesktop() {
 
         {/* Indicadores de ventanas en móvil */}
         {!isDesktop && windows.length > 0 && (
-          <div className="flex-1 flex justify-center px-2">
-            <div className="flex gap-1">
-              {windows.map((w) => (
-                <button
-                  key={w.id}
-                  className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
-                    !w.isMinimized ? 'bg-blue-400/80' : 'bg-blue-600/60'
-                  }`}
-                  onClick={() => {
-                    if (w.isMinimized) {
-                      setWindows(prev => prev.map(win =>
-                        win.id === w.id ? {...win, isMinimized: false, zIndex: nextZIndex} : win
-                      ))
-                      setNextZIndex(prev => prev + 1)
-                    } else {
-                      minimizeWindow(w.id)
-                    }
-                  }}
-                  title={w.title}
-                >
-                  <span className="text-xs">📄</span>
-                </button>
-              ))}
-            </div>
+          <div className="flex gap-1 mx-2">
+            {windows.map((w) => (
+              <button
+                key={w.id}
+                className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                  !w.isMinimized ? 'bg-blue-400/80' : 'bg-blue-600/60'
+                }`}
+                onClick={() => {
+                  if (w.isMinimized) {
+                    setWindows(prev => prev.map(win =>
+                      win.id === w.id ? {...win, isMinimized: false, zIndex: nextZIndex} : win
+                    ))
+                    setNextZIndex(prev => prev + 1)
+                  } else {
+                    minimizeWindow(w.id)
+                  }
+                }}
+                title={w.title}
+              >
+                <span className="text-xs">📄</span>
+              </button>
+            ))}
           </div>
         )}
 

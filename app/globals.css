@@ -236,12 +236,12 @@ body {
   max-height: calc(48vh - 32px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 2px !important;
+  padding: 0 !important;
 }
 
 /* Ajustar contenido de ventanas iniciales */
 .mobile-window-initial .window-content img {
-  max-height: calc(48vh - 60px) !important;
+  max-height: calc(48vh - 36px) !important;
   width: auto !important;
   max-width: 100% !important;
   object-fit: contain !important;
@@ -255,7 +255,7 @@ body {
 }
 
 .mobile-window-welcome-poster .window-content img {
-  max-height: calc(55vh - 60px) !important;
+  max-height: calc(55vh - 36px) !important;
 }
 
 .mobile-window .window-header {
