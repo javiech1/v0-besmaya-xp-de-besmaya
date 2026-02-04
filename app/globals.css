@@ -1172,3 +1172,151 @@ body {
 .concert-row .concert-btn:hover {
   background-color: #16a34a;
 }
+
+/* ================================================
+   XP TABS SYSTEM - Estilo Windows XP
+   ================================================ */
+
+/* Contenedor de tabs */
+.xp-tabs-container {
+  display: flex;
+  align-items: flex-end;
+  padding: 0 4px;
+  margin-bottom: -1px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Tab individual - estilo botón XP claro */
+.xp-tab {
+  padding: 8px 20px;
+  font-size: 12px;
+  font-family: "Tahoma", sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  margin-right: 4px;
+  position: relative;
+  /* Transición específica para rendimiento óptimo */
+  transition:
+    background 0.2s ease-out,
+    color 0.2s ease-out,
+    border-color 0.2s ease-out,
+    box-shadow 0.2s ease-out,
+    transform 0.15s ease-out;
+  will-change: background, color, box-shadow, transform;
+  /* Estilo botón 3D - gris con efecto elevado */
+  background: linear-gradient(to bottom, #f5f5f5 0%, #e5e5e5 50%, #d4d4d4 100%);
+  color: #525252;
+  border-top-color: #fafafa;
+  border-left-color: #fafafa;
+  border-right-color: #a3a3a3;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.9),
+    inset -1px 0 0 rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Tab activo - Azul brillante, más grande y prominente */
+.xp-tab.active {
+  padding: 10px 24px;
+  padding-bottom: 12px;
+  margin-bottom: -1px;
+  font-size: 13px;
+  z-index: 2;
+  font-weight: bold;
+  /* Azul XP brillante */
+  background: linear-gradient(to bottom, #60a5fa 0%, #3b82f6 40%, #2563eb 100%);
+  color: #ffffff;
+  border-color: #1d4ed8;
+  border-top-color: #93c5fd;
+  border-left-color: #93c5fd;
+  border-right-color: #1e40af;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.4),
+    inset -1px 0 0 rgba(0, 0, 0, 0.2),
+    0 -2px 8px rgba(59, 130, 246, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Tab hover (no activo) - efecto de elevación */
+.xp-tab:not(.active):hover {
+  background: linear-gradient(to bottom, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%);
+  color: #1e40af;
+  border-top-color: #e0f2fe;
+  border-left-color: #e0f2fe;
+  border-right-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.9),
+    inset -1px 0 0 rgba(0, 0, 0, 0.1),
+    0 4px 8px rgba(59, 130, 246, 0.2);
+}
+
+/* Tab click/active state */
+.xp-tab:not(.active):active {
+  transform: translateY(0);
+  background: linear-gradient(to bottom, #93c5fd 0%, #60a5fa 50%, #3b82f6 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Contenedor del contenido de tabs */
+.xp-tab-content {
+  background: #f5f5f5;
+  border: 1px solid #808080;
+  border-top-color: #808080;
+  position: relative;
+  box-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #dfdfdf;
+}
+
+/* Panel de contenido individual */
+.xp-tab-panel {
+  display: none;
+  padding: 8px;
+}
+
+.xp-tab-panel.active {
+  display: block;
+}
+
+/* Responsive tabs con container queries */
+@container concert-list (max-width: 400px) {
+  .xp-tab {
+    padding: 6px 12px;
+    font-size: 10px;
+  }
+  .xp-tab.active {
+    padding: 8px 14px;
+    padding-bottom: 10px;
+    font-size: 11px;
+  }
+}
+
+@container concert-list (min-width: 401px) and (max-width: 550px) {
+  .xp-tab {
+    padding: 7px 14px;
+    font-size: 11px;
+  }
+  .xp-tab.active {
+    padding: 9px 18px;
+    padding-bottom: 11px;
+    font-size: 12px;
+  }
+}
+
+@container concert-list (min-width: 551px) and (max-width: 700px) {
+  .xp-tab {
+    padding: 6px 14px;
+    font-size: 11px;
+  }
+}
+
+@container concert-list (min-width: 701px) {
+  .xp-tab {
+    padding: 6px 20px;
+    font-size: 12px;
+  }
+}
