@@ -187,44 +187,60 @@ body {
   animation: mobileWindowSlideUp 0.25s ease-out;
 }
 
-/* Mobile initial windows (ventanas iniciales - debajo de iconos) */
+/* Mobile initial windows (ventanas iniciales - apiladas debajo de iconos) */
 .mobile-window-initial {
   position: fixed !important;
-  left: 12px !important;
-  right: 12px !important;
-  width: calc(100vw - 24px) !important;
+  left: 8px !important;
+  right: 8px !important;
+  width: calc(50vw - 12px) !important;
   bottom: 56px !important;
   top: auto !important;
   height: auto !important;
-  max-height: 58vh !important;
+  max-height: 48vh !important;
   min-width: unset !important;
   border-radius: 8px !important;
   animation: mobileWindowSlideUp 0.25s ease-out;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Primera ventana (FEED) - izquierda */
+.mobile-window-welcome-poster {
+  left: 8px !important;
+  right: auto !important;
+}
+
+/* Segunda ventana (Album) - derecha */
+.mobile-window-album {
+  left: auto !important;
+  right: 8px !important;
 }
 
 .mobile-window-initial .window-header {
   border-radius: 8px 8px 0 0;
-  height: 36px;
-  padding: 0 8px;
+  height: 32px;
+  padding: 0 6px;
+}
+
+.mobile-window-initial .window-title {
+  font-size: 10px !important;
 }
 
 .mobile-window-initial .window-control {
-  width: 26px;
-  height: 26px;
-  font-size: 14px;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
 }
 
 .mobile-window-initial .window-content {
-  max-height: calc(58vh - 36px);
+  max-height: calc(48vh - 32px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 6px !important;
+  padding: 4px !important;
 }
 
 /* Ajustar contenido de ventanas iniciales */
 .mobile-window-initial .window-content img {
-  max-height: calc(58vh - 100px) !important;
+  max-height: calc(48vh - 80px) !important;
   width: auto !important;
   max-width: 100% !important;
   object-fit: contain !important;

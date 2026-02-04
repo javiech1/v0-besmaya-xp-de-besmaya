@@ -121,7 +121,7 @@ export default function BesmayaDesktop() {
     const screenWidth = typeof window !== "undefined" ? window.innerWidth : 1024
     const screenHeight = typeof window !== "undefined" ? window.innerHeight : 768
 
-    // En móvil: mostrar las 2 ventanas debajo de los iconos
+    // En móvil: mostrar las 2 ventanas apiladas debajo de los iconos
     if (!isDesktop) {
       const initialWindows: WindowState[] = [
         {
@@ -133,7 +133,7 @@ export default function BesmayaDesktop() {
           width: screenWidth,
           height: "auto",
           isMinimized: false,
-          zIndex: 101,
+          zIndex: 102,
           isInitial: true,
         },
         {
@@ -144,8 +144,8 @@ export default function BesmayaDesktop() {
           y: 0,
           width: screenWidth,
           height: "auto",
-          isMinimized: true, // Minimizada por defecto, el usuario puede abrirla
-          zIndex: 102,
+          isMinimized: false,
+          zIndex: 101,
           isInitial: true,
         },
       ]
@@ -424,7 +424,7 @@ export default function BesmayaDesktop() {
         .map((windowItem) => (
           <div
             key={windowItem.id}
-            className={`window ${!isDesktop ? (windowItem.isInitial ? 'mobile-window-initial' : 'mobile-window') : ''}`}
+            className={`window ${!isDesktop ? (windowItem.isInitial ? `mobile-window-initial mobile-window-${windowItem.id}` : 'mobile-window') : ''}`}
             style={isDesktop ? {
               left: windowItem.x,
               top: windowItem.y,
