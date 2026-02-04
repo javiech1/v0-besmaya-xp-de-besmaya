@@ -560,41 +560,43 @@ export default function BesmayaDesktop() {
       )}
 
       <div className="xp-taskbar flex items-center justify-between px-2 sm:px-4 py-2 bg-gray-800 text-white">
-        <button className="xp-start-btn" onClick={toggleStartMenu}>
-          <img src="/icons/sistema-operativo.png" alt="Start" width={16} height={16} className="mr-1 sm:mr-1" />
-          <span className="hidden sm:inline">start</span>
-        </button>
+        {/* Grupo izquierdo: Start + indicadores de ventanas */}
+        <div className="flex items-center">
+          <button className="xp-start-btn" onClick={toggleStartMenu}>
+            <img src="/icons/sistema-operativo.png" alt="Start" width={16} height={16} className="mr-1 sm:mr-1" />
+            <span className="hidden sm:inline">start</span>
+          </button>
 
-        {/* Indicadores de ventanas en móvil */}
-        {!isDesktop && windows.length > 0 && (
-          <div className="flex gap-1 mx-2">
-            {windows.map((w) => (
-              <button
-                key={w.id}
-                className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
-                  !w.isMinimized ? 'bg-blue-400/80' : 'bg-blue-600/60'
-                }`}
-                onClick={() => {
-                  if (w.isMinimized) {
-                    setWindows(prev => prev.map(win =>
-                      win.id === w.id ? {...win, isMinimized: false, zIndex: nextZIndex} : win
-                    ))
-                    setNextZIndex(prev => prev + 1)
-                  } else {
-                    minimizeWindow(w.id)
-                  }
-                }}
-                title={w.title}
-              >
-                <span className="text-xs">{w.id === 'welcome-poster' ? '🎫' : w.id === 'album' ? '💿' : '📄'}</span>
-              </button>
-            ))}
-          </div>
-        )}
+          {/* Indicadores de ventanas en móvil */}
+          {!isDesktop && windows.length > 0 && (
+            <div className="flex gap-1 ml-2">
+              {windows.map((w) => (
+                <button
+                  key={w.id}
+                  className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                    !w.isMinimized ? 'bg-blue-400/80' : 'bg-blue-600/60'
+                  }`}
+                  onClick={() => {
+                    if (w.isMinimized) {
+                      setWindows(prev => prev.map(win =>
+                        win.id === w.id ? {...win, isMinimized: false, zIndex: nextZIndex} : win
+                      ))
+                      setNextZIndex(prev => prev + 1)
+                    } else {
+                      minimizeWindow(w.id)
+                    }
+                  }}
+                  title={w.title}
+                >
+                  <span className="text-xs">{w.id === 'welcome-poster' ? '🎫' : w.id === 'album' ? '💿' : '📄'}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
-        {/* Botones de ventanas - solo desktop */}
-        {isDesktop && (
-        <div className="xp-taskbar-buttons flex-1 flex overflow-hidden">
+          {/* Botones de ventanas - solo desktop */}
+          {isDesktop && (
+          <div className="xp-taskbar-buttons flex-1 flex overflow-hidden ml-2">
           {windows.map((windowItem) => (
             <button
               key={windowItem.id}
@@ -615,6 +617,7 @@ export default function BesmayaDesktop() {
           ))}
         </div>
         )}
+        </div>
 
         <div className="flex items-center space-x-2 sm:space-x-1 text-white text-xs flex-shrink-0">
           <a
