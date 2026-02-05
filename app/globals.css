@@ -538,6 +538,7 @@ body {
 
   /* Individual icon adjustments for equal visual height */
   .desktop-icon-image-wrapper.icon-conciertos { width: 115px !important; }
+  .desktop-icon-image-wrapper.icon-vinilo { width: 110px !important; }
   .desktop-icon-image-wrapper.icon-merchan { width: 55px !important; }
 
   .desktop-icon-image-wrapper.icon-conciertos img,
@@ -630,6 +631,18 @@ body {
     width: 62px !important;
     height: 52px !important;
     object-fit: fill !important;
+  }
+
+  /* Fix for "Vinilos y CDs" icon */
+  .desktop-icon-image-wrapper.icon-vinilo {
+    width: 62px !important;
+    height: 52px !important;
+  }
+
+  .desktop-icon-image-wrapper.icon-vinilo img {
+    width: 62px !important;
+    height: 52px !important;
+    object-fit: contain !important;
   }
 }
 

@@ -295,6 +295,9 @@ export default function BesmayaDesktop() {
 
   const handleIconClick = (iconId: string) => {
     switch (iconId) {
+      case "vinilo":
+        window.open("https://acqustic-platform.sumupstore.com/producto/la-vida-de-nadie-besmaya", "_blank")
+        break
       case "merchan":
         window.open("https://merchandtour.com/besmaya/", "_blank")
         break
@@ -389,13 +392,23 @@ export default function BesmayaDesktop() {
         </div>
 
         <div
+          className={`desktop-icon ${selectedIcon === "vinilo" ? "selected" : ""}`}
+          onClick={() => handleIconClick("vinilo")}
+        >
+          <div className="desktop-icon-image-wrapper icon-vinilo">
+            <img src="/icons/vinilo.png" alt="Vinilos y CDs" />
+          </div>
+          <span>Vinilos y CDs</span>
+        </div>
+
+        <div
           className={`desktop-icon ${selectedIcon === "merchan" ? "selected" : ""}`}
           onClick={() => handleIconClick("merchan")}
         >
           <div className="desktop-icon-image-wrapper icon-merchan">
             <img src="/icons/merchan.png" alt="Merchan" />
           </div>
-          <span>Tienda</span>
+          <span>Merch</span>
         </div>
 
         <div
