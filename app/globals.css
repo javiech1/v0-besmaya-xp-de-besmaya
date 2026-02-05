@@ -1406,58 +1406,63 @@ body {
   height: 20px !important;
 }
 
-/* Iconos a la izquierda - 3 iconos por columna */
+/* Iconos - Grid 3 filas × máx 3 columnas */
 .landscape-mobile .desktop-icons {
   position: fixed !important;
   left: 0 !important;
   top: 0 !important;
   width: 30vw !important;
   height: calc(100vh - 36px) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  flex-wrap: wrap !important;
-  align-content: flex-start !important;
-  justify-content: flex-start !important;
+
+  display: grid !important;
+  /* 3 filas fijas */
+  grid-template-rows: repeat(3, 1fr) !important;
+  /* Llenar por columna (arriba→abajo, luego siguiente columna) */
+  grid-auto-flow: column !important;
+  /* Columnas flexibles, máximo 1/3 del ancho para 3 columnas */
+  grid-auto-columns: minmax(0, calc(100% / 3)) !important;
+
+  gap: 2px !important;
   padding: 4px !important;
-  gap: 4px !important;
   overflow: hidden !important;
   background: rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Iconos con altura fija para 3 por columna */
+/* Iconos se adaptan a la celda del grid */
 .landscape-mobile .desktop-icon {
-  width: calc(15vw - 6px) !important;
-  min-width: 60px !important;
-  max-width: 90px !important;
-  height: calc((100vh - 36px - 16px) / 3) !important;
-  max-height: 75px !important;
-  min-height: auto !important;
-  padding: 4px !important;
-  flex-shrink: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  max-width: unset !important;
+  min-height: 0 !important;
+  max-height: unset !important;
+  padding: 2px !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
   align-items: center !important;
 }
 
+/* Imagen del icono se adapta */
 .landscape-mobile .desktop-icon-image-wrapper {
-  width: 32px !important;
-  height: 32px !important;
+  width: clamp(24px, 6vw, 40px) !important;
+  height: clamp(24px, 6vw, 40px) !important;
   margin-bottom: 2px !important;
 }
 
 .landscape-mobile .desktop-icon-image-wrapper.icon-conciertos {
-  width: 38px !important;
-  height: 32px !important;
+  width: clamp(28px, 7vw, 44px) !important;
+  height: clamp(24px, 6vw, 38px) !important;
 }
 
 .landscape-mobile .desktop-icon-image-wrapper.icon-conciertos img {
-  width: 38px !important;
-  height: 32px !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
+/* Texto del icono se adapta */
 .landscape-mobile .desktop-icon span {
-  font-size: 9px !important;
+  font-size: clamp(7px, 1.5vw, 10px) !important;
   line-height: 1.1 !important;
 }
 

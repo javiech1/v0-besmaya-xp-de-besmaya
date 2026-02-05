@@ -69,9 +69,13 @@ export default function BesmayaDesktop() {
       const isLandscape = w > h
       const hasPointer = pointerQuery.matches
 
-      // Desktop SOLO si tiene puntero fino (ratón) Y ancho suficiente
+      // Ancho mínimo para que quepan todos los iconos en desktop
+      // 6 iconos × 140px + margen = ~880px
+      const MIN_DESKTOP_WIDTH = 880
+
+      // Desktop SOLO si tiene puntero fino (ratón) Y caben los iconos
       // Sin puntero fino = siempre móvil, sin importar tamaño de pantalla
-      const isDesktopMode = hasPointer && w >= 640
+      const isDesktopMode = hasPointer && w >= MIN_DESKTOP_WIDTH
       setIsDesktop(isDesktopMode)
       setIsSmallDesktop(isDesktopMode && w < 1024)
       // Landscape móvil: no es desktop Y orientación horizontal
