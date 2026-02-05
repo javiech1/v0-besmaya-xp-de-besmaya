@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
@@ -48,19 +48,81 @@ export default function BesmayaDesktop() {
   const [isUnderConstruction, setIsUnderConstruction] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
   const [isDesktopDetermined, setIsDesktopDetermined] = useState(false)
+  const [isSmallDesktop, setIsSmallDesktop] = useState(false)
+  const [isLandscapeMobile, setIsLandscapeMobile] = useState(false)
+  const [hasFinePointer, setHasFinePointer] = useState(false)
   const [initialWindowsCreated, setInitialWindowsCreated] = useState(false)
   const [spotifyPrefetched, setSpotifyPrefetched] = useState(false)
   const [concertsPreloaded, setConcertsPreloaded] = useState(false)
   const router = useRouter()
+  const iconsContainerRef = useRef<HTMLDivElement>(null)
+  const forcedMobileByCollision = useRef(false)
+  const collisionEntryHeight = useRef<number>(0)
 
   useEffect(() => {
+    // Detectar capacidad de puntero fino (ratón)
+    const pointerQuery = window.matchMedia('(pointer: fine)')
+    const updatePointer = () => setHasFinePointer(pointerQuery.matches)
+    updatePointer()
+    pointerQuery.addEventListener('change', updatePointer)
+
     const checkScreenSize = () => {
-      setIsDesktop(window.innerWidth >= 640)
+      const w = window.innerWidth
+      const h = window.innerHeight
+      const isLandscape = w > h
+      const hasPointer = pointerQuery.matches
+
+      // Ancho mínimo para que quepan todos los iconos en desktop
+      // 6 iconos × 140px + margen = ~880px
+      const MIN_DESKTOP_WIDTH = 880
+
+      // Desktop SOLO si tiene puntero fino (ratón) Y caben los iconos
+      // Sin puntero fino = siempre móvil, sin importar tamaño de pantalla
+      let isDesktopMode = hasPointer && w >= MIN_DESKTOP_WIDTH
+
+      // Si es desktop, verificar si los iconos tocan la taskbar
+      if (isDesktopMode && iconsContainerRef.current) {
+        const iconsRect = iconsContainerRef.current.getBoundingClientRect()
+        const taskbarTop = h - TASKBAR_HEIGHT
+        const iconHeight = 130
+        const enterThreshold = iconHeight * 0.2
+
+        if (forcedMobileByCollision.current) {
+          // Ya en móvil por colisión: solo salir si hay suficiente altura extra
+          if (h > collisionEntryHeight.current + 100) {
+            forcedMobileByCollision.current = false
+            collisionEntryHeight.current = 0
+          } else {
+            isDesktopMode = false
+          }
+        } else {
+          // Verificar si debemos entrar a móvil por colisión
+          if (iconsRect.bottom > taskbarTop + enterThreshold) {
+            forcedMobileByCollision.current = true
+            collisionEntryHeight.current = h
+            isDesktopMode = false
+          }
+        }
+      }
+
+      // Forzar landscape cuando móvil por colisión vertical (pantalla desktop sin altura)
+      const shouldBeLandscapeMobile = forcedMobileByCollision.current
+        ? true
+        : (!isDesktopMode && isLandscape)
+
+      setIsDesktop(isDesktopMode)
+      setIsSmallDesktop(isDesktopMode && w < 1024)
+      setIsLandscapeMobile(shouldBeLandscapeMobile)
       setIsDesktopDetermined(true)
     }
     checkScreenSize()
     window.addEventListener("resize", checkScreenSize)
-    return () => window.removeEventListener("resize", checkScreenSize)
+    window.addEventListener("orientationchange", checkScreenSize)
+    return () => {
+      window.removeEventListener("resize", checkScreenSize)
+      window.removeEventListener("orientationchange", checkScreenSize)
+      pointerQuery.removeEventListener('change', updatePointer)
+    }
   }, [])
 
   useEffect(() => {
@@ -78,6 +140,71 @@ export default function BesmayaDesktop() {
     const interval = setInterval(updateTime, 1000)
     return () => clearInterval(interval)
   }, [])
+
+  // Clamping de ventanas cuando el viewport se reduce (solo en desktop)
+  useEffect(() => {
+    if (!isDesktop) return
+
+    const handleViewportResize = () => {
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+
+      setWindows(prev => prev.map(w => {
+        const windowHeight = typeof w.height === "number" ? w.height : 400
+        const maxX = Math.max(0, vw - w.width)
+        const maxY = Math.max(0, vh - windowHeight - TASKBAR_HEIGHT)
+
+        return {
+          ...w,
+          x: Math.max(0, Math.min(w.x, maxX)),
+          y: Math.max(0, Math.min(w.y, maxY)),
+        }
+      }))
+    }
+
+    window.addEventListener("resize", handleViewportResize)
+    return () => window.removeEventListener("resize", handleViewportResize)
+  }, [isDesktop])
+
+  // Adaptar ventanas iniciales cuando cambia el modo desktop↔móvil
+  useEffect(() => {
+    if (!isDesktopDetermined || !initialWindowsCreated) return
+
+    const screenWidth = window.innerWidth
+    const screenHeight = window.innerHeight
+
+    setWindows(prev => prev.map(w => {
+      if (!w.isInitial) return w
+
+      if (!isDesktop) {
+        // Modo móvil: ancho completo
+        return { ...w, x: 0, y: 0, width: screenWidth }
+      } else {
+        // Modo desktop: recalcular posiciones
+        const isSmall = screenWidth < 1024
+        const scale = isSmall ? Math.max(0.75, screenWidth / 1024) : 1
+        const windowWidth = Math.min(384, screenWidth * 0.4) * scale
+        const offsetX = isSmall ? Math.min(100, screenWidth * 0.1) : 200
+
+        if (w.id === "welcome-poster") {
+          return {
+            ...w,
+            x: Math.max(20, screenWidth / 2 - windowWidth / 2 - offsetX),
+            y: Math.max(20, screenHeight / 2 - 275 - 80),
+            width: windowWidth,
+          }
+        } else if (w.id === "album") {
+          return {
+            ...w,
+            x: Math.min(screenWidth - windowWidth - 20, screenWidth / 2 - windowWidth / 2 + offsetX),
+            y: Math.max(20, screenHeight / 2 - 230 + (isSmall ? 60 : 120)),
+            width: windowWidth,
+          }
+        }
+        return w
+      }
+    }))
+  }, [isDesktop, isDesktopDetermined, initialWindowsCreated])
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -163,19 +290,26 @@ export default function BesmayaDesktop() {
       return
     }
 
-    // Desktop: dos ventanas en cascada
-    const feedWidth = 384
-    const albumWidth = 384
+    // Desktop: dos ventanas en cascada con dimensiones adaptativas
+    const isSmall = screenWidth < 1024
+    const scale = isSmall ? Math.max(0.75, screenWidth / 1024) : 1
+
+    const feedWidth = Math.min(384, screenWidth * 0.4) * scale
+    const albumWidth = Math.min(384, screenWidth * 0.4) * scale
     const feedEstimatedHeight = 550
     const albumEstimatedHeight = 460
+
+    // Offset de cascada adaptativo
+    const offsetX = isSmall ? Math.min(100, screenWidth * 0.1) : 200
+    const offsetY = isSmall ? 60 : 120
 
     const initialWindows: WindowState[] = [
       {
         id: "welcome-poster",
         title: "La gira de Nadie",
         content: <WelcomePosterContent />,
-        x: screenWidth / 2 - feedWidth / 2 - 200,
-        y: Math.min(screenHeight / 2 - feedEstimatedHeight / 2 - 80, screenHeight - feedEstimatedHeight - TASKBAR_HEIGHT),
+        x: Math.max(20, screenWidth / 2 - feedWidth / 2 - offsetX),
+        y: Math.max(20, Math.min(screenHeight / 2 - feedEstimatedHeight / 2 - 80, screenHeight - feedEstimatedHeight - TASKBAR_HEIGHT - 20)),
         width: feedWidth,
         height: "auto",
         isMinimized: false,
@@ -185,8 +319,8 @@ export default function BesmayaDesktop() {
         id: "album",
         title: "La vida de Nadie",
         content: <AlbumContent />,
-        x: screenWidth / 2 - albumWidth / 2 + 200,
-        y: Math.min(screenHeight / 2 - albumEstimatedHeight / 2 + 120, screenHeight - albumEstimatedHeight - TASKBAR_HEIGHT),
+        x: Math.min(screenWidth - albumWidth - 20, screenWidth / 2 - albumWidth / 2 + offsetX),
+        y: Math.max(20, Math.min(screenHeight / 2 - albumEstimatedHeight / 2 + offsetY, screenHeight - albumEstimatedHeight - TASKBAR_HEIGHT - 20)),
         width: albumWidth,
         height: "auto",
         isMinimized: false,
@@ -224,32 +358,51 @@ export default function BesmayaDesktop() {
       return
     }
 
-    let windowWidth = 600
-    let windowHeight = 400
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+
+    // Factor de escala para escritorios pequeños (640-1024px)
+    const scale = vw < 1024 ? Math.max(0.75, vw / 1024) : 1
+
+    // Dimensiones base responsivas
+    let windowWidth: number
+    let windowHeight: number
 
     if (id === "musica") {
-      windowWidth = 306
-      windowHeight = 388
+      windowWidth = Math.min(306, vw * 0.4) * scale
+      windowHeight = Math.min(388, vh * 0.6)
+    } else if (id === "welcome") {
+      windowWidth = Math.min(420, vw * 0.45) * scale
+      windowHeight = Math.min(520, vh * 0.7)
+    } else if (id === "welcome-mobile") {
+      windowWidth = Math.min(350, vw * 0.4) * scale
+      windowHeight = Math.min(600, vh * 0.75)
+    } else {
+      windowWidth = Math.min(600, vw * 0.6) * scale
+      windowHeight = Math.min(400, vh * 0.55)
     }
-    if (id === "welcome") {
-      windowWidth = 420
-      windowHeight = 520
-    }
-    if (id === "welcome-mobile") {
-      windowWidth = 350
-      windowHeight = 600
-    }
-    if (id === "paint") {
-      windowWidth = 500
-      windowHeight = 500
-    }
+
+    // Tamaño mínimo usable
+    windowWidth = Math.max(280, windowWidth)
+    windowHeight = Math.max(200, windowHeight)
+
+    // Posición con cascade offset adaptativo
+    const cascadeOffset = (windows.length % 5) * (isSmallDesktop ? 20 : 30)
+    const x = Math.max(0, Math.min(
+      50 + cascadeOffset,
+      vw - windowWidth
+    ))
+    const y = Math.max(0, Math.min(
+      50 + cascadeOffset,
+      vh - windowHeight - TASKBAR_HEIGHT
+    ))
 
     const newWindow: WindowState = {
       id,
       title,
       content,
-      x: 100 + windows.length * 30,
-      y: Math.min(100 + windows.length * 30, window.innerHeight - windowHeight - TASKBAR_HEIGHT),
+      x,
+      y,
       width: windowWidth,
       height: windowHeight,
       isMinimized: false,
@@ -316,9 +469,6 @@ export default function BesmayaDesktop() {
       case "videos":
         window.open("https://www.youtube.com/@BESMAYA", "_blank")
         break
-      case "paint":
-        openWindow("paint", "Paint", <PaintContent />)
-        break
     }
     setSelectedIcon(null)
   }
@@ -370,14 +520,22 @@ export default function BesmayaDesktop() {
   }
 
   return (
-    <div className="h-screen w-screen relative overflow-hidden">
+    <div className={`h-screen w-screen relative overflow-hidden ${isLandscapeMobile ? 'landscape-mobile' : ''}`}>
       <img
         src="/xp-bliss-custom.jpg"
         alt="Windows XP Bliss Wallpaper"
         className="absolute inset-0 w-full h-full object-cover -z-10"
       />
 
-      <div className="desktop-icons absolute top-8 left-8 flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 gap-5 h-max">
+      <div
+        ref={iconsContainerRef}
+        className={`desktop-icons ${
+        isLandscapeMobile
+          ? ''
+          : isDesktop
+            ? 'absolute top-8 left-8 flex flex-wrap gap-5'
+            : 'absolute top-8 left-8 grid grid-cols-2 gap-5'
+      }`}>
         <div
           className={`desktop-icon ${selectedIcon === "conciertos" ? "selected" : ""}`}
           onClick={() => handleIconClick("conciertos")}
@@ -431,7 +589,7 @@ export default function BesmayaDesktop() {
         </div>
 
         <div
-          className={`desktop-icon hidden ${selectedIcon === "bio" ? "selected" : ""}`}
+          className={`desktop-icon ${selectedIcon === "bio" ? "selected" : ""}`}
           onClick={() => handleIconClick("bio")}
         >
           <div className="desktop-icon-image-wrapper">
@@ -546,19 +704,6 @@ export default function BesmayaDesktop() {
                 <span>Videos</span>
               </div>
 
-              <div className="border-t border-gray-300 my-2"></div>
-              <div
-                className="start-menu-item flex items-center space-x-2 mb-2 cursor-pointer"
-                onClick={() => {
-                  openWindow("paint", "Paint", <PaintContent />)
-                  setIsStartMenuOpen(false)
-                }}
-              >
-                <div className="w-8 h-8 bg-gradient-to-br from-red-400 to-red-600 rounded flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">🎨</span>
-                </div>
-                <span>Paint</span>
-              </div>
             </div>
           </div>
         </div>
@@ -761,76 +906,6 @@ function BioContent() {
       <div className="bg-white border border-gray-300 h-full p-4 overflow-auto" style={{ fontFamily: "monospace" }}>
         <div className="text-sm leading-relaxed">
           <p className="mb-4">Besmaya son Javi Ojanguren y Javi Echavarri</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function PaintContent() {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    setIsMobile(window.innerWidth < 640)
-  }, [])
-
-  if (isMobile) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-gray-100">
-        <div className="text-6xl mb-4">🎨</div>
-        <h2 className="text-xl font-bold mb-2">Paint</h2>
-        <p className="text-gray-600">
-          Esta aplicación funciona mejor en un ordenador.
-        </p>
-        <p className="text-gray-500 text-sm mt-4">
-          ¡Visita desde tu PC para dibujar!
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="h-full bg-gray-200 flex flex-col">
-      <div className="bg-gray-100 border-b border-gray-300 p-1 flex space-x-2">
-        <button className="px-2 py-1 text-xs hover:bg-blue-100">File</button>
-        <button className="px-2 py-1 text-xs hover:bg-blue-100">Edit</button>
-        <button className="px-2 py-1 text-xs hover:bg-blue-100">View</button>
-        <button className="px-2 py-1 text-xs hover:bg-blue-100">Image</button>
-        <button className="px-2 py-1 text-xs hover:bg-blue-100">Colors</button>
-        <button className="px-2 py-1 text-xs hover:bg-blue-100">Help</button>
-      </div>
-
-      <div className="bg-gray-100 border-b border-gray-300 p-1 flex space-x-1">
-        <button className="w-8 h-8 bg-white border border-gray-400 hover:bg-gray-50 flex items-center justify-center text-xs">
-          ✏️
-        </button>
-        <button className="w-8 h-8 bg-white border border-gray-400 hover:bg-gray-50 flex items-center justify-center text-xs">
-          🖌️
-        </button>
-        <button className="w-8 h-8 bg-white border border-gray-400 hover:bg-gray-50 flex items-center justify-center text-xs">
-          🪣
-        </button>
-        <button className="w-8 h-8 bg-white border border-gray-400 hover:bg-gray-50 flex items-center justify-center text-xs">
-          ⬜
-        </button>
-        <button className="w-8 h-8 bg-white border border-gray-400 hover:bg-gray-50 flex items-center justify-center text-xs">
-          ⭕
-        </button>
-      </div>
-
-      <div className="flex-1 bg-white m-2 border-2 border-gray-400 relative overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">Canvas de dibujo</div>
-      </div>
-
-      <div className="bg-gray-100 border-t border-gray-300 p-1 flex space-x-2">
-        <div className="flex space-x-1">
-          {["#000000", "#FFFFFF", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"].map((color) => (
-            <div
-              key={color}
-              className="w-6 h-6 border border-gray-400 cursor-pointer hover:scale-110 transition-transform"
-              style={{ backgroundColor: color }}
-            />
-          ))}
         </div>
       </div>
     </div>
