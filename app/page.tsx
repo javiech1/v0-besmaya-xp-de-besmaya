@@ -494,7 +494,11 @@ export default function BesmayaDesktop() {
         className="absolute inset-0 w-full h-full object-cover -z-10"
       />
 
-      <div className="desktop-icons absolute top-8 left-8 flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 gap-5 h-max">
+      <div className={`desktop-icons ${
+        isLandscapeMobile
+          ? ''
+          : 'absolute top-8 left-8 flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 gap-5 h-max'
+      }`}>
         <div
           className={`desktop-icon ${selectedIcon === "conciertos" ? "selected" : ""}`}
           onClick={() => handleIconClick("conciertos")}
