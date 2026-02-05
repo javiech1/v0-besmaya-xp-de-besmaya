@@ -1,10 +1,11 @@
 "use client"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { getFromCache, setToCache, sortByFechaChronologically } from "@/lib/cache"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
-interface Concert {
+interface Event {
   id: string
   fecha: string
   ciudad: string
@@ -12,14 +13,8 @@ interface Concert {
   link: string
 }
 
-interface Festival {
-  id: string
-  fecha: string
-  ciudad: string
-  sala: string
-  link: string
-}
-
+type Concert = Event
+type Festival = Event
 type TabType = 'conciertos' | 'festivales'
 
 const fallbackConcerts: Concert[] = [
@@ -37,54 +32,11 @@ const fallbackConcerts: Concert[] = [
 
 const fallbackFestivals: Festival[] = []
 
-function parseFechaToDate(fecha: string): Date {
-  const monthMap: { [key: string]: number } = {
-    ene: 0,
-    feb: 1,
-    mar: 2,
-    abr: 3,
-    may: 4,
-    jun: 5,
-    jul: 6,
-    ago: 7,
-    sep: 8,
-    oct: 9,
-    nov: 10,
-    dic: 11,
-  }
-
-  const parts = fecha.split("-")
-  if (parts.length !== 2) return new Date()
-
-  const day = Number.parseInt(parts[0], 10)
-  const month = monthMap[parts[1].toLowerCase()]
-
-  if (isNaN(day) || month === undefined) return new Date()
-
-  return new Date(2026, month, day)
-}
-
-function sortConcertsChronologically(concerts: Concert[]): Concert[] {
-  return [...concerts].sort((a, b) => {
-    const dateA = parseFechaToDate(a.fecha)
-    const dateB = parseFechaToDate(b.fecha)
-    return dateA.getTime() - dateB.getTime()
-  })
-}
-
-function sortFestivalsChronologically(festivals: Festival[]): Festival[] {
-  return [...festivals].sort((a, b) => {
-    const dateA = parseFechaToDate(a.fecha)
-    const dateB = parseFechaToDate(b.fecha)
-    return dateA.getTime() - dateB.getTime()
-  })
-}
-
 export default function ConciertosPage() {
   const [time, setTime] = useState("")
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('conciertos')
-  const [concerts, setConcerts] = useState<Concert[]>(sortConcertsChronologically(fallbackConcerts))
+  const [concerts, setConcerts] = useState<Concert[]>(sortByFechaChronologically(fallbackConcerts))
   const [isLoading, setIsLoading] = useState(true)
   const [festivals, setFestivals] = useState<Festival[]>([])
   const [isFestivalsLoading, setIsFestivalsLoading] = useState(true)
@@ -126,86 +78,40 @@ export default function ConciertosPage() {
   }, [isStartMenuOpen])
 
   const fetchConcerts = async () => {
-    // Try cache first
-    try {
-      const cached = localStorage.getItem('concerts_cache')
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached)
-        if (Date.now() - timestamp < 5 * 60 * 1000) {
-          setConcerts(sortConcertsChronologically(data))
-          setIsLoading(false)
-          return
-        }
-      }
-    } catch {
-      // Ignore cache errors
+    const cached = getFromCache<Concert[]>('concerts_cache')
+    if (cached) {
+      setConcerts(sortByFechaChronologically(cached))
+      setIsLoading(false)
+      return
     }
 
-    // Fetch from Supabase
     try {
       const { data, error } = await supabase.from("concerts").select("*")
-
-      if (error) {
-        console.log("Database not ready, using fallback data:", error.message)
-        setConcerts(sortConcertsChronologically(fallbackConcerts))
-      } else {
-        const sortedData = sortConcertsChronologically(data || fallbackConcerts)
-        setConcerts(sortedData)
-        try {
-          localStorage.setItem('concerts_cache', JSON.stringify({
-            data: data || fallbackConcerts,
-            timestamp: Date.now()
-          }))
-        } catch {
-          // Ignore storage errors
-        }
-      }
-    } catch (error) {
-      console.log("Error fetching concerts, using fallback data:", error)
-      setConcerts(sortConcertsChronologically(fallbackConcerts))
+      const result = error ? fallbackConcerts : (data || fallbackConcerts)
+      setConcerts(sortByFechaChronologically(result))
+      setToCache('concerts_cache', result)
+    } catch {
+      setConcerts(sortByFechaChronologically(fallbackConcerts))
     } finally {
       setIsLoading(false)
     }
   }
 
   const fetchFestivals = async () => {
-    // Try cache first
-    try {
-      const cached = localStorage.getItem('festivals_cache')
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached)
-        if (Date.now() - timestamp < 5 * 60 * 1000) {
-          setFestivals(sortFestivalsChronologically(data))
-          setIsFestivalsLoading(false)
-          return
-        }
-      }
-    } catch {
-      // Ignore cache errors
+    const cached = getFromCache<Festival[]>('festivals_cache')
+    if (cached) {
+      setFestivals(sortByFechaChronologically(cached))
+      setIsFestivalsLoading(false)
+      return
     }
 
-    // Fetch from Supabase
     try {
       const { data, error } = await supabase.from("festis").select("*")
-
-      if (error) {
-        console.log("Festivals database not ready, using fallback data:", error.message)
-        setFestivals(sortFestivalsChronologically(fallbackFestivals))
-      } else {
-        const sortedData = sortFestivalsChronologically(data || fallbackFestivals)
-        setFestivals(sortedData)
-        try {
-          localStorage.setItem('festivals_cache', JSON.stringify({
-            data: data || fallbackFestivals,
-            timestamp: Date.now()
-          }))
-        } catch {
-          // Ignore storage errors
-        }
-      }
-    } catch (error) {
-      console.log("Error fetching festivals, using fallback data:", error)
-      setFestivals(sortFestivalsChronologically(fallbackFestivals))
+      const result = error ? fallbackFestivals : (data || fallbackFestivals)
+      setFestivals(sortByFechaChronologically(result))
+      setToCache('festivals_cache', result)
+    } catch {
+      setFestivals(sortByFechaChronologically(fallbackFestivals))
     } finally {
       setIsFestivalsLoading(false)
     }

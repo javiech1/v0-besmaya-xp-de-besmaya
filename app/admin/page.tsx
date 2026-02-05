@@ -15,6 +15,7 @@ interface Concert {
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [password, setPassword] = useState("")
   const [loginError, setLoginError] = useState("")
 
@@ -32,21 +33,51 @@ export default function AdminPage() {
 
   const supabase = createClient()
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Check existing session on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth")
+        const data = await response.json()
+        setIsAuthenticated(data.authenticated)
+      } catch {
+        setIsAuthenticated(false)
+      } finally {
+        setIsCheckingAuth(false)
+      }
+    }
+    checkAuth()
+  }, [])
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("[v0] Login attempt with password:", password)
-    if (password === "dfñlka134513jhf") {
-      console.log("[v0] Authentication successful")
-      setIsAuthenticated(true)
-      setLoginError("")
-    } else {
-      console.log("[v0] Authentication failed")
-      setLoginError("Contraseña incorrecta")
+    setLoginError("")
+
+    try {
+      const response = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setIsAuthenticated(true)
+      } else {
+        setLoginError(data.error || "Contraseña incorrecta")
+      }
+    } catch {
+      setLoginError("Error de conexión")
     }
   }
 
-  const handleLogout = () => {
-    console.log("[v0] Logging out")
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth", { method: "DELETE" })
+    } catch {
+      // Ignore logout errors
+    }
     setIsAuthenticated(false)
     setPassword("")
   }
@@ -138,7 +169,9 @@ export default function AdminPage() {
     setIsStartMenuOpen(!isStartMenuOpen)
   }
 
-  console.log("[v0] Current authentication state:", isAuthenticated)
+  if (isCheckingAuth) {
+    return <div className="h-screen w-screen flex items-center justify-center">Verificando sesión...</div>
+  }
 
   if (!isAuthenticated) {
     return (
