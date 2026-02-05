@@ -121,6 +121,12 @@ export default function BesmayaDesktop() {
     if (!isDesktopDetermined) return
     if (initialWindowsCreated) return
 
+    // Check if windows were already created in this session
+    if (typeof window !== "undefined" && sessionStorage.getItem("initialWindowsCreated") === "true") {
+      setInitialWindowsCreated(true)
+      return
+    }
+
     const screenWidth = typeof window !== "undefined" ? window.innerWidth : 1024
     const screenHeight = typeof window !== "undefined" ? window.innerHeight : 768
 
@@ -155,6 +161,7 @@ export default function BesmayaDesktop() {
       setWindows(initialWindows)
       setNextZIndex(103)
       setInitialWindowsCreated(true)
+      sessionStorage.setItem("initialWindowsCreated", "true")
       return
     }
 
@@ -192,6 +199,7 @@ export default function BesmayaDesktop() {
     setWindows(initialWindows)
     setNextZIndex(103)
     setInitialWindowsCreated(true)
+    sessionStorage.setItem("initialWindowsCreated", "true")
   }, [isDesktop, isDesktopDetermined, initialWindowsCreated])
 
   useEffect(() => {
