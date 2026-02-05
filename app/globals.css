@@ -1415,6 +1415,7 @@ body {
   left: 0 !important;
   top: 0 !important;
   width: 30vw !important;
+  max-width: 264px !important; /* 30vw a 880px = 264px, evita crecimiento cíclico */
   /* dvh = dynamic viewport height, se ajusta a la UI del navegador */
   height: calc(100dvh - 36px) !important;
 
@@ -1451,16 +1452,16 @@ body {
   border-radius: 8px !important;
 }
 
-/* Imagen del icono se adapta */
+/* Imagen del icono - tamaño fijo para evitar ciclos al redimensionar */
 .landscape-mobile .desktop-icon-image-wrapper {
-  width: clamp(24px, 6vw, 40px) !important;
-  height: clamp(24px, 6vw, 40px) !important;
+  width: 36px !important;
+  height: 36px !important;
   margin-bottom: 2px !important;
 }
 
 .landscape-mobile .desktop-icon-image-wrapper.icon-conciertos {
-  width: clamp(28px, 7vw, 44px) !important;
-  height: clamp(24px, 6vw, 38px) !important;
+  width: 40px !important;
+  height: 36px !important;
 }
 
 .landscape-mobile .desktop-icon-image-wrapper.icon-conciertos img {
@@ -1468,9 +1469,9 @@ body {
   height: 100% !important;
 }
 
-/* Texto del icono se adapta */
+/* Texto del icono - tamaño fijo para evitar ciclos */
 .landscape-mobile .desktop-icon span {
-  font-size: clamp(7px, 1.5vw, 10px) !important;
+  font-size: 9px !important;
   line-height: 1.1 !important;
 }
 
