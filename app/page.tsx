@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
@@ -55,6 +55,9 @@ export default function BesmayaDesktop() {
   const [spotifyPrefetched, setSpotifyPrefetched] = useState(false)
   const [concertsPreloaded, setConcertsPreloaded] = useState(false)
   const router = useRouter()
+  const iconsContainerRef = useRef<HTMLDivElement>(null)
+  const forcedMobileByCollision = useRef(false)
+  const collisionEntryHeight = useRef<number>(0)
 
   useEffect(() => {
     // Detectar capacidad de puntero fino (ratón)
@@ -75,11 +78,41 @@ export default function BesmayaDesktop() {
 
       // Desktop SOLO si tiene puntero fino (ratón) Y caben los iconos
       // Sin puntero fino = siempre móvil, sin importar tamaño de pantalla
-      const isDesktopMode = hasPointer && w >= MIN_DESKTOP_WIDTH
+      let isDesktopMode = hasPointer && w >= MIN_DESKTOP_WIDTH
+
+      // Si es desktop, verificar si los iconos tocan la taskbar
+      if (isDesktopMode && iconsContainerRef.current) {
+        const iconsRect = iconsContainerRef.current.getBoundingClientRect()
+        const taskbarTop = h - TASKBAR_HEIGHT
+        const iconHeight = 130
+        const enterThreshold = iconHeight * 0.2
+
+        if (forcedMobileByCollision.current) {
+          // Ya en móvil por colisión: solo salir si hay suficiente altura extra
+          if (h > collisionEntryHeight.current + 100) {
+            forcedMobileByCollision.current = false
+            collisionEntryHeight.current = 0
+          } else {
+            isDesktopMode = false
+          }
+        } else {
+          // Verificar si debemos entrar a móvil por colisión
+          if (iconsRect.bottom > taskbarTop + enterThreshold) {
+            forcedMobileByCollision.current = true
+            collisionEntryHeight.current = h
+            isDesktopMode = false
+          }
+        }
+      }
+
+      // Forzar landscape cuando móvil por colisión vertical (pantalla desktop sin altura)
+      const shouldBeLandscapeMobile = forcedMobileByCollision.current
+        ? true
+        : (!isDesktopMode && isLandscape)
+
       setIsDesktop(isDesktopMode)
       setIsSmallDesktop(isDesktopMode && w < 1024)
-      // Landscape móvil: no es desktop Y orientación horizontal
-      setIsLandscapeMobile(!isDesktopMode && isLandscape)
+      setIsLandscapeMobile(shouldBeLandscapeMobile)
       setIsDesktopDetermined(true)
     }
     checkScreenSize()
@@ -494,7 +527,9 @@ export default function BesmayaDesktop() {
         className="absolute inset-0 w-full h-full object-cover -z-10"
       />
 
-      <div className={`desktop-icons ${
+      <div
+        ref={iconsContainerRef}
+        className={`desktop-icons ${
         isLandscapeMobile
           ? ''
           : isDesktop
