@@ -1389,133 +1389,130 @@ body {
 
 /* ================================================
    LANDSCAPE MOBILE (Split View)
-   Iconos a la izquierda (30%), ventanas a la derecha (70%)
+   Controlado por clase JS, no por media query de píxeles
+   (los móviles modernos superan 639px en landscape)
    ================================================ */
-@media (max-width: 639px) and (orientation: landscape) {
-  /* Taskbar más compacto en landscape */
-  .xp-taskbar {
-    height: 36px !important;
-  }
+.landscape-mobile .xp-taskbar {
+  height: 36px !important;
+}
 
-  .xp-start-btn {
-    height: 28px !important;
-    padding: 0 8px !important;
-  }
+.landscape-mobile .xp-start-btn {
+  height: 28px !important;
+  padding: 0 8px !important;
+}
 
-  .xp-start-btn img {
-    width: 20px !important;
-    height: 20px !important;
-  }
+.landscape-mobile .xp-start-btn img {
+  width: 20px !important;
+  height: 20px !important;
+}
 
-  /* Iconos a la izquierda - 3 iconos por columna */
-  .desktop-icons {
-    position: fixed !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 30vw !important;
-    height: calc(100vh - 36px) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    flex-wrap: wrap !important;
-    align-content: flex-start !important;
-    justify-content: flex-start !important;
-    padding: 4px !important;
-    gap: 4px !important;
-    overflow: hidden !important;
-    background: rgba(0, 0, 0, 0.1) !important;
-  }
+/* Iconos a la izquierda - 3 iconos por columna */
+.landscape-mobile .desktop-icons {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 30vw !important;
+  height: calc(100vh - 36px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: wrap !important;
+  align-content: flex-start !important;
+  justify-content: flex-start !important;
+  padding: 4px !important;
+  gap: 4px !important;
+  overflow: hidden !important;
+  background: rgba(0, 0, 0, 0.1) !important;
+}
 
-  /* Iconos con altura fija para 3 por columna */
-  .desktop-icon {
-    width: calc(15vw - 6px) !important;
-    min-width: 60px !important;
-    max-width: 90px !important;
-    /* Altura calculada: (altura disponible - gaps) / 3 */
-    height: calc((100vh - 36px - 16px) / 3) !important;
-    max-height: 75px !important;
-    min-height: auto !important;
-    padding: 4px !important;
-    flex-shrink: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: center !important;
-  }
+/* Iconos con altura fija para 3 por columna */
+.landscape-mobile .desktop-icon {
+  width: calc(15vw - 6px) !important;
+  min-width: 60px !important;
+  max-width: 90px !important;
+  height: calc((100vh - 36px - 16px) / 3) !important;
+  max-height: 75px !important;
+  min-height: auto !important;
+  padding: 4px !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
 
-  .desktop-icon-image-wrapper {
-    width: 32px !important;
-    height: 32px !important;
-    margin-bottom: 2px !important;
-  }
+.landscape-mobile .desktop-icon-image-wrapper {
+  width: 32px !important;
+  height: 32px !important;
+  margin-bottom: 2px !important;
+}
 
-  .desktop-icon-image-wrapper.icon-conciertos {
-    width: 38px !important;
-    height: 32px !important;
-  }
+.landscape-mobile .desktop-icon-image-wrapper.icon-conciertos {
+  width: 38px !important;
+  height: 32px !important;
+}
 
-  .desktop-icon-image-wrapper.icon-conciertos img {
-    width: 38px !important;
-    height: 32px !important;
-  }
+.landscape-mobile .desktop-icon-image-wrapper.icon-conciertos img {
+  width: 38px !important;
+  height: 32px !important;
+}
 
-  .desktop-icon span {
-    font-size: 9px !important;
-    line-height: 1.1 !important;
-  }
+.landscape-mobile .desktop-icon span {
+  font-size: 9px !important;
+  line-height: 1.1 !important;
+}
 
-  /* Ventanas iniciales en el lado derecho (70% pantalla) */
-  .mobile-window-initial {
-    position: fixed !important;
-    left: 30vw !important;
-    right: 4px !important;
-    width: calc(70vw - 8px) !important;
-    top: 4px !important;
-    bottom: auto !important;
-    max-height: calc(100vh - 44px) !important;
-  }
+/* Ventanas iniciales en el lado derecho (70% pantalla) */
+.landscape-mobile .mobile-window-initial {
+  position: fixed !important;
+  left: 30vw !important;
+  right: 4px !important;
+  width: calc(70vw - 8px) !important;
+  top: 4px !important;
+  bottom: auto !important;
+  max-height: calc(100vh - 44px) !important;
+}
 
-  /* Album arriba */
-  .mobile-window-album {
-    top: 4px !important;
-    max-height: calc(50vh - 24px) !important;
-  }
+/* Album arriba */
+.landscape-mobile .mobile-window-album {
+  top: 4px !important;
+  max-height: calc(50vh - 24px) !important;
+}
 
-  /* Poster abajo */
-  .mobile-window-welcome-poster {
-    top: auto !important;
-    bottom: 40px !important;
-    max-height: calc(50vh - 24px) !important;
-  }
+/* Poster abajo */
+.landscape-mobile .mobile-window-welcome-poster {
+  top: auto !important;
+  bottom: 40px !important;
+  max-height: calc(50vh - 24px) !important;
+}
 
-  .mobile-window-initial .window-content {
-    max-height: calc(50vh - 56px) !important;
-  }
+.landscape-mobile .mobile-window-initial .window-content {
+  max-height: calc(50vh - 56px) !important;
+}
 
-  .mobile-window-initial .window-content img {
-    max-height: calc(50vh - 60px) !important;
-  }
+.landscape-mobile .mobile-window-initial .window-content img {
+  max-height: calc(50vh - 60px) !important;
+}
 
-  /* Ventanas fullscreen en landscape */
-  .mobile-window {
-    left: 30vw !important;
-    width: calc(70vw) !important;
-    height: calc(100vh - 36px) !important;
-    max-height: calc(100vh - 36px) !important;
-  }
+/* Ventanas fullscreen en landscape */
+.landscape-mobile .mobile-window {
+  left: 30vw !important;
+  width: calc(70vw) !important;
+  height: calc(100vh - 36px) !important;
+  max-height: calc(100vh - 36px) !important;
+}
 
-  .mobile-window .window-header {
-    height: 36px;
-  }
+.landscape-mobile .mobile-window .window-header {
+  height: 36px;
+}
 
-  .mobile-window .window-content {
-    height: calc(100% - 36px);
-  }
+.landscape-mobile .mobile-window .window-content {
+  height: calc(100% - 36px);
+}
 
-  /* Start menu en landscape */
-  .start-menu {
-    left: 0 !important;
-    width: min(100vw, 350px) !important;
-    max-height: 60vh !important;
-    bottom: 36px !important;
-  }
+/* Start menu en landscape */
+.landscape-mobile .start-menu {
+  left: 0 !important;
+  width: min(100vw, 350px) !important;
+  max-height: 60vh !important;
+  bottom: 36px !important;
 }
