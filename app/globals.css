@@ -1407,7 +1407,7 @@ body {
     height: 20px !important;
   }
 
-  /* Iconos a la izquierda - Grid flexible que rellena verticalmente */
+  /* Iconos a la izquierda - 3 iconos por columna */
   .desktop-icons {
     position: fixed !important;
     left: 0 !important;
@@ -1419,41 +1419,48 @@ body {
     flex-wrap: wrap !important;
     align-content: flex-start !important;
     justify-content: flex-start !important;
-    padding: 8px !important;
-    gap: 8px !important;
+    padding: 4px !important;
+    gap: 4px !important;
     overflow: hidden !important;
     background: rgba(0, 0, 0, 0.1) !important;
   }
 
-  /* Iconos mismo estilo que móvil portrait */
+  /* Iconos con altura fija para 3 por columna */
   .desktop-icon {
-    width: auto !important;
-    min-width: 70px !important;
-    max-width: calc(15vw - 12px) !important;
+    width: calc(15vw - 6px) !important;
+    min-width: 60px !important;
+    max-width: 90px !important;
+    /* Altura calculada: (altura disponible - gaps) / 3 */
+    height: calc((100vh - 36px - 16px) / 3) !important;
+    max-height: 75px !important;
     min-height: auto !important;
-    padding: 8px 6px !important;
+    padding: 4px !important;
     flex-shrink: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
   }
 
   .desktop-icon-image-wrapper {
-    width: 40px !important;
-    height: 40px !important;
-    margin-bottom: 4px !important;
+    width: 32px !important;
+    height: 32px !important;
+    margin-bottom: 2px !important;
   }
 
   .desktop-icon-image-wrapper.icon-conciertos {
-    width: 48px !important;
-    height: 40px !important;
+    width: 38px !important;
+    height: 32px !important;
   }
 
   .desktop-icon-image-wrapper.icon-conciertos img {
-    width: 48px !important;
-    height: 40px !important;
+    width: 38px !important;
+    height: 32px !important;
   }
 
   .desktop-icon span {
-    font-size: 10px !important;
-    line-height: 1.2 !important;
+    font-size: 9px !important;
+    line-height: 1.1 !important;
   }
 
   /* Ventanas iniciales en el lado derecho (70% pantalla) */

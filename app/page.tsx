@@ -126,6 +126,46 @@ export default function BesmayaDesktop() {
     return () => window.removeEventListener("resize", handleViewportResize)
   }, [isDesktop])
 
+  // Adaptar ventanas iniciales cuando cambia el modo desktop↔móvil
+  useEffect(() => {
+    if (!isDesktopDetermined || !initialWindowsCreated) return
+
+    const screenWidth = window.innerWidth
+    const screenHeight = window.innerHeight
+
+    setWindows(prev => prev.map(w => {
+      if (!w.isInitial) return w
+
+      if (!isDesktop) {
+        // Modo móvil: ancho completo
+        return { ...w, x: 0, y: 0, width: screenWidth }
+      } else {
+        // Modo desktop: recalcular posiciones
+        const isSmall = screenWidth < 1024
+        const scale = isSmall ? Math.max(0.75, screenWidth / 1024) : 1
+        const windowWidth = Math.min(384, screenWidth * 0.4) * scale
+        const offsetX = isSmall ? Math.min(100, screenWidth * 0.1) : 200
+
+        if (w.id === "welcome-poster") {
+          return {
+            ...w,
+            x: Math.max(20, screenWidth / 2 - windowWidth / 2 - offsetX),
+            y: Math.max(20, screenHeight / 2 - 275 - 80),
+            width: windowWidth,
+          }
+        } else if (w.id === "album") {
+          return {
+            ...w,
+            x: Math.min(screenWidth - windowWidth - 20, screenWidth / 2 - windowWidth / 2 + offsetX),
+            y: Math.max(20, screenHeight / 2 - 230 + (isSmall ? 60 : 120)),
+            width: windowWidth,
+          }
+        }
+        return w
+      }
+    }))
+  }, [isDesktop, isDesktopDetermined, initialWindowsCreated])
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!dragState.isDragging || !dragState.windowId) return
@@ -297,9 +337,6 @@ export default function BesmayaDesktop() {
     } else if (id === "welcome-mobile") {
       windowWidth = Math.min(350, vw * 0.4) * scale
       windowHeight = Math.min(600, vh * 0.75)
-    } else if (id === "paint") {
-      windowWidth = Math.min(500, vw * 0.5) * scale
-      windowHeight = Math.min(500, vh * 0.65)
     } else {
       windowWidth = Math.min(600, vw * 0.6) * scale
       windowHeight = Math.min(400, vh * 0.55)
@@ -391,9 +428,6 @@ export default function BesmayaDesktop() {
         break
       case "videos":
         window.open("https://www.youtube.com/@BESMAYA", "_blank")
-        break
-      case "paint":
-        openWindow("paint", "Paint", <PaintContent />)
         break
     }
     setSelectedIcon(null)
@@ -507,7 +541,7 @@ export default function BesmayaDesktop() {
         </div>
 
         <div
-          className={`desktop-icon hidden ${selectedIcon === "bio" ? "selected" : ""}`}
+          className={`desktop-icon ${selectedIcon === "bio" ? "selected" : ""}`}
           onClick={() => handleIconClick("bio")}
         >
           <div className="desktop-icon-image-wrapper">
@@ -622,19 +656,6 @@ export default function BesmayaDesktop() {
                 <span>Videos</span>
               </div>
 
-              <div className="border-t border-gray-300 my-2"></div>
-              <div
-                className="start-menu-item flex items-center space-x-2 mb-2 cursor-pointer"
-                onClick={() => {
-                  openWindow("paint", "Paint", <PaintContent />)
-                  setIsStartMenuOpen(false)
-                }}
-              >
-                <div className="w-8 h-8 bg-gradient-to-br from-red-400 to-red-600 rounded flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">🎨</span>
-                </div>
-                <span>Paint</span>
-              </div>
             </div>
           </div>
         </div>
@@ -837,76 +858,6 @@ function BioContent() {
       <div className="bg-white border border-gray-300 h-full p-4 overflow-auto" style={{ fontFamily: "monospace" }}>
         <div className="text-sm leading-relaxed">
           <p className="mb-4">Besmaya son Javi Ojanguren y Javi Echavarri</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function PaintContent() {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    setIsMobile(window.innerWidth < 640)
-  }, [])
-
-  if (isMobile) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-gray-100">
-        <div className="text-6xl mb-4">🎨</div>
-        <h2 className="text-xl font-bold mb-2">Paint</h2>
-        <p className="text-gray-600">
-          Esta aplicación funciona mejor en un ordenador.
-        </p>
-        <p className="text-gray-500 text-sm mt-4">
-          ¡Visita desde tu PC para dibujar!
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="h-full bg-gray-200 flex flex-col">
-      <div className="bg-gray-100 border-b border-gray-300 p-1 flex space-x-2">
-        <button className="px-2 py-1 text-xs hover:bg-blue-100">File</button>
-        <button className="px-2 py-1 text-xs hover:bg-blue-100">Edit</button>
-        <button className="px-2 py-1 text-xs hover:bg-blue-100">View</button>
-        <button className="px-2 py-1 text-xs hover:bg-blue-100">Image</button>
-        <button className="px-2 py-1 text-xs hover:bg-blue-100">Colors</button>
-        <button className="px-2 py-1 text-xs hover:bg-blue-100">Help</button>
-      </div>
-
-      <div className="bg-gray-100 border-b border-gray-300 p-1 flex space-x-1">
-        <button className="w-8 h-8 bg-white border border-gray-400 hover:bg-gray-50 flex items-center justify-center text-xs">
-          ✏️
-        </button>
-        <button className="w-8 h-8 bg-white border border-gray-400 hover:bg-gray-50 flex items-center justify-center text-xs">
-          🖌️
-        </button>
-        <button className="w-8 h-8 bg-white border border-gray-400 hover:bg-gray-50 flex items-center justify-center text-xs">
-          🪣
-        </button>
-        <button className="w-8 h-8 bg-white border border-gray-400 hover:bg-gray-50 flex items-center justify-center text-xs">
-          ⬜
-        </button>
-        <button className="w-8 h-8 bg-white border border-gray-400 hover:bg-gray-50 flex items-center justify-center text-xs">
-          ⭕
-        </button>
-      </div>
-
-      <div className="flex-1 bg-white m-2 border-2 border-gray-400 relative overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">Canvas de dibujo</div>
-      </div>
-
-      <div className="bg-gray-100 border-t border-gray-300 p-1 flex space-x-2">
-        <div className="flex space-x-1">
-          {["#000000", "#FFFFFF", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"].map((color) => (
-            <div
-              key={color}
-              className="w-6 h-6 border border-gray-400 cursor-pointer hover:scale-110 transition-transform"
-              style={{ backgroundColor: color }}
-            />
-          ))}
         </div>
       </div>
     </div>
