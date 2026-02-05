@@ -497,7 +497,9 @@ export default function BesmayaDesktop() {
       <div className={`desktop-icons ${
         isLandscapeMobile
           ? ''
-          : 'absolute top-8 left-8 flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 gap-5 h-max'
+          : isDesktop
+            ? 'absolute top-8 left-8 flex flex-wrap gap-5'
+            : 'absolute top-8 left-8 grid grid-cols-2 gap-5'
       }`}>
         <div
           className={`desktop-icon ${selectedIcon === "conciertos" ? "selected" : ""}`}

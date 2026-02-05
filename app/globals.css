@@ -300,7 +300,7 @@ body {
   }
 }
 
-@media (max-width: 639px) {
+@media (max-width: 879px) {
   .window:not(.mobile-window):not(.mobile-window-initial) {
     left: 5vw !important;
     top: 10vh !important;
@@ -331,7 +331,7 @@ body {
   }
 }
 
-@media (min-width: 641px) {
+@media (min-width: 880px) {
   .window {
     max-width: 90vw;
     max-height: 80vh;
@@ -507,7 +507,7 @@ body {
 }
 
 /* Desktop-only styling for bigger icons centered vertically */
-@media (min-width: 641px) {
+@media (min-width: 880px) {
   .desktop-icons {
     display: flex !important;
     flex-direction: row !important;
@@ -571,7 +571,7 @@ body {
 }
 
 /* Mobile Responsive - Touch-friendly grid */
-@media (max-width: 639px) {
+@media (max-width: 879px) {
   .desktop-icons {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
@@ -1357,10 +1357,11 @@ body {
 }
 
 /* ================================================
-   SMALL DESKTOP (640px - 1024px)
+   SMALL DESKTOP (880px - 1023px)
+   ES desktop (según JS threshold de 880px)
    Iconos tamaño fijo, solo wrap automático
    ================================================ */
-@media (min-width: 640px) and (max-width: 1023px) {
+@media (min-width: 880px) and (max-width: 1023px) {
   /* Ventanas con dimensiones más pequeñas */
   .window {
     min-width: 260px;
@@ -1467,36 +1468,40 @@ body {
   line-height: 1.1 !important;
 }
 
-/* Ventanas iniciales en el lado derecho (70% pantalla) */
+/* Ventanas iniciales LADO A LADO en el área derecha (70% pantalla) */
 .landscape-mobile .mobile-window-initial {
   position: fixed !important;
-  left: 30vw !important;
-  right: 4px !important;
-  width: calc(70vw - 8px) !important;
   top: 4px !important;
-  bottom: auto !important;
+  height: calc(100dvh - 44px) !important;
   max-height: calc(100dvh - 44px) !important;
+  bottom: auto !important;
 }
 
-/* Album arriba */
+/* Album: izquierda del área de ventanas (30vw a 65vw) */
 .landscape-mobile .mobile-window-album {
-  top: 4px !important;
-  max-height: calc(50dvh - 24px) !important;
+  left: 30vw !important;
+  width: calc(35vw - 6px) !important;
+  right: auto !important;
 }
 
-/* Poster abajo */
+/* Poster: derecha del área de ventanas (65vw a 100vw) */
 .landscape-mobile .mobile-window-welcome-poster {
-  top: auto !important;
-  bottom: 40px !important;
-  max-height: calc(50dvh - 24px) !important;
+  left: calc(65vw - 2px) !important;
+  right: 4px !important;
+  width: calc(35vw - 6px) !important;
+  top: 4px !important;
 }
 
+/* Contenido de ventanas se adapta a altura completa */
 .landscape-mobile .mobile-window-initial .window-content {
-  max-height: calc(50dvh - 56px) !important;
+  max-height: calc(100% - 32px) !important;
+  overflow-y: auto !important;
 }
 
 .landscape-mobile .mobile-window-initial .window-content img {
-  max-height: calc(50dvh - 60px) !important;
+  max-height: calc(100dvh - 100px) !important;
+  width: auto !important;
+  max-width: 100% !important;
 }
 
 /* Ventanas fullscreen en landscape */
