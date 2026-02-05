@@ -11,6 +11,10 @@
   --xp-window-bg: #f0f0f0;
   --xp-panel-bg: #e8f1fd;
   --xp-taskbar-bg: #245edb;
+  /* Responsive taskbar heights */
+  --taskbar-height: 40px;
+  --taskbar-height-mobile: 48px;
+  --taskbar-height-landscape: 36px;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -923,10 +927,11 @@ body {
 /* Start Menu */
 .start-menu {
   position: fixed;
-  bottom: 40px;
+  bottom: var(--taskbar-height);
   left: 0;
-  width: 400px;
+  width: clamp(280px, 80vw, 400px);
   height: 450px;
+  max-height: calc(100vh - var(--taskbar-height) - 20px);
   background: white;
   border: 2px solid #0831d9;
   border-bottom: none;
@@ -1348,5 +1353,162 @@ body {
   .xp-tab {
     padding: 6px 20px;
     font-size: 12px;
+  }
+}
+
+/* ================================================
+   SMALL DESKTOP (640px - 1024px)
+   Iconos tamaño fijo, solo wrap automático
+   ================================================ */
+@media (min-width: 640px) and (max-width: 1023px) {
+  /* Ventanas con dimensiones más pequeñas */
+  .window {
+    min-width: 260px;
+    max-width: 90vw;
+  }
+
+  /* Iconos: MISMO TAMAÑO que desktop grande, solo wrap */
+  .desktop-icons {
+    flex-wrap: wrap !important;
+    max-width: calc(100vw - 40px) !important;
+  }
+
+  /* Start menu responsivo */
+  .start-menu {
+    width: min(400px, 90vw);
+    max-height: 80vh;
+  }
+
+  /* Taskbar buttons más compactos */
+  .xp-taskbar-btn {
+    min-width: 100px;
+    max-width: 140px;
+    font-size: 10px;
+  }
+}
+
+/* ================================================
+   LANDSCAPE MOBILE (Split View)
+   Iconos a la izquierda (30%), ventanas a la derecha (70%)
+   ================================================ */
+@media (max-width: 639px) and (orientation: landscape) {
+  /* Taskbar más compacto en landscape */
+  .xp-taskbar {
+    height: 36px !important;
+  }
+
+  .xp-start-btn {
+    height: 28px !important;
+    padding: 0 8px !important;
+  }
+
+  .xp-start-btn img {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  /* Iconos a la izquierda - Grid flexible que rellena verticalmente */
+  .desktop-icons {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 30vw !important;
+    height: calc(100vh - 36px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: wrap !important;
+    align-content: flex-start !important;
+    justify-content: flex-start !important;
+    padding: 8px !important;
+    gap: 8px !important;
+    overflow: hidden !important;
+    background: rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* Iconos mismo estilo que móvil portrait */
+  .desktop-icon {
+    width: auto !important;
+    min-width: 70px !important;
+    max-width: calc(15vw - 12px) !important;
+    min-height: auto !important;
+    padding: 8px 6px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .desktop-icon-image-wrapper {
+    width: 40px !important;
+    height: 40px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .desktop-icon-image-wrapper.icon-conciertos {
+    width: 48px !important;
+    height: 40px !important;
+  }
+
+  .desktop-icon-image-wrapper.icon-conciertos img {
+    width: 48px !important;
+    height: 40px !important;
+  }
+
+  .desktop-icon span {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Ventanas iniciales en el lado derecho (70% pantalla) */
+  .mobile-window-initial {
+    position: fixed !important;
+    left: 30vw !important;
+    right: 4px !important;
+    width: calc(70vw - 8px) !important;
+    top: 4px !important;
+    bottom: auto !important;
+    max-height: calc(100vh - 44px) !important;
+  }
+
+  /* Album arriba */
+  .mobile-window-album {
+    top: 4px !important;
+    max-height: calc(50vh - 24px) !important;
+  }
+
+  /* Poster abajo */
+  .mobile-window-welcome-poster {
+    top: auto !important;
+    bottom: 40px !important;
+    max-height: calc(50vh - 24px) !important;
+  }
+
+  .mobile-window-initial .window-content {
+    max-height: calc(50vh - 56px) !important;
+  }
+
+  .mobile-window-initial .window-content img {
+    max-height: calc(50vh - 60px) !important;
+  }
+
+  /* Ventanas fullscreen en landscape */
+  .mobile-window {
+    left: 30vw !important;
+    width: calc(70vw) !important;
+    height: calc(100vh - 36px) !important;
+    max-height: calc(100vh - 36px) !important;
+  }
+
+  .mobile-window .window-header {
+    height: 36px;
+  }
+
+  .mobile-window .window-content {
+    height: calc(100% - 36px);
+  }
+
+  /* Start menu en landscape */
+  .start-menu {
+    left: 0 !important;
+    width: min(100vw, 350px) !important;
+    max-height: 60vh !important;
+    bottom: 36px !important;
   }
 }

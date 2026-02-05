@@ -48,19 +48,41 @@ export default function BesmayaDesktop() {
   const [isUnderConstruction, setIsUnderConstruction] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
   const [isDesktopDetermined, setIsDesktopDetermined] = useState(false)
+  const [isSmallDesktop, setIsSmallDesktop] = useState(false)
+  const [isLandscapeMobile, setIsLandscapeMobile] = useState(false)
+  const [hasFinePointer, setHasFinePointer] = useState(false)
   const [initialWindowsCreated, setInitialWindowsCreated] = useState(false)
   const [spotifyPrefetched, setSpotifyPrefetched] = useState(false)
   const [concertsPreloaded, setConcertsPreloaded] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
+    // Detectar capacidad de puntero fino (ratón)
+    const pointerQuery = window.matchMedia('(pointer: fine)')
+    const updatePointer = () => setHasFinePointer(pointerQuery.matches)
+    updatePointer()
+    pointerQuery.addEventListener('change', updatePointer)
+
     const checkScreenSize = () => {
-      setIsDesktop(window.innerWidth >= 640)
+      const w = window.innerWidth
+      const h = window.innerHeight
+      const isLandscape = w > h
+      const hasPointer = pointerQuery.matches
+
+      // Desktop solo si tiene puntero fino Y tamaño suficiente
+      setIsDesktop(hasPointer && w >= 640)
+      setIsSmallDesktop(hasPointer && w >= 640 && w < 1024)
+      setIsLandscapeMobile(!hasPointer && w < 640 && isLandscape)
       setIsDesktopDetermined(true)
     }
     checkScreenSize()
     window.addEventListener("resize", checkScreenSize)
-    return () => window.removeEventListener("resize", checkScreenSize)
+    window.addEventListener("orientationchange", checkScreenSize)
+    return () => {
+      window.removeEventListener("resize", checkScreenSize)
+      window.removeEventListener("orientationchange", checkScreenSize)
+      pointerQuery.removeEventListener('change', updatePointer)
+    }
   }, [])
 
   useEffect(() => {
@@ -78,6 +100,31 @@ export default function BesmayaDesktop() {
     const interval = setInterval(updateTime, 1000)
     return () => clearInterval(interval)
   }, [])
+
+  // Clamping de ventanas cuando el viewport se reduce (solo en desktop)
+  useEffect(() => {
+    if (!isDesktop) return
+
+    const handleViewportResize = () => {
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+
+      setWindows(prev => prev.map(w => {
+        const windowHeight = typeof w.height === "number" ? w.height : 400
+        const maxX = Math.max(0, vw - w.width)
+        const maxY = Math.max(0, vh - windowHeight - TASKBAR_HEIGHT)
+
+        return {
+          ...w,
+          x: Math.max(0, Math.min(w.x, maxX)),
+          y: Math.max(0, Math.min(w.y, maxY)),
+        }
+      }))
+    }
+
+    window.addEventListener("resize", handleViewportResize)
+    return () => window.removeEventListener("resize", handleViewportResize)
+  }, [isDesktop])
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -163,19 +210,26 @@ export default function BesmayaDesktop() {
       return
     }
 
-    // Desktop: dos ventanas en cascada
-    const feedWidth = 384
-    const albumWidth = 384
+    // Desktop: dos ventanas en cascada con dimensiones adaptativas
+    const isSmall = screenWidth < 1024
+    const scale = isSmall ? Math.max(0.75, screenWidth / 1024) : 1
+
+    const feedWidth = Math.min(384, screenWidth * 0.4) * scale
+    const albumWidth = Math.min(384, screenWidth * 0.4) * scale
     const feedEstimatedHeight = 550
     const albumEstimatedHeight = 460
+
+    // Offset de cascada adaptativo
+    const offsetX = isSmall ? Math.min(100, screenWidth * 0.1) : 200
+    const offsetY = isSmall ? 60 : 120
 
     const initialWindows: WindowState[] = [
       {
         id: "welcome-poster",
         title: "La gira de Nadie",
         content: <WelcomePosterContent />,
-        x: screenWidth / 2 - feedWidth / 2 - 200,
-        y: Math.min(screenHeight / 2 - feedEstimatedHeight / 2 - 80, screenHeight - feedEstimatedHeight - TASKBAR_HEIGHT),
+        x: Math.max(20, screenWidth / 2 - feedWidth / 2 - offsetX),
+        y: Math.max(20, Math.min(screenHeight / 2 - feedEstimatedHeight / 2 - 80, screenHeight - feedEstimatedHeight - TASKBAR_HEIGHT - 20)),
         width: feedWidth,
         height: "auto",
         isMinimized: false,
@@ -185,8 +239,8 @@ export default function BesmayaDesktop() {
         id: "album",
         title: "La vida de Nadie",
         content: <AlbumContent />,
-        x: screenWidth / 2 - albumWidth / 2 + 200,
-        y: Math.min(screenHeight / 2 - albumEstimatedHeight / 2 + 120, screenHeight - albumEstimatedHeight - TASKBAR_HEIGHT),
+        x: Math.min(screenWidth - albumWidth - 20, screenWidth / 2 - albumWidth / 2 + offsetX),
+        y: Math.max(20, Math.min(screenHeight / 2 - albumEstimatedHeight / 2 + offsetY, screenHeight - albumEstimatedHeight - TASKBAR_HEIGHT - 20)),
         width: albumWidth,
         height: "auto",
         isMinimized: false,
@@ -224,32 +278,54 @@ export default function BesmayaDesktop() {
       return
     }
 
-    let windowWidth = 600
-    let windowHeight = 400
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+
+    // Factor de escala para escritorios pequeños (640-1024px)
+    const scale = vw < 1024 ? Math.max(0.75, vw / 1024) : 1
+
+    // Dimensiones base responsivas
+    let windowWidth: number
+    let windowHeight: number
 
     if (id === "musica") {
-      windowWidth = 306
-      windowHeight = 388
+      windowWidth = Math.min(306, vw * 0.4) * scale
+      windowHeight = Math.min(388, vh * 0.6)
+    } else if (id === "welcome") {
+      windowWidth = Math.min(420, vw * 0.45) * scale
+      windowHeight = Math.min(520, vh * 0.7)
+    } else if (id === "welcome-mobile") {
+      windowWidth = Math.min(350, vw * 0.4) * scale
+      windowHeight = Math.min(600, vh * 0.75)
+    } else if (id === "paint") {
+      windowWidth = Math.min(500, vw * 0.5) * scale
+      windowHeight = Math.min(500, vh * 0.65)
+    } else {
+      windowWidth = Math.min(600, vw * 0.6) * scale
+      windowHeight = Math.min(400, vh * 0.55)
     }
-    if (id === "welcome") {
-      windowWidth = 420
-      windowHeight = 520
-    }
-    if (id === "welcome-mobile") {
-      windowWidth = 350
-      windowHeight = 600
-    }
-    if (id === "paint") {
-      windowWidth = 500
-      windowHeight = 500
-    }
+
+    // Tamaño mínimo usable
+    windowWidth = Math.max(280, windowWidth)
+    windowHeight = Math.max(200, windowHeight)
+
+    // Posición con cascade offset adaptativo
+    const cascadeOffset = (windows.length % 5) * (isSmallDesktop ? 20 : 30)
+    const x = Math.max(0, Math.min(
+      50 + cascadeOffset,
+      vw - windowWidth
+    ))
+    const y = Math.max(0, Math.min(
+      50 + cascadeOffset,
+      vh - windowHeight - TASKBAR_HEIGHT
+    ))
 
     const newWindow: WindowState = {
       id,
       title,
       content,
-      x: 100 + windows.length * 30,
-      y: Math.min(100 + windows.length * 30, window.innerHeight - windowHeight - TASKBAR_HEIGHT),
+      x,
+      y,
       width: windowWidth,
       height: windowHeight,
       isMinimized: false,
@@ -370,7 +446,7 @@ export default function BesmayaDesktop() {
   }
 
   return (
-    <div className="h-screen w-screen relative overflow-hidden">
+    <div className={`h-screen w-screen relative overflow-hidden ${isLandscapeMobile ? 'landscape-mobile' : ''}`}>
       <img
         src="/xp-bliss-custom.jpg"
         alt="Windows XP Bliss Wallpaper"
