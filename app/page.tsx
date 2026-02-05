@@ -44,8 +44,6 @@ export default function BesmayaDesktop() {
   const [time, setTime] = useState("")
   const [nextZIndex, setNextZIndex] = useState(100)
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null)
-  const [lastClickTime, setLastClickTime] = useState(0)
-  const [lastClickedIcon, setLastClickedIcon] = useState<string | null>(null)
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
   const [isUnderConstruction, setIsUnderConstruction] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
@@ -580,6 +578,7 @@ export default function BesmayaDesktop() {
           }}
           tabIndex={-1}
           aria-hidden="true"
+          sandbox="allow-scripts allow-same-origin"
         />
       )}
 
@@ -748,6 +747,7 @@ function MusicaContent() {
         src="https://open.spotify.com/embed/playlist/0iXYV9B7pvlsZKqJEfOk5V?utm_source=generator&theme=0"
         frameBorder="0"
         allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
         className={`block w-full h-full transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
         onLoad={() => setIsLoaded(true)}
       />
@@ -761,75 +761,6 @@ function BioContent() {
       <div className="bg-white border border-gray-300 h-full p-4 overflow-auto" style={{ fontFamily: "monospace" }}>
         <div className="text-sm leading-relaxed">
           <p className="mb-4">Besmaya son Javi Ojanguren y Javi Echavarri</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ConcertosContent() {
-  const concerts = [
-    { date: "15 Mar 2024", city: "Madrid", venue: "Sala Riviera", link: "#" },
-    { date: "22 Mar 2024", city: "Barcelona", venue: "Razzmatazz", link: "#" },
-    { date: "29 Mar 2024", city: "Valencia", venue: "Loco Club", link: "#" },
-    { date: "05 Abr 2024", city: "Sevilla", venue: "Sala X", link: "#" },
-    { date: "12 Abr 2024", city: "Bilbao", venue: "Kafe Antzokia", link: "#" },
-  ]
-
-  return (
-    <div className="h-full">
-      <div className="bg-white border border-gray-300 h-full p-2">
-        <div className="space-y-1">
-          {concerts.map((concert, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between p-2 hover:bg-blue-100 border-b border-gray-200"
-            >
-              <div className="flex-1">
-                <span className="font-bold">{concert.date}</span>
-                <span className="mx-2">—</span>
-                <span>{concert.city}</span>
-                <span className="mx-2">—</span>
-                <span>{concert.venue}</span>
-              </div>
-              <a href={concert.link} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
-                Ver
-              </a>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function MerchanContent() {
-  const merchItems = Array.from({ length: 8 }, (_, i) => ({
-    id: i + 1,
-    name: `Producto ${i + 1}`,
-    image: `/placeholder.svg?height=120&width=120&query=band merchandise item ${i + 1}`,
-  }))
-
-  return (
-    <div className="h-full">
-      <div className="bg-white border border-gray-300 h-full p-4 overflow-auto">
-        <div className="grid grid-cols-3 gap-4">
-          {merchItems.map((item) => (
-            <div
-              key={item.id}
-              className="border border-gray-300 p-2 hover:bg-blue-50 cursor-pointer"
-              onClick={() => {
-                alert(`Vista previa de ${item.name}`)
-              }}
-            >
-              <img
-                src={item.image || "/placeholder.svg"}
-                alt={item.name}
-                className="w-full h-24 object-cover mb-2 placeholder-img"
-              />
-              <div className="text-xs text-center">{item.name}</div>
-            </div>
-          ))}
         </div>
       </div>
     </div>
