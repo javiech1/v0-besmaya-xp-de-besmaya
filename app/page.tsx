@@ -69,10 +69,13 @@ export default function BesmayaDesktop() {
       const isLandscape = w > h
       const hasPointer = pointerQuery.matches
 
-      // Desktop solo si tiene puntero fino Y tamaño suficiente
-      setIsDesktop(hasPointer && w >= 640)
-      setIsSmallDesktop(hasPointer && w >= 640 && w < 1024)
-      setIsLandscapeMobile(!hasPointer && w < 640 && isLandscape)
+      // Desktop SOLO si tiene puntero fino (ratón) Y ancho suficiente
+      // Sin puntero fino = siempre móvil, sin importar tamaño de pantalla
+      const isDesktopMode = hasPointer && w >= 640
+      setIsDesktop(isDesktopMode)
+      setIsSmallDesktop(isDesktopMode && w < 1024)
+      // Landscape móvil: no es desktop Y orientación horizontal
+      setIsLandscapeMobile(!isDesktopMode && isLandscape)
       setIsDesktopDetermined(true)
     }
     checkScreenSize()
