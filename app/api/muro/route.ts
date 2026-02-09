@@ -49,7 +49,7 @@ export async function POST(request: Request) {
 
 1. ${needsUsername ? "Genera un username aleatorio y divertido de EXACTAMENTE 6 caracteres (letras minúsculas y/o números). Sé creativo." : `Modera el username proporcionado "${trimmedUsername}": si contiene tacos, palabrotas, insultos o lenguaje ofensivo, reemplaza las palabras ofensivas por asteriscos (*) del mismo número de caracteres. Si no contiene nada ofensivo, devuélvelo tal cual.`}
 
-2. Modera el siguiente mensaje: revisa si contiene tacos, palabrotas, insultos o lenguaje ofensivo en español (y también en inglés). Si encuentras alguna palabra ofensiva, reemplázala por asteriscos (*) del mismo número de caracteres que la palabra original. Si el mensaje no contiene nada ofensivo, devuélvelo tal cual.
+2. Modera el siguiente mensaje: revisa si contiene tacos, palabrotas, insultos, slurs, lenguaje homófobo, racista, sexista, discriminatorio o cualquier forma de lenguaje ofensivo en español (y también en inglés). Incluye palabras como maricón, marica, gay (usado como insulto), puta, zorra, negro (usado como insulto), subnormal, retrasado, etc. Si encuentras alguna palabra ofensiva, reemplázala por asteriscos (*) del mismo número de caracteres que la palabra original. Si el mensaje no contiene nada ofensivo, devuélvelo tal cual.
 
 Responde SOLO con un JSON válido con este formato exacto, sin markdown ni explicaciones:
 {"username": "...", "content": "..."}`
