@@ -56,7 +56,7 @@ Responde SOLO con un JSON válido con este formato exacto, sin markdown ni expli
 {"username": "...", "content": "..."}`
 
     const response = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 200,
       messages: [
         {
@@ -78,7 +78,8 @@ Responde SOLO con un JSON válido con este formato exacto, sin markdown ni expli
       if (parsed.content) finalContent = parsed.content.slice(0, 140)
     }
   } catch (err) {
-    console.error("Error de moderación (usando fallback):", err instanceof Error ? err.message : err)
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error("Error de moderación (usando fallback):", msg, "| API key available:", !!process.env.ANTHROPIC_API_KEY)
   }
 
   // Insertar en Supabase
