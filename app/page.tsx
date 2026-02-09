@@ -1167,7 +1167,7 @@ function MuroContent() {
             value={username}
             onChange={(e) => setUsername(e.target.value.slice(0, 20))}
             placeholder="anónimo"
-            className="w-[72px] shrink-0 text-xs px-1.5 py-1 border border-gray-400 bg-white focus:outline-none focus:border-blue-500"
+            className="w-[72px] shrink-0 text-[16px] sm:text-xs px-1.5 py-1 border border-gray-400 bg-white focus:outline-none focus:border-blue-500"
             maxLength={20}
           />
           <div className="flex-1 relative">
@@ -1176,7 +1176,7 @@ function MuroContent() {
               value={message}
               onChange={(e) => setMessage(e.target.value.slice(0, 140))}
               placeholder="Escribe algo..."
-              className="w-full text-xs px-1.5 py-1 pr-10 border border-gray-400 bg-white focus:outline-none focus:border-blue-500"
+              className="w-full text-[16px] sm:text-xs px-1.5 py-1 pr-10 border border-gray-400 bg-white focus:outline-none focus:border-blue-500"
               maxLength={140}
             />
             <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none">
