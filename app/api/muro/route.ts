@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import Anthropic from "@anthropic-ai/sdk"
 
 function getSupabase() {
   return createClient(
@@ -44,6 +43,7 @@ export async function POST(request: Request) {
 
   // Intentar moderar con Claude Haiku
   try {
+    const { default: Anthropic } = await import("@anthropic-ai/sdk")
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
     const systemPrompt = `Eres un moderador de contenido y generador de usernames. Tu tarea es:
@@ -69,7 +69,7 @@ Responde SOLO con un JSON válido con este formato exacto, sin markdown ni expli
       system: systemPrompt,
     })
 
-    const textBlock = response.content.find((block) => block.type === "text")
+    const textBlock = response.content.find((block: { type: string }) => block.type === "text")
     if (textBlock && textBlock.type === "text") {
       let rawText = textBlock.text.trim()
       rawText = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "")
