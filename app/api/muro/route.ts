@@ -4,38 +4,23 @@ import { createClient } from "@supabase/supabase-js"
 function getSupabase() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 }
 
 export async function GET() {
-  try {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!url || !key) {
-      return NextResponse.json(
-        { error: "Missing env vars", hasUrl: !!url, hasKey: !!key },
-        { status: 500 }
-      )
-    }
-    const supabase = createClient(url, key)
-    const { data, error } = await supabase
-      .from("muro_comments")
-      .select("*")
-      .order("created_at", { ascending: true })
-      .limit(50)
+  const supabase = getSupabase()
+  const { data, error } = await supabase
+    .from("muro_comments")
+    .select("*")
+    .order("created_at", { ascending: true })
+    .limit(50)
 
-    if (error) {
-      return NextResponse.json({ error: error.message, code: error.code }, { status: 500 })
-    }
-
-    return NextResponse.json(data)
-  } catch (err) {
-    return NextResponse.json(
-      { error: "Unhandled", message: err instanceof Error ? err.message : String(err) },
-      { status: 500 }
-    )
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  return NextResponse.json(data)
 }
 
 export async function POST(request: Request) {
