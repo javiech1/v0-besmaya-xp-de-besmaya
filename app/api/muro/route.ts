@@ -41,12 +41,11 @@ export async function POST(request: Request) {
   let finalUsername = trimmedUsername || ("user" + Math.random().toString(36).slice(2, 6))
   let finalContent = trimmedContent
 
-  // Intentar moderar con Claude Haiku
-  try {
-    const { default: Anthropic } = await import("@anthropic-ai/sdk")
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-
-    const systemPrompt = `Eres un moderador de contenido y generador de usernames. Tu tarea es:
+  // Intentar moderar con Claude Haiku via fetch directo
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (apiKey) {
+    try {
+      const systemPrompt = `Eres un moderador de contenido y generador de usernames. Tu tarea es:
 
 1. ${needsUsername ? "Genera un username aleatorio y divertido de EXACTAMENTE 6 caracteres (letras minúsculas y/o números). Sé creativo." : `Modera el username proporcionado "${trimmedUsername}": si contiene tacos, palabrotas, insultos o lenguaje ofensivo, reemplaza las palabras ofensivas por asteriscos (*) del mismo número de caracteres. Si no contiene nada ofensivo, devuélvelo tal cual.`}
 
@@ -55,31 +54,44 @@ export async function POST(request: Request) {
 Responde SOLO con un JSON válido con este formato exacto, sin markdown ni explicaciones:
 {"username": "...", "content": "..."}`
 
-    const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 200,
-      messages: [
-        {
-          role: "user",
-          content: needsUsername
-            ? `Mensaje a moderar: "${trimmedContent}"`
-            : `Username: "${trimmedUsername}" | Mensaje: "${trimmedContent}"`,
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
         },
-      ],
-      system: systemPrompt,
-    })
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 200,
+          system: systemPrompt,
+          messages: [
+            {
+              role: "user",
+              content: needsUsername
+                ? `Mensaje a moderar: "${trimmedContent}"`
+                : `Username: "${trimmedUsername}" | Mensaje: "${trimmedContent}"`,
+            },
+          ],
+        }),
+      })
 
-    const textBlock = response.content.find((block: { type: string }) => block.type === "text")
-    if (textBlock && textBlock.type === "text") {
-      let rawText = textBlock.text.trim()
-      rawText = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "")
-      const parsed = JSON.parse(rawText)
-      if (parsed.username) finalUsername = parsed.username.slice(0, 20)
-      if (parsed.content) finalContent = parsed.content.slice(0, 140)
+      if (res.ok) {
+        const data = await res.json()
+        const textBlock = data.content?.find((b: { type: string }) => b.type === "text")
+        if (textBlock?.text) {
+          let rawText = textBlock.text.trim()
+          rawText = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "")
+          const parsed = JSON.parse(rawText)
+          if (parsed.username) finalUsername = parsed.username.slice(0, 20)
+          if (parsed.content) finalContent = parsed.content.slice(0, 140)
+        }
+      } else {
+        console.error("Anthropic API error:", res.status, await res.text())
+      }
+    } catch (err) {
+      console.error("Error de moderación (usando fallback):", err instanceof Error ? err.message : err)
     }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error("Error de moderación (usando fallback):", msg, "| API key available:", !!process.env.ANTHROPIC_API_KEY)
   }
 
   // Insertar en Supabase
