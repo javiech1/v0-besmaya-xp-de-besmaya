@@ -290,26 +290,46 @@ export default function BesmayaDesktop() {
       return
     }
 
-    // Desktop: dos ventanas en cascada con dimensiones adaptativas
+    // Desktop: tres ventanas distribuidas sin solapamiento
     const isSmall = screenWidth < 1024
     const scale = isSmall ? Math.max(0.75, screenWidth / 1024) : 1
 
     const feedWidth = Math.min(384, screenWidth * 0.4) * scale
     const albumWidth = Math.min(384, screenWidth * 0.4) * scale
+    const muroWidth = Math.min(400, screenWidth * 0.45) * scale
     const feedEstimatedHeight = 550
     const albumEstimatedHeight = 460
+    const muroEstimatedHeight = 500
 
-    // Offset de cascada adaptativo
-    const offsetX = isSmall ? Math.min(100, screenWidth * 0.1) : 200
-    const offsetY = isSmall ? 60 : 120
+    const gap = 20
+    const totalWidth = feedWidth + albumWidth + muroWidth + gap * 2
+    const fits = totalWidth + gap * 2 <= screenWidth
+
+    let welcomeX: number, albumX: number, muroX: number
+
+    if (fits) {
+      // Distribuir en 3 columnas sin solapamiento
+      const startX = Math.max(gap, (screenWidth - totalWidth) / 2)
+      welcomeX = startX
+      albumX = startX + feedWidth + gap
+      muroX = startX + feedWidth + gap + albumWidth + gap
+    } else {
+      // Cascada para pantallas pequeñas
+      const offsetX = isSmall ? Math.min(100, screenWidth * 0.1) : 200
+      welcomeX = Math.max(20, screenWidth / 2 - feedWidth / 2 - offsetX)
+      albumX = Math.min(screenWidth - albumWidth - 20, screenWidth / 2 - albumWidth / 2 + offsetX)
+      muroX = Math.max(20, screenWidth / 2 - muroWidth / 2)
+    }
+
+    const centerY = (screenHeight - TASKBAR_HEIGHT) / 2
 
     const initialWindows: WindowState[] = [
       {
         id: "welcome-poster",
         title: "La gira de Nadie",
         content: <WelcomePosterContent />,
-        x: Math.max(20, screenWidth / 2 - feedWidth / 2 - offsetX),
-        y: Math.max(20, Math.min(screenHeight / 2 - feedEstimatedHeight / 2 - 80, screenHeight - feedEstimatedHeight - TASKBAR_HEIGHT - 20)),
+        x: welcomeX,
+        y: Math.max(20, Math.min(centerY - feedEstimatedHeight / 2, screenHeight - feedEstimatedHeight - TASKBAR_HEIGHT - 20)),
         width: feedWidth,
         height: "auto",
         isMinimized: false,
@@ -319,17 +339,28 @@ export default function BesmayaDesktop() {
         id: "album",
         title: "La vida de Nadie",
         content: <AlbumContent />,
-        x: Math.min(screenWidth - albumWidth - 20, screenWidth / 2 - albumWidth / 2 + offsetX),
-        y: Math.max(20, Math.min(screenHeight / 2 - albumEstimatedHeight / 2 + offsetY, screenHeight - albumEstimatedHeight - TASKBAR_HEIGHT - 20)),
+        x: albumX,
+        y: Math.max(20, Math.min(centerY - albumEstimatedHeight / 2, screenHeight - albumEstimatedHeight - TASKBAR_HEIGHT - 20)),
         width: albumWidth,
         height: "auto",
         isMinimized: false,
         zIndex: 102,
       },
+      {
+        id: "muro",
+        title: "El Muro de Nadie",
+        content: <MuroContent />,
+        x: muroX,
+        y: Math.max(20, Math.min(centerY - muroEstimatedHeight / 2, screenHeight - muroEstimatedHeight - TASKBAR_HEIGHT - 20)),
+        width: muroWidth,
+        height: muroEstimatedHeight,
+        isMinimized: false,
+        zIndex: 103,
+      },
     ]
 
     setWindows(initialWindows)
-    setNextZIndex(103)
+    setNextZIndex(104)
     setInitialWindowsCreated(true)
     sessionStorage.setItem("initialWindowsCreated", "true")
   }, [isDesktop, isDesktopDetermined, initialWindowsCreated])
@@ -377,6 +408,9 @@ export default function BesmayaDesktop() {
     } else if (id === "welcome-mobile") {
       windowWidth = Math.min(350, vw * 0.4) * scale
       windowHeight = Math.min(600, vh * 0.75)
+    } else if (id === "muro") {
+      windowWidth = Math.min(400, vw * 0.45) * scale
+      windowHeight = Math.min(500, vh * 0.65)
     } else {
       windowWidth = Math.min(600, vw * 0.6) * scale
       windowHeight = Math.min(400, vh * 0.55)
@@ -462,6 +496,9 @@ export default function BesmayaDesktop() {
         break
       case "bio":
         openWindow("bio", "Bio", <BioContent />)
+        break
+      case "muro":
+        openWindow("muro", "El Muro de Nadie", <MuroContent />)
         break
       case "conciertos":
         router.push("/conciertos")
@@ -565,6 +602,16 @@ export default function BesmayaDesktop() {
             <img src="/icons/merchan.png" alt="Merchan" />
           </div>
           <span>Merch</span>
+        </div>
+
+        <div
+          className={`desktop-icon ${selectedIcon === "muro" ? "selected" : ""}`}
+          onClick={() => handleIconClick("muro")}
+        >
+          <div className="desktop-icon-image-wrapper">
+            <img src="/icons/muro.svg" alt="El Muro de Nadie" />
+          </div>
+          <span>El Muro de Nadie</span>
         </div>
 
         <div
@@ -674,6 +721,17 @@ export default function BesmayaDesktop() {
               <div
                 className="start-menu-item flex items-center space-x-2 mb-2 cursor-pointer"
                 onClick={() => {
+                  openWindow("muro", "El Muro de Nadie", <MuroContent />)
+                  setIsStartMenuOpen(false)
+                }}
+              >
+                <img src="/icons/muro.svg" alt="El Muro" width={32} height={32} />
+                <span>El Muro de Nadie</span>
+              </div>
+
+              <div
+                className="start-menu-item flex items-center space-x-2 mb-2 cursor-pointer"
+                onClick={() => {
                   router.push("/conciertos")
                 }}
                 onMouseEnter={prefetchConciertos}
@@ -756,7 +814,7 @@ export default function BesmayaDesktop() {
                   }}
                   title={w.title}
                 >
-                  <span className="text-xs">{w.id === 'welcome-poster' ? '🎫' : w.id === 'album' ? '💿' : '📄'}</span>
+                  <span className="text-xs">{w.id === 'welcome-poster' ? '🎫' : w.id === 'album' ? '💿' : w.id === 'muro' ? '🧱' : '📄'}</span>
                 </button>
               ))}
             </div>
@@ -963,6 +1021,157 @@ function AlbumContent() {
       >
         comprar ahora
       </a>
+    </div>
+  )
+}
+
+interface MuroComment {
+  id: string
+  username: string
+  content: string
+  created_at: string
+}
+
+function MuroContent() {
+  const [comments, setComments] = useState<MuroComment[]>([])
+  const [username, setUsername] = useState("")
+  const [message, setMessage] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
+  const feedRef = useRef<HTMLDivElement>(null)
+
+  const scrollToBottom = () => {
+    if (feedRef.current) {
+      feedRef.current.scrollTop = feedRef.current.scrollHeight
+    }
+  }
+
+  useEffect(() => {
+    fetch("/api/muro")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setComments(data)
+          setTimeout(scrollToBottom, 50)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false))
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!message.trim() || isSubmitting) return
+    setError("")
+    setIsSubmitting(true)
+
+    try {
+      const res = await fetch("/api/muro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: username.trim() || undefined,
+          content: message.trim(),
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error || "Error al enviar")
+        return
+      }
+
+      const newComment = await res.json()
+      setComments((prev) => [...prev, newComment])
+      setMessage("")
+      setTimeout(scrollToBottom, 50)
+    } catch {
+      setError("Error de conexión")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return "ahora"
+    if (mins < 60) return `${mins}m`
+    const hours = Math.floor(mins / 60)
+    if (hours < 24) return `${hours}h`
+    const days = Math.floor(hours / 24)
+    return `${days}d`
+  }
+
+  return (
+    <div className="h-full flex flex-col" style={{ fontFamily: "Tahoma, sans-serif" }}>
+      <div className="bg-[#ece9d8] px-3 py-2 border-b border-gray-400 text-xs text-gray-600 italic">
+        ¿Qué os está pareciendo el disco?
+      </div>
+
+      <div
+        ref={feedRef}
+        className="flex-1 bg-white border border-gray-300 mx-1 mt-1 overflow-y-auto"
+        style={{ minHeight: 0 }}
+      >
+        {isLoading ? (
+          <div className="p-3 text-center text-gray-400 text-xs">Cargando...</div>
+        ) : comments.length === 0 ? (
+          <div className="p-3 text-center text-gray-400 text-xs">Sé el primero en escribir</div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {comments.map((c) => (
+              <div key={c.id} className="px-3 py-2 hover:bg-blue-50/50">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs font-bold text-blue-800 shrink-0">@{c.username}</span>
+                  <span className="text-xs text-gray-400 shrink-0">{timeAgo(c.created_at)}</span>
+                </div>
+                <p className="text-xs text-gray-800 mt-0.5 break-words">{c.content}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className="bg-[#ece9d8] border-t border-gray-400 p-2">
+        {error && (
+          <div className="text-xs text-red-600 mb-1 px-1">{error}</div>
+        )}
+        <div className="flex gap-1.5 items-end">
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value.slice(0, 20))}
+            placeholder="anónimo"
+            className="w-[72px] shrink-0 text-xs px-1.5 py-1 border border-gray-400 bg-white focus:outline-none focus:border-blue-500"
+            maxLength={20}
+          />
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={message}
+              onChange={(e) => setMessage(e.target.value.slice(0, 140))}
+              placeholder="Escribe algo..."
+              className="w-full text-xs px-1.5 py-1 pr-10 border border-gray-400 bg-white focus:outline-none focus:border-blue-500"
+              maxLength={140}
+            />
+            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none">
+              {message.length}/140
+            </span>
+          </div>
+          <button
+            type="submit"
+            disabled={isSubmitting || !message.trim()}
+            className="shrink-0 text-xs px-2 py-1 bg-[#d4d0c8] border border-gray-400 hover:bg-[#c8c4bc] active:bg-[#bfbbb3] disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              boxShadow: "inset 1px 1px 0 #fff, inset -1px -1px 0 #808080",
+            }}
+          >
+            {isSubmitting ? "..." : "Enviar"}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }
