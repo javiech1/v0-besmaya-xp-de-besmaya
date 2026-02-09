@@ -41,7 +41,7 @@ const MONTH_MAP: Record<string, number> = {
  * Parse Spanish date format "DD-mmm" (e.g., "30-ene") to Date object
  */
 export function parseFechaToDate(fecha: string): Date {
-  const parts = fecha.split("-")
+  const parts = fecha.split(/[-\s]+/)
   if (parts.length !== 2) return new Date()
 
   const day = Number.parseInt(parts[0], 10)

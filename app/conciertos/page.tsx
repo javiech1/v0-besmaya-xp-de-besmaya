@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { getFromCache, setToCache, sortByFechaChronologically } from "@/lib/cache"
+import { getFromCache, setToCache, sortByFechaChronologically, parseFechaToDate } from "@/lib/cache"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -32,11 +32,17 @@ const fallbackConcerts: Concert[] = [
 
 const fallbackFestivals: Festival[] = []
 
+function filterPastEvents<T extends { fecha: string }>(items: T[]): T[] {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return items.filter((item) => parseFechaToDate(item.fecha) >= today)
+}
+
 export default function ConciertosPage() {
   const [time, setTime] = useState("")
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('conciertos')
-  const [concerts, setConcerts] = useState<Concert[]>(sortByFechaChronologically(fallbackConcerts))
+  const [concerts, setConcerts] = useState<Concert[]>(sortByFechaChronologically(filterPastEvents(fallbackConcerts)))
   const [isLoading, setIsLoading] = useState(true)
   const [festivals, setFestivals] = useState<Festival[]>([])
   const [isFestivalsLoading, setIsFestivalsLoading] = useState(true)
@@ -80,7 +86,7 @@ export default function ConciertosPage() {
   const fetchConcerts = async () => {
     const cached = getFromCache<Concert[]>('concerts_cache')
     if (cached) {
-      setConcerts(sortByFechaChronologically(cached))
+      setConcerts(sortByFechaChronologically(filterPastEvents(cached)))
       setIsLoading(false)
       return
     }
@@ -88,10 +94,10 @@ export default function ConciertosPage() {
     try {
       const { data, error } = await supabase.from("concerts").select("*")
       const result = error ? fallbackConcerts : (data || fallbackConcerts)
-      setConcerts(sortByFechaChronologically(result))
+      setConcerts(sortByFechaChronologically(filterPastEvents(result)))
       setToCache('concerts_cache', result)
     } catch {
-      setConcerts(sortByFechaChronologically(fallbackConcerts))
+      setConcerts(sortByFechaChronologically(filterPastEvents(fallbackConcerts)))
     } finally {
       setIsLoading(false)
     }
@@ -100,7 +106,7 @@ export default function ConciertosPage() {
   const fetchFestivals = async () => {
     const cached = getFromCache<Festival[]>('festivals_cache')
     if (cached) {
-      setFestivals(sortByFechaChronologically(cached))
+      setFestivals(sortByFechaChronologically(filterPastEvents(cached)))
       setIsFestivalsLoading(false)
       return
     }
@@ -108,10 +114,10 @@ export default function ConciertosPage() {
     try {
       const { data, error } = await supabase.from("festis").select("*")
       const result = error ? fallbackFestivals : (data || fallbackFestivals)
-      setFestivals(sortByFechaChronologically(result))
+      setFestivals(sortByFechaChronologically(filterPastEvents(result)))
       setToCache('festivals_cache', result)
     } catch {
-      setFestivals(sortByFechaChronologically(fallbackFestivals))
+      setFestivals(sortByFechaChronologically(filterPastEvents(fallbackFestivals)))
     } finally {
       setIsFestivalsLoading(false)
     }

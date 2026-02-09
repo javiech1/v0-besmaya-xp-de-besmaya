@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react"
 import type React from "react"
 
-import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
 
 interface Concert {
@@ -30,8 +29,6 @@ export default function AdminPage() {
   })
   const [time, setTime] = useState("")
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
-
-  const supabase = createClient()
 
   // Check existing session on mount
   useEffect(() => {
@@ -106,9 +103,9 @@ export default function AdminPage() {
 
   const fetchConcerts = async () => {
     try {
-      const { data, error } = await supabase.from("concerts").select("*").order("fecha", { ascending: true })
-
-      if (error) throw error
+      const response = await fetch("/api/admin/concerts")
+      if (!response.ok) throw new Error("Failed to fetch")
+      const data = await response.json()
       setConcerts(data || [])
     } catch (error) {
       console.error("Error fetching concerts:", error)
@@ -124,9 +121,12 @@ export default function AdminPage() {
     }
 
     try {
-      const { error } = await supabase.from("concerts").insert([newConcert])
-
-      if (error) throw error
+      const response = await fetch("/api/admin/concerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newConcert),
+      })
+      if (!response.ok) throw new Error("Failed to add")
 
       setNewConcert({ fecha: "", ciudad: "", sala: "", link: "" })
       fetchConcerts()
@@ -138,9 +138,12 @@ export default function AdminPage() {
 
   const updateConcert = async (id: string, updatedConcert: Partial<Concert>) => {
     try {
-      const { error } = await supabase.from("concerts").update(updatedConcert).eq("id", id)
-
-      if (error) throw error
+      const response = await fetch("/api/admin/concerts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...updatedConcert }),
+      })
+      if (!response.ok) throw new Error("Failed to update")
 
       setEditingId(null)
       fetchConcerts()
@@ -154,9 +157,12 @@ export default function AdminPage() {
     if (!confirm("Are you sure you want to delete this concert?")) return
 
     try {
-      const { error } = await supabase.from("concerts").delete().eq("id", id)
-
-      if (error) throw error
+      const response = await fetch("/api/admin/concerts", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      })
+      if (!response.ok) throw new Error("Failed to delete")
 
       fetchConcerts()
     } catch (error) {
