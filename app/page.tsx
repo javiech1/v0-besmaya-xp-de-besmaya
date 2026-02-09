@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
+import { getFromCache, setToCache } from "@/lib/cache"
 
 interface WindowState {
   id: string
@@ -1048,11 +1049,19 @@ function MuroContent() {
   }
 
   useEffect(() => {
+    const cached = getFromCache<MuroComment[]>("muro_comments")
+    if (cached) {
+      setComments(cached)
+      setIsLoading(false)
+      setTimeout(scrollToBottom, 50)
+    }
+
     fetch("/api/muro")
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
           setComments(data)
+          setToCache("muro_comments", data)
           setTimeout(scrollToBottom, 50)
         }
       })
@@ -1066,28 +1075,42 @@ function MuroContent() {
     setError("")
     setIsSubmitting(true)
 
+    const tempId = "temp-" + Date.now()
+    const trimmedContent = message.trim()
+    const trimmedUsername = username.trim()
+    const optimisticComment: MuroComment = {
+      id: tempId,
+      username: trimmedUsername || "anónimo",
+      content: trimmedContent,
+      created_at: new Date().toISOString(),
+    }
+
+    setComments((prev) => [...prev, optimisticComment])
+    setMessage("")
+    setTimeout(scrollToBottom, 50)
+
     try {
       const res = await fetch("/api/muro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: username.trim() || undefined,
-          content: message.trim(),
+          username: trimmedUsername || undefined,
+          content: trimmedContent,
         }),
       })
 
       if (!res.ok) {
         const data = await res.json()
         setError(data.error || "Error al enviar")
+        setComments((prev) => prev.filter((c) => c.id !== tempId))
         return
       }
 
       const newComment = await res.json()
-      setComments((prev) => [...prev, newComment])
-      setMessage("")
-      setTimeout(scrollToBottom, 50)
+      setComments((prev) => prev.map((c) => c.id === tempId ? newComment : c))
     } catch {
       setError("Error de conexión")
+      setComments((prev) => prev.filter((c) => c.id !== tempId))
     } finally {
       setIsSubmitting(false)
     }

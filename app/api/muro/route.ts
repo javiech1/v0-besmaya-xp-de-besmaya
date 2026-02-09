@@ -80,6 +80,9 @@ En caso de duda, CENSURA. Es mejor censurar de más que de menos. Aplica en espa
 Responde SOLO con un JSON válido con este formato exacto, sin markdown ni explicaciones:
 {"username": "...", "content": "..."}`
 
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -100,7 +103,10 @@ Responde SOLO con un JSON válido con este formato exacto, sin markdown ni expli
             },
           ],
         }),
+        signal: controller.signal,
       })
+
+      clearTimeout(timeoutId)
 
       if (res.ok) {
         const data = await res.json()

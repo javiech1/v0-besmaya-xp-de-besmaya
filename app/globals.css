@@ -192,11 +192,14 @@ body {
   left: 0 !important;
   top: 0 !important;
   width: 100vw !important;
-  height: calc(100dvh - 48px) !important;
+  height: calc(100vh - 48px) !important;
   max-width: 100vw !important;
+  max-height: calc(100vh - 48px) !important;
+  height: calc(100dvh - 48px) !important;
   max-height: calc(100dvh - 48px) !important;
   min-width: unset !important;
   border-radius: 0 !important;
+  overflow: hidden !important;
   animation: mobileWindowSlideUp 0.25s ease-out;
 }
 
@@ -284,7 +287,7 @@ body {
 }
 
 .mobile-window .window-content {
-  height: calc(100% - 44px);
+  height: calc(100% - 44px) !important;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -1515,6 +1518,8 @@ body {
 .landscape-mobile .mobile-window {
   left: 30vw !important;
   width: calc(70vw) !important;
+  height: calc(100vh - 36px) !important;
+  max-height: calc(100vh - 36px) !important;
   height: calc(100dvh - 36px) !important;
   max-height: calc(100dvh - 36px) !important;
 }
@@ -1524,7 +1529,7 @@ body {
 }
 
 .landscape-mobile .mobile-window .window-content {
-  height: calc(100% - 36px);
+  height: calc(100% - 36px) !important;
 }
 
 /* Start menu en landscape */
