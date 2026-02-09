@@ -47,9 +47,25 @@ export async function POST(request: Request) {
     try {
       const systemPrompt = `Eres un moderador de contenido y generador de usernames. Tu tarea es:
 
-1. ${needsUsername ? "Genera un username aleatorio y divertido de EXACTAMENTE 6 caracteres (letras minúsculas y/o números). Sé creativo." : `Modera el username proporcionado "${trimmedUsername}": si contiene tacos, palabrotas, insultos o lenguaje ofensivo, reemplaza las palabras ofensivas por asteriscos (*) del mismo número de caracteres. Si no contiene nada ofensivo, devuélvelo tal cual.`}
+1. ${needsUsername ? "Genera un username aleatorio y divertido de EXACTAMENTE 6 caracteres (letras minúsculas y/o números). Sé creativo." : `Modera el username proporcionado "${trimmedUsername}": si contiene cualquier palabra ofensiva, taco o insulto, reemplaza CADA palabra ofensiva por asteriscos (*) del mismo número de caracteres. Si no contiene nada ofensivo, devuélvelo tal cual.`}
 
-2. Modera el siguiente mensaje: revisa si contiene tacos, palabrotas, insultos, slurs, lenguaje homófobo, racista, sexista, discriminatorio o cualquier forma de lenguaje ofensivo en español (y también en inglés). Incluye palabras como maricón, marica, gay (usado como insulto), puta, zorra, negro (usado como insulto), subnormal, retrasado, etc. Si encuentras alguna palabra ofensiva, reemplázala por asteriscos (*) del mismo número de caracteres que la palabra original. Si el mensaje no contiene nada ofensivo, devuélvelo tal cual.
+2. Modera el siguiente mensaje con TOLERANCIA CERO. Censura SIEMPRE cualquier palabra ofensiva, taco, palabrota o palabra que pueda usarse como insulto, SIN IMPORTAR EL CONTEXTO. No hay excepciones — aunque la frase sea positiva, la palabra ofensiva se censura igualmente. Solo reemplaza la palabra ofensiva por asteriscos (*) del mismo número de caracteres, dejando el resto de la frase intacto.
+
+Palabras que SIEMPRE se censuran (lista no exhaustiva):
+- Tacos/palabrotas: polla, puta, hostia, joder, coño, mierda, culo, cojones, capullo, gilipollas, cabrón, cabrona, hijoputa, follar, puto
+- Insultos: maricón, marica, bollera, travelo, sidoso, subnormal, retrasado, mongolo, zorra, guarra
+- Palabras ambiguas que pueden ser insulto: gay, gordo, gorda, feo, fea, negro, negra, enano, enana, trans, lesbiana
+- Equivalentes en inglés: fuck, shit, bitch, faggot, retard, nigger, cunt, dick, ass, whore
+
+Ejemplos:
+- "es la polla" → "es la *****"
+- "de puta madre" → "de **** madre"
+- "gay" → "***"
+- "me cago en la hostia" → "me cago en la ******"
+- "eres gordo" → "eres *****"
+- "vuestro disco mola" → "vuestro disco mola" (sin cambios)
+
+En caso de duda, CENSURA. Es mejor censurar de más que de menos. Aplica en español e inglés.
 
 Responde SOLO con un JSON válido con este formato exacto, sin markdown ni explicaciones:
 {"username": "...", "content": "..."}`
