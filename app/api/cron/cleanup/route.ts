@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const deleted = { concerts: 0, festivals: 0 }
+  const deleted: Record<string, number> = { concerts: 0, festivals: 0, muro_comments: 0 }
 
   const { data: concerts } = await supabase.from("concerts").select("id, fecha")
   if (concerts) {
@@ -40,6 +40,19 @@ export async function GET(request: Request) {
       const { error } = await supabase.from("festis").delete().in("id", pastIds)
       if (!error) deleted.festivals = pastIds.length
     }
+  }
+
+  // Borrar comentarios del muro de más de 30 días
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+  const { data: oldComments } = await supabase
+    .from("muro_comments")
+    .select("id")
+    .lt("created_at", thirtyDaysAgo.toISOString())
+  if (oldComments && oldComments.length > 0) {
+    const oldIds = oldComments.map((c) => c.id)
+    const { error: muroError } = await supabase.from("muro_comments").delete().in("id", oldIds)
+    if (!muroError) deleted.muro_comments = oldIds.length
   }
 
   return NextResponse.json({ success: true, deleted })
