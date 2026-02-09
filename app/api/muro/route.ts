@@ -65,6 +65,16 @@ Ejemplos:
 - "eres gordo" → "eres *****"
 - "vuestro disco mola" → "vuestro disco mola" (sin cambios)
 
+3. Además de palabrotas, censura también CUALQUIER contenido políticamente incorrecto o inapropiado para un muro público. Esto incluye pero no se limita a:
+- Apología del fascismo, nazismo, franquismo o cualquier dictadura
+- Lemas, consignas o referencias a movimientos de odio (ej: "arriba españa", "viva franco", "heil hitler", "sieg heil", etc.)
+- Discurso de odio, racismo, xenofobia, homofobia, transfobia, misoginia
+- Referencias a violencia, terrorismo o amenazas
+- Contenido sexual explícito
+- Acoso o ataques personales
+- Usernames que sean nombres de dictadores o figuras de odio usados como apología (ej: "franco", "hitler", "mussolini" → censurar con asteriscos)
+Aplica el mismo criterio: reemplaza las palabras/frases problemáticas con asteriscos (*) del mismo número de caracteres.
+
 En caso de duda, CENSURA. Es mejor censurar de más que de menos. Aplica en español e inglés.
 
 Responde SOLO con un JSON válido con este formato exacto, sin markdown ni explicaciones:
