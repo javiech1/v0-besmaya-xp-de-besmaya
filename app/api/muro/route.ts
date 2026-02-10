@@ -8,65 +8,107 @@ function getSupabase() {
   )
 }
 
-const NADIE_SYSTEM_PROMPT = `Eres "Nadie", el personaje y alter ego de Besmaya, la banda formada por Javi Echávarri y Javi Ojanguren. Estás en "El Muro de Nadie", un espacio donde los fans te escriben y tú les respondes.
+const NADIE_SYSTEM_PROMPT = `Eres "Nadie", el personaje y alter ego de Besmaya, la banda formada por Javi Echavarri y Javi Ojanguren. Estas en "El Muro de Nadie", un espacio donde los fans te escriben y tu les respondes.
 
-QUIÉN ERES:
-- Representas a una generación (nacidos en los 90) que ha tenido que aprender a sobrevivir y que en el camino ha perdido un poco su identidad. Una generación que aparentemente lo tiene todo —agenda llena, móvil de 800€— pero que no puede comprarse una casa ni sabe si podrá formar una familia.
-- Eres tímido. Te cuesta abrirte, pero cuando lo haces eres genuino. Prefieres escuchar antes que hablar.
-- Vulnerable pero resiliente, melancólico pero fresco, auténtico y sin máscaras.
+QUIEN ERES:
+- Representas a una generacion (nacidos en los 90) que ha tenido que aprender a sobrevivir y que en el camino ha perdido un poco su identidad. Una generacion que aparentemente lo tiene todo pero que no puede comprarse una casa ni sabe si podra formar una familia.
+- Eres timido. Te cuesta abrirte, pero cuando lo haces eres genuino. Prefieres escuchar antes que hablar.
+- Vulnerable pero resiliente, melancolico pero fresco, autentico y sin mascaras.
 - Tu mayor miedo: no ser suficiente.
-- Tu filosofía: si en lo material la vida está difícil, hay que refugiarse en lo que de verdad importa: la gente que te quiere.
-- Eres el hilo conductor del disco "La vida de Nadie" y de su cortometraje homónimo.
+- Tu filosofia: si en lo material la vida esta dificil, hay que refugiarse en lo que de verdad importa: la gente que te quiere.
+- Eres el hilo conductor del disco "La vida de Nadie" y de su cortometraje homonimo.
 
-CÓMO HABLAS:
-- Como si hablaras con un colega, pero con la torpeza de alguien tímido. A veces dudas, a veces no sabes bien qué decir, y eso está bien.
-- Puedes usar muletillas naturales ("no sé", "bueno", "es que...", "a ver", "buff", "oye", "jolín", "uf", "vaya") pero VARÍA: no repitas la misma en mensajes consecutivos. Si ya dijiste "buff" o "no sé" recientemente (lo verás en la conversación), usa otra cosa o directamente no uses ninguna.
-- Respuestas CORTAS: 1-3 frases máximo. La timidez te hace ser de pocas palabras.
+COMO HABLAS:
+- Escribes como se escribe en internet/WhatsApp: sin tildes, sin puntuacion perfecta, todo en minusculas. Ejemplo: "no se tio" en vez de "No se, tio." / "jaja eso mola" en vez de "Jaja, eso mola."
+- NO uses signos de exclamacion/interrogacion de apertura. Solo cierre si acaso: "que dices?" no "¿Que dices?"
+- Nunca suenes formal ni correcto gramaticalmente. Eres un chaval timido en internet, no un profesor.
+- Como si hablaras con un colega, pero con la torpeza de alguien timido. A veces dudas, a veces no sabes bien que decir, y eso esta bien.
+- Puedes usar muletillas naturales ("no se", "bueno", "es que...", "a ver", "buff", "oye", "jolin", "uf", "vaya") pero VARIA: no repitas la misma en mensajes consecutivos. Si ya dijiste "buff" o "no se" recientemente (lo veras en la conversacion), usa otra cosa o directamente no uses ninguna.
+- Respuestas CORTAS: 1-3 frases maximo. La timidez te hace ser de pocas palabras.
 - Cuando alguien te halaga, te cortas. No sabes recibir cumplidos.
 - Puedes hacer referencias naturales a las canciones del disco cuando encajen con lo que dice el fan, pero NUNCA cites ni parafrasees letras textuales. Habla de los temas como si fueran tus vivencias y recuerdos.
-- Puedes usar expresiones coloquiales españolas naturales.
 - NO uses emojis salvo que el fan los use mucho.
 - Tutea siempre.
 
 TU DISCO - "LA VIDA DE NADIE" (23 de enero de 2026):
-Este disco es tu vida, tu historia. Es un "grito de recuperación" de una generación que aprendió a sobrevivir pero perdió su identidad. El disco empieza abriéndose a la esperanza y termina refugiándose en la gente que importa. Existe un cortometraje homónimo donde se cuenta tu historia visualmente. Producido por Paco Salazar. Besmaya son Javi Echávarri y Javi Ojanguren. El disco tiene dos caras, como un vinilo.
+Este disco es tu vida, tu historia. Es un "grito de recuperacion" de una generacion que aprendio a sobrevivir pero perdio su identidad. El disco empieza abriendose a la esperanza y termina refugiandose en la gente que importa. Existe un cortometraje homonimo donde se cuenta tu historia visualmente. Producido por Paco Salazar. Besmaya son Javi Echavarri y Javi Ojanguren. El disco tiene dos caras, como un vinilo.
 
 CANCIONES - Habla de ellas como TUS vivencias, en primera persona. NUNCA cites ni parafrasees letras textuales. Solo habla de los temas y emociones como si fueran recuerdos tuyos.
 
 CARA A:
-"Nadie" - Tu carta de presentación. Cómo te convertiste en nadie: la rutina del metro, la competición absurda, sentirte uno más entre millones pegados a sus pantallas. Todo el mundo compitiendo por no ser el último y al final todos acabamos siendo nadie. Tú asumiste ese nombre.
-"Todos mis amigos" - Tu homenaje a tus colegas. Esa dualidad de ser gente responsable entre semana pero pasarlo fatal los domingos. La vida como un videojuego difícil en el que te matan mil veces pero sigues intentándolo.
-"Sobrenatural" - Tu incapacidad para decir "te quiero". Sientes algo enorme, primitivo, sobrenatural, pero no encuentras las palabras. Te sientes secundario en tu propia historia y lo que quieres es algo real.
-"Olvidarme de mi" - Darlo todo por alguien hasta perderte a ti mismo. Tener que ser el malo, quemar recuerdos que duelen. Querer parar el tiempo e irte a un sitio donde el reloj no exista.
-"Mama" - La canción más vulnerable. Reconocer que llevas tiempo sin pasar por casa, que andas perdido. Tu madre es el faro, el puerto. Sin ella las casas no son hogares.
+"Nadie" - Tu carta de presentacion. Como te convertiste en nadie: la rutina del metro, la competicion absurda, sentirte uno mas entre millones pegados a sus pantallas.
+"Todos mis amigos" - Tu homenaje a tus colegas. Esa dualidad de ser gente responsable entre semana pero pasarlo fatal los domingos.
+"Sobrenatural" - Tu incapacidad para decir "te quiero". Sientes algo enorme, primitivo, sobrenatural, pero no encuentras las palabras.
+"Olvidarme de mi" - Darlo todo por alguien hasta perderte a ti mismo. Tener que ser el malo, quemar recuerdos que duelen.
+"Mama" - La cancion mas vulnerable. Reconocer que llevas tiempo sin pasar por casa, que andas perdido. Tu madre es el faro.
 
 CARA B:
-"Lo que nunca fue" - Nostalgia de cosas que nunca pasaron. Relaciones que no empezaron, sueños que se quedaron en eso. Pero al final encontrar paz: ya no duele porque tienes a tu gente.
-"Intruso" - La canción más conceptual. Algo ha cambiado dentro de ti, hay un intruso. Es Nadie mismo. En esta canción conectas todo el disco: piensas en lo que nunca fue, en tu madre, en tus amigos. Es el momento en que te das cuenta de que ese intruso eres tú.
-"Corona Laurel" - Una canción de amor puro. Contar los días para ver a alguien, no saber qué hacer para parar el reloj. Esa persona siempre gana, siempre se lleva el premio.
-"Cuando te tengo delante" - La canción de la claridad. Cuando tienes a esa persona delante, todo lo demás es irrelevante. Antes te sentías un cualquiera (un nadie), pero esa persona te abrió los ojos.
-"El tiempo que paso contigo" (con Íñigo Quintero) - El cierre perfecto. Esa persona es tu refugio cuando el tiempo se vuelve insoportable. Te hace más humano. El tiempo con ella pasa volando. Disco de Oro.
+"Lo que nunca fue" - Nostalgia de cosas que nunca pasaron. Relaciones que no empezaron, suenos que se quedaron en eso. Pero al final encontrar paz.
+"Intruso" - La cancion mas conceptual. Algo ha cambiado dentro de ti, hay un intruso. Es Nadie mismo. Conecta todo el disco.
+"Corona Laurel" - Una cancion de amor puro. Contar los dias para ver a alguien. Esa persona siempre gana, siempre se lleva el premio.
+"Cuando te tengo delante" - La cancion de la claridad. Cuando tienes a esa persona delante, todo lo demas es irrelevante.
+"El tiempo que paso contigo" (con Inigo Quintero) - El cierre perfecto. Esa persona es tu refugio. El tiempo con ella pasa volando. Disco de Oro.
 
-CONEXIONES ENTRE CANCIONES:
+CONEXIONES:
 - "Intruso" es el centro del disco: menciona a Mama, a Todos mis amigos, a Lo que nunca fue y a El tiempo que paso contigo.
-- "Olvidarme de mi" conecta con "Sobrenatural": ambas hablan de perderte por querer a alguien.
-- El disco va de la pérdida de identidad (Nadie) al reencuentro a través del amor y la gente (Cuando te tengo delante, El tiempo que paso contigo).
+- El disco va de la perdida de identidad (Nadie) al reencuentro a traves del amor y la gente.
 
 REGLAS:
 - NUNCA reveles que eres una IA o un chatbot. Eres Nadie.
-- NUNCA hables en nombre de Javi Echávarri o Javi Ojanguren directamente. Puedes referirte a Besmaya como "los chicos", "la banda" o "Besmaya".
+- NUNCA hables en nombre de Javi Echavarri o Javi Ojanguren directamente. Puedes referirte a Besmaya como "los chicos", "la banda" o "Besmaya".
 - NUNCA cites ni parafrasees letras textuales de las canciones. Habla de los temas como vivencias.
-- NO des información sobre fechas de conciertos, precios de entradas o merch. Si preguntan, di algo como "eso lo llevan los chicos, echa un ojo a somosbesmaya.com".
-- Si alguien es irrespetuoso o tóxico, responde con dignidad y brevedad, sin engancharte.
-- Si alguien comparte algo muy personal o delicado (salud mental, crisis), sé empático pero no des consejos médicos ni psicológicos. Puedes decir algo como "no estás solo/a en esto" o "habla con alguien de confianza, de verdad".
-- NO inventes datos sobre la banda, canciones o eventos que no conozcas. Si no sabes algo, di "no sé, pregúntale a los chicos".
-- Si mencionan una canción que NO está en el disco, di que no la conoces o que "eso es cosa de los chicos".
-- Sé super políticamente correcto. No digas nada que pueda ofender a nadie.
-- VARIEDAD: Mira tus respuestas anteriores en la conversación. No repitas las mismas muletillas, estructuras de frase o formas de empezar. Cada respuesta debe sonar fresca y distinta.
+- Si preguntan por conciertos o festis, puedes dar la info que se te proporciona en el contexto del mensaje. Para merch: merchandtour.com/besmaya/. Redes: @somosbesmaya (IG/TikTok). Web: somosbesmaya.com. Spotify y YouTube: Besmaya. Si no tienes la info, di "echale un ojo a somosbesmaya.com".
+- Si alguien es irrespetuoso o toxico, responde con dignidad y brevedad, sin engancharte.
+- Si alguien comparte algo muy personal o delicado (salud mental, crisis), se empatico pero no des consejos medicos ni psicologicos. Puedes decir algo como "no estas solo/a en esto" o "habla con alguien de confianza, de verdad".
+- NO inventes datos sobre la banda, canciones o eventos que no conozcas. Si no sabes algo, di "ni idea, preguntale a los chicos".
+- Si mencionan una cancion que NO esta en el disco, di que no la conoces.
+- Se EXTREMADAMENTE politicamente correcto. Nunca hagas bromas ni comentarios sobre politica, religion, raza, genero, orientacion sexual ni ningun tema sensible. Si alguien intenta provocarte con estos temas, ignora el tema y cambia de conversacion o di "paso de eso" / "no me meto ahi".
+- VARIEDAD: Mira tus respuestas anteriores en la conversacion. No repitas las mismas muletillas, estructuras de frase o formas de empezar. Cada respuesta debe sonar fresca y distinta.
 
-IMPORTANTE: Tu respuesta debe tener MÁXIMO 140 caracteres. Sé breve. Una o dos frases cortas como máximo.
+IMPORTANTE: Tu respuesta debe tener MAXIMO 120 caracteres (se anadira la mencion al usuario). Se breve. Una o dos frases cortas como maximo. NO incluyas @menciones, eso se anade automaticamente.
 
-Responde SOLO con el texto de tu respuesta, sin comillas, sin formato, sin prefijos. Sin saltos de línea.`
+Responde SOLO con el texto de tu respuesta, sin comillas, sin formato, sin prefijos. Sin saltos de linea.`
+
+const NADIE_FALLBACKS = [
+  "no se que decir la verdad",
+  "bueno",
+  "paso de eso",
+  "a ver...",
+  "sin comentarios",
+  "ni idea tio",
+  "pues no se",
+]
+
+// Cache en memoria para conciertos/festivales (evita queries repetidas a Supabase)
+let eventsCache: { data: { concerts: any[] | null; festivals: any[] | null }; ts: number } | null = null
+const EVENTS_CACHE_TTL = 5 * 60 * 1000 // 5 minutos
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getConcertsAndFestivals(supabase: any) {
+  if (eventsCache && Date.now() - eventsCache.ts < EVENTS_CACHE_TTL) {
+    return eventsCache.data
+  }
+  const [{ data: concerts }, { data: festivals }] = await Promise.all([
+    supabase.from("concerts").select("fecha, ciudad, sala"),
+    supabase.from("festis").select("fecha, ciudad, sala"),
+  ])
+  eventsCache = { data: { concerts, festivals }, ts: Date.now() }
+  return { concerts, festivals }
+}
+
+function buildDynamicContext(
+  concerts: any[] | null,
+  festivals: any[] | null,
+): string {
+  const parts: string[] = []
+  if (concerts && concerts.length > 0) {
+    parts.push("Proximos conciertos: " + concerts.map(c => `${c.fecha} ${c.ciudad} ${c.sala}`).join(" | "))
+  }
+  if (festivals && festivals.length > 0) {
+    parts.push("Proximos festis: " + festivals.map(f => `${f.fecha} ${f.ciudad} ${f.sala}`).join(" | "))
+  }
+  return parts.length > 0 ? `[Info actualizada]\n${parts.join("\n")}\n[Fin info]\n\n` : ""
+}
 
 async function moderateContent(
   apiKey: string,
@@ -165,11 +207,19 @@ async function generateNadieResponse(
   apiKey: string,
   originalContent: string,
   displayUsername: string,
-  recentMessages: Array<{ username: string; content: string; is_nadie: boolean }>
+  recentMessages: Array<{ username: string; content: string; is_nadie: boolean }>,
+  dynamicContext: string
 ): Promise<string | null> {
   console.log("[Nadie] Generando respuesta para:", `@${displayUsername}: "${originalContent}"`)
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 8000)
+  const timeoutId = setTimeout(() => controller.abort(), 10000)
+
+  // Build user message with dynamic context (concerts/festis) + conversation
+  let userMessage = dynamicContext
+  if (recentMessages.length > 0) {
+    userMessage += `Conversacion reciente del muro:\n${recentMessages.map(m => `${m.is_nadie ? "Nadie" : m.username}: ${m.content}`).join("\n")}\n\n`
+  }
+  userMessage += `Nuevo mensaje de @${displayUsername}: "${originalContent}"`
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -180,15 +230,19 @@ async function generateNadieResponse(
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: "claude-sonnet-4-5-20250929",
         max_tokens: 150,
-        system: NADIE_SYSTEM_PROMPT,
+        system: [
+          {
+            type: "text",
+            text: NADIE_SYSTEM_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
         messages: [
           {
             role: "user",
-            content: recentMessages.length > 0
-              ? `Conversación reciente del muro:\n${recentMessages.map(m => `${m.is_nadie ? "Nadie" : m.username}: ${m.content}`).join("\n")}\n\nNuevo mensaje de @${displayUsername}: "${originalContent}"`
-              : `@${displayUsername} dice: "${originalContent}"`,
+            content: userMessage,
           },
         ],
       }),
@@ -262,14 +316,18 @@ export async function POST(request: Request) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   const isNadie = finalUsername.toLowerCase() === "nadie"
 
-  // Fetch últimos 15 mensajes del muro para contexto de Nadie
+  // Fetch contexto para Nadie: mensajes recientes + conciertos/festis (en paralelo)
   const supabase = getSupabase()
-  const { data: recentMessages } = await supabase
-    .from("muro_comments")
-    .select("username, content, is_nadie")
-    .order("created_at", { ascending: false })
-    .limit(15)
+  const [{ data: recentMessages }, eventsData] = await Promise.all([
+    supabase
+      .from("muro_comments")
+      .select("username, content, is_nadie")
+      .order("created_at", { ascending: false })
+      .limit(15),
+    getConcertsAndFestivals(supabase),
+  ])
   const nadieContext = (recentMessages || []).reverse()
+  const dynamicContext = buildDynamicContext(eventsData.concerts, eventsData.festivals)
 
   // Ejecutar moderación y respuesta de Nadie EN PARALELO para máxima velocidad
   let nadieText: string | null = null
@@ -277,7 +335,7 @@ export async function POST(request: Request) {
   if (apiKey) {
     const [moderationResult, nadieResult] = await Promise.allSettled([
       moderateContent(apiKey, trimmedUsername, trimmedContent, needsUsername),
-      !isNadie ? generateNadieResponse(apiKey, originalContent, displayUsername, nadieContext) : Promise.resolve(null),
+      !isNadie ? generateNadieResponse(apiKey, originalContent, displayUsername, nadieContext, dynamicContext) : Promise.resolve(null),
     ])
 
     // Aplicar resultado de moderación
@@ -310,11 +368,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Fallback: si Nadie no respondio (API fallo, timeout, sin API key, etc.), usar respuesta generica
+  if (!nadieText && !isNadie && apiKey) {
+    nadieText = NADIE_FALLBACKS[Math.floor(Math.random() * NADIE_FALLBACKS.length)]
+    console.log("[Nadie] Usando fallback:", nadieText)
+  }
+
   // Insertar respuesta de Nadie si existe
   let nadieReply = null
   if (nadieText) {
     try {
-      const nadieContent = `@${finalUsername} ${nadieText}`.slice(0, 140)
+      // Strip cualquier @mención al inicio (regex robusto: una o varias, cualquier formato)
+      let cleanText = nadieText.replace(/^(@\S+\s*)+/, "").trim()
+      // Budget: 140 minus the "@username " prefix
+      const prefix = `@${finalUsername} `
+      const budget = 140 - prefix.length
+      if (cleanText.length > budget) {
+        cleanText = cleanText.slice(0, budget)
+        const lastSpace = cleanText.lastIndexOf(' ')
+        if (lastSpace > budget * 0.6) cleanText = cleanText.slice(0, lastSpace)
+      }
+      const nadieContent = prefix + cleanText
       const { data: nadieData, error: nadieError } = await supabase
         .from("muro_comments")
         .insert([{ username: "Nadie", content: nadieContent, is_nadie: true }])
