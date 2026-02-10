@@ -3,9 +3,14 @@
 import type React from "react"
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
-import { getFromCache, setToCache } from "@/lib/cache"
+import { useClock } from "@/hooks/useClock"
+import { Taskbar } from "@/components/Taskbar"
+import { MusicaContent } from "@/components/windows/MusicaWindow"
+import { BioContent } from "@/components/windows/BioWindow"
+import { WelcomePosterContent } from "@/components/windows/WelcomePosterWindow"
+import { AlbumContent } from "@/components/windows/AlbumWindow"
+import { MuroContent } from "@/components/windows/MuroWindow"
+import { UnderConstructionPage } from "@/components/windows/UnderConstructionPage"
 
 interface WindowState {
   id: string
@@ -42,7 +47,7 @@ export default function BesmayaDesktop() {
     startWindowX: 0,
     startWindowY: 0,
   })
-  const [time, setTime] = useState("")
+  const time = useClock()
   const [nextZIndex, setNextZIndex] = useState(100)
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null)
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
@@ -53,8 +58,6 @@ export default function BesmayaDesktop() {
   const [isLandscapeMobile, setIsLandscapeMobile] = useState(false)
   const [hasFinePointer, setHasFinePointer] = useState(false)
   const [initialWindowsCreated, setInitialWindowsCreated] = useState(false)
-  const [spotifyPrefetched, setSpotifyPrefetched] = useState(false)
-  const [concertsPreloaded, setConcertsPreloaded] = useState(false)
   const router = useRouter()
   const iconsContainerRef = useRef<HTMLDivElement>(null)
   const forcedMobileByCollision = useRef(false)
@@ -124,22 +127,6 @@ export default function BesmayaDesktop() {
       window.removeEventListener("orientationchange", checkScreenSize)
       pointerQuery.removeEventListener('change', updatePointer)
     }
-  }, [])
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date()
-      setTime(
-        now.toLocaleTimeString("es-ES", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }),
-      )
-    }
-    updateTime()
-    const interval = setInterval(updateTime, 1000)
-    return () => clearInterval(interval)
   }, [])
 
   // Clamping de ventanas cuando el viewport se reduce (solo en desktop)
@@ -515,31 +502,6 @@ export default function BesmayaDesktop() {
     setIsStartMenuOpen(!isStartMenuOpen)
   }
 
-  const prefetchSpotify = useCallback(() => {
-    if (!spotifyPrefetched) {
-      setSpotifyPrefetched(true)
-    }
-  }, [spotifyPrefetched])
-
-  const prefetchConciertos = useCallback(async () => {
-    router.prefetch('/conciertos')
-
-    if (concertsPreloaded) return
-    setConcertsPreloaded(true)
-
-    try {
-      const supabase = createClient()
-      const { data } = await supabase.from("concerts").select("*")
-      if (data) {
-        localStorage.setItem('concerts_cache', JSON.stringify({
-          data,
-          timestamp: Date.now()
-        }))
-      }
-    } catch {
-      // Silent fail - conciertos page will fetch if needed
-    }
-  }, [router, concertsPreloaded])
 
   // Sync --app-height and --app-offset-top with visualViewport for mobile keyboard handling.
   // On iOS Safari, when the keyboard opens the browser scrolls the layout viewport down
@@ -633,7 +595,6 @@ export default function BesmayaDesktop() {
         <div
           className={`desktop-icon ${selectedIcon === "conciertos" ? "selected" : ""}`}
           onClick={() => handleIconClick("conciertos")}
-          onMouseEnter={prefetchConciertos}
         >
           <div className="desktop-icon-image-wrapper icon-conciertos">
             <img src="/icons/conciertos.png" alt="Conciertos" />
@@ -674,7 +635,6 @@ export default function BesmayaDesktop() {
         <div
           className={`desktop-icon ${selectedIcon === "musica" ? "selected" : ""}`}
           onClick={() => handleIconClick("musica")}
-          onMouseEnter={prefetchSpotify}
         >
           <div className="desktop-icon-image-wrapper">
             <img src="/icons/musica.png" alt="Música" />
@@ -791,7 +751,6 @@ export default function BesmayaDesktop() {
                 onClick={() => {
                   router.push("/conciertos")
                 }}
-                onMouseEnter={prefetchConciertos}
               >
                 <img src="/icons/conciertos.png" alt="Conciertos" width={32} height={32} />
                 <span>La gira de Nadie</span>
@@ -824,32 +783,7 @@ export default function BesmayaDesktop() {
         </div>
       )}
 
-      {/* Hidden Spotify prefetch iframe */}
-      {spotifyPrefetched && (
-        <iframe
-          src="https://open.spotify.com/embed/playlist/0iXYV9B7pvlsZKqJEfOk5V?utm_source=generator&theme=0"
-          style={{
-            position: 'absolute',
-            width: '1px',
-            height: '1px',
-            opacity: 0,
-            pointerEvents: 'none',
-            visibility: 'hidden'
-          }}
-          tabIndex={-1}
-          aria-hidden="true"
-          sandbox="allow-scripts allow-same-origin"
-        />
-      )}
-
-      <div className="xp-taskbar flex items-center justify-between px-2 sm:px-4 py-2 bg-gray-800 text-white">
-        {/* Grupo izquierdo: Start + indicadores de ventanas */}
-        <div className="flex items-center">
-          <button className="xp-start-btn" onClick={toggleStartMenu}>
-            <img src="/icons/sistema-operativo.png" alt="Start" width={16} height={16} className="mr-1 sm:mr-1" />
-            <span className="hidden sm:inline">start</span>
-          </button>
-
+      <Taskbar time={time} onStartClick={toggleStartMenu} showSocialLinks>
           {/* Indicadores de ventanas en móvil */}
           {!isDesktop && windows.length > 0 && (
             <div className="flex gap-1 ml-2">
@@ -900,429 +834,8 @@ export default function BesmayaDesktop() {
           ))}
         </div>
         )}
-        </div>
-
-        <div className="flex items-center space-x-2 sm:space-x-1 text-white text-xs flex-shrink-0">
-          <a
-            href="https://www.instagram.com/somosbesmaya/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-white hover:text-blue-200 cursor-pointer font-bold p-2 sm:p-0"
-          >
-            IG
-          </a>
-          <a
-            href="https://www.tiktok.com/@somosbesmaya"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-white hover:text-blue-200 cursor-pointer font-bold p-2 sm:p-0"
-          >
-            TT
-          </a>
-          <span className="text-white hidden sm:inline">|</span>
-          <div className="xp-clock text-white">{time}</div>
-        </div>
-      </div>
+      </Taskbar>
     </div>
   )
 }
 
-function UnderConstructionPage({ onToggle }: { onToggle: () => void }) {
-  return (
-    <div className="h-screen w-screen bg-gradient-to-br from-blue-900 via-purple-900 to-black flex items-center justify-center relative overflow-hidden">
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=60 height=60 viewBox=0 0 60 60 xmlns=http://www.w3.org/2000/svg%3E%3Cg fill=none fillRule=evenodd%3E%3Cg fill=%23ffffff fillOpacity=0.1%3E%3Ccircle cx=30 cy=30 r=2/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
-      </div>
-
-      <div className="text-center z-10 max-w-2xl mx-auto px-6">
-        {/* Logo/Brand */}
-        <div className="mb-8">
-          <h1 className="text-6xl md:text-8xl font-bold text-white mb-4 tracking-wider">BESMAYA</h1>
-          <div className="w-32 h-1 bg-gradient-to-r from-purple-400 to-pink-400 mx-auto"></div>
-        </div>
-
-        {/* Main message */}
-        <div className="mb-12">
-          <h2 className="text-2xl md:text-4xl text-gray-300 mb-6 font-light">Sitio en Construcción</h2>
-          <p className="text-lg text-gray-400 leading-relaxed max-w-lg mx-auto">
-            Estamos trabajando en algo increíble. Muy pronto podrás disfrutar de una experiencia única.
-          </p>
-        </div>
-
-        {/* Social links */}
-        <div className="mb-12">
-          <div className="flex justify-center space-x-6">
-            <a
-              href="https://merchandtour.com/besmaya/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105"
-            >
-              Merchan
-            </a>
-            <a
-              href="/conciertos"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
-            >
-              Entradas
-            </a>
-          </div>
-        </div>
-
-        {/* Coming soon indicator */}
-        <div className="text-gray-500 text-sm">
-          <p>Próximamente...</p>
-        </div>
-      </div>
-
-      {/* Hidden toggle for admin access */}
-      <button
-        onClick={onToggle}
-        className="absolute bottom-4 right-4 opacity-0 hover:opacity-50 text-white text-xs px-2 py-1 bg-black bg-opacity-50 rounded"
-        title="Press Ctrl+Shift+C to toggle"
-      >
-        Admin
-      </button>
-    </div>
-  )
-}
-
-function MusicaContent() {
-  const [isLoaded, setIsLoaded] = useState(false)
-
-  return (
-    <div className="relative w-full h-full">
-      {/* Skeleton loader */}
-      {!isLoaded && (
-        <div className="absolute inset-0 bg-[#121212] flex flex-col items-center justify-center">
-          <div className="w-16 h-16 rounded-full bg-[#1DB954]/30 mb-3 animate-pulse" />
-          <div className="w-24 h-3 bg-gray-700 rounded mb-2 animate-pulse" />
-          <div className="w-16 h-2 bg-gray-800 rounded animate-pulse" />
-        </div>
-      )}
-      <iframe
-        src="https://open.spotify.com/embed/playlist/0iXYV9B7pvlsZKqJEfOk5V?utm_source=generator&theme=0"
-        frameBorder="0"
-        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        className={`block w-full h-full transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-        onLoad={() => setIsLoaded(true)}
-      />
-    </div>
-  )
-}
-
-function BioContent() {
-  return (
-    <div className="h-full">
-      <div className="bg-white border border-gray-300 h-full p-4 overflow-auto" style={{ fontFamily: "monospace" }}>
-        <div className="text-sm leading-relaxed">
-          <p className="mb-4">Besmaya son Javi Ojanguren y Javi Echavarri</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function WelcomePosterContent() {
-  const [isLoaded, setIsLoaded] = useState(false)
-
-  return (
-    <div className="flex flex-col items-center p-0 sm:p-2">
-      <div className="relative w-full mb-1 sm:mb-4">
-        {!isLoaded && (
-          <div className="w-full aspect-[3/4] bg-gray-300 animate-pulse rounded-none sm:rounded-lg" />
-        )}
-        <img
-          src="/gira.jpg"
-          alt="La gira de Nadie - Besmaya"
-          className={`w-full h-auto rounded-none sm:rounded-lg transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'}`}
-          onLoad={() => setIsLoaded(true)}
-        />
-      </div>
-      <Link
-        href="/conciertos"
-        prefetch={true}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-lg text-center block transition-colors duration-200 text-sm sm:text-base border-transparent"
-      >
-        entradas
-      </Link>
-    </div>
-  )
-}
-
-function AlbumContent() {
-  const [isLoaded, setIsLoaded] = useState(false)
-
-  return (
-    <div className="flex flex-col items-center p-0 sm:p-2">
-      <div className="relative w-full mb-1 sm:mb-4">
-        {!isLoaded && (
-          <div className="w-full aspect-square bg-gray-300 animate-pulse rounded-none sm:rounded-lg" />
-        )}
-        <img
-          src="/album-lavida.png"
-          alt="La vida de Nadie - Besmaya"
-          className={`w-full h-auto rounded-none sm:rounded-lg transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'}`}
-          onLoad={() => setIsLoaded(true)}
-        />
-      </div>
-      <a
-        href="https://acqustic-platform.sumupstore.com/producto/la-vida-de-nadie-besmaya"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-lg text-center block transition-colors duration-200 text-sm sm:text-base border-transparent"
-      >
-        comprar ahora
-      </a>
-    </div>
-  )
-}
-
-interface MuroComment {
-  id: string
-  username: string
-  content: string
-  created_at: string
-  is_nadie?: boolean
-}
-
-function MuroContent() {
-  const [comments, setComments] = useState<MuroComment[]>([])
-  const [username, setUsername] = useState("")
-  const [message, setMessage] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-  const [sessionUsername] = useState(() => {
-    if (typeof window === "undefined") return ""
-    const stored = sessionStorage.getItem("muro_username")
-    if (stored) return stored
-    const generated = "user" + Math.random().toString(36).slice(2, 6)
-    sessionStorage.setItem("muro_username", generated)
-    return generated
-  })
-  const feedRef = useRef<HTMLDivElement>(null)
-  const isPostingRef = useRef(false)
-
-  const scrollToBottom = () => {
-    if (feedRef.current) {
-      feedRef.current.scrollTop = feedRef.current.scrollHeight
-    }
-  }
-
-  useEffect(() => {
-    const cached = getFromCache<MuroComment[]>("muro_comments")
-    if (cached) {
-      setComments(cached)
-      setIsLoading(false)
-      setTimeout(scrollToBottom, 50)
-    }
-
-    fetch("/api/muro")
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setComments(data)
-          setToCache("muro_comments", data)
-          setTimeout(scrollToBottom, 50)
-        }
-      })
-      .catch(() => {})
-      .finally(() => setIsLoading(false))
-  }, [])
-
-  // Auto-refresh: polling cada 5 segundos para nuevos mensajes
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      if (isPostingRef.current) return
-      try {
-        const res = await fetch("/api/muro")
-        const data = await res.json()
-        if (Array.isArray(data)) {
-          setComments((prev) => {
-            if (data.length !== prev.length || data[data.length - 1]?.id !== prev[prev.length - 1]?.id) {
-              setToCache("muro_comments", data)
-              // Auto-scroll solo si ya está cerca del fondo
-              if (feedRef.current) {
-                const { scrollTop, scrollHeight, clientHeight } = feedRef.current
-                if (scrollHeight - scrollTop - clientHeight < 80) {
-                  setTimeout(scrollToBottom, 50)
-                }
-              }
-              return data
-            }
-            return prev
-          })
-        }
-      } catch {}
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!message.trim() || isSubmitting) return
-    setError("")
-    setIsSubmitting(true)
-
-    const tempId = "temp-" + Date.now()
-    const trimmedContent = message.trim()
-    const trimmedUsername = username.trim()
-    const optimisticComment: MuroComment = {
-      id: tempId,
-      username: trimmedUsername || sessionUsername || "anónimo",
-      content: trimmedContent,
-      created_at: new Date().toISOString(),
-    }
-
-    setComments((prev) => [...prev, optimisticComment])
-    setMessage("")
-    setTimeout(scrollToBottom, 50)
-    isPostingRef.current = true
-
-    try {
-      const res = await fetch("/api/muro", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: trimmedUsername || sessionUsername,
-          content: trimmedContent,
-        }),
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        setError(data.error || "Error al enviar")
-        setComments((prev) => prev.filter((c) => c.id !== tempId))
-        return
-      }
-
-      const { userComment, nadieReply } = await res.json()
-      setComments((prev) => {
-        let updated = prev.map((c) => c.id === tempId ? userComment : c)
-        if (nadieReply) updated = [...updated, nadieReply]
-        return updated
-      })
-      if (nadieReply) setTimeout(scrollToBottom, 100)
-    } catch {
-      setError("Error de conexión")
-      setComments((prev) => prev.filter((c) => c.id !== tempId))
-    } finally {
-      isPostingRef.current = false
-      setIsSubmitting(false)
-    }
-  }
-
-  const timeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime()
-    const mins = Math.floor(diff / 60000)
-    if (mins < 1) return "ahora"
-    if (mins < 60) return `${mins}m`
-    const hours = Math.floor(mins / 60)
-    if (hours < 24) return `${hours}h`
-    const days = Math.floor(hours / 24)
-    return `${days}d`
-  }
-
-  const myUsername = username.trim() || sessionUsername
-
-  const getUsernameClass = (c: MuroComment) => {
-    if (c.is_nadie) return "text-xs font-bold shrink-0"
-    if (c.username === myUsername) return "text-xs font-bold shrink-0 text-green-700"
-    return "text-xs font-bold shrink-0 text-blue-800"
-  }
-
-  const renderContent = (c: MuroComment) => {
-    if (c.is_nadie && c.content.startsWith("@")) {
-      const spaceIdx = c.content.indexOf(" ")
-      if (spaceIdx > 0) {
-        const mention = c.content.slice(0, spaceIdx)
-        const rest = c.content.slice(spaceIdx)
-        const mentionedUser = mention.slice(1)
-        const isMe = mentionedUser === myUsername
-        return (
-          <>
-            <span className={`font-bold ${isMe ? "text-green-700" : "text-blue-800"}`}>{mention}</span>
-            {rest}
-          </>
-        )
-      }
-    }
-    return c.content
-  }
-
-  return (
-    <div className="h-full flex flex-col" style={{ fontFamily: "Tahoma, sans-serif" }}>
-      <div className="bg-[#ece9d8] px-3 py-2 border-b border-gray-400 text-xs text-gray-600 italic">
-        ¿Qué os está pareciendo el disco?
-      </div>
-
-      <div
-        ref={feedRef}
-        className="flex-1 bg-white border border-gray-300 mx-1 mt-1 overflow-y-auto"
-        style={{ minHeight: 0, overscrollBehavior: 'contain' }}
-      >
-        {isLoading ? (
-          <div className="p-3 text-center text-gray-400 text-xs">Cargando...</div>
-        ) : comments.length === 0 ? (
-          <div className="p-3 text-center text-gray-400 text-xs">Sé el primero en escribir</div>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {comments.map((c) => (
-              <div key={c.id} className={`px-3 py-2 ${c.is_nadie ? "bg-yellow-50/30 hover:bg-yellow-50/50" : "hover:bg-blue-50/50"}`}>
-                <div className="flex items-baseline gap-2">
-                  <span className={getUsernameClass(c)} style={c.is_nadie ? { color: "#C4A43C" } : undefined}>@{c.username}</span>
-                  <span className="text-xs text-gray-400 shrink-0">{timeAgo(c.created_at)}</span>
-                </div>
-                <p className="text-xs text-gray-800 mt-0.5 break-words">{renderContent(c)}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <form onSubmit={handleSubmit} className="bg-[#ece9d8] border-t border-gray-400 p-2">
-        {error && (
-          <div className="text-xs text-red-600 mb-1 px-1">{error}</div>
-        )}
-        <div className="flex gap-1.5 items-end">
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value.slice(0, 20))}
-            placeholder="anónimo"
-            className="w-[72px] shrink-0 text-[16px] sm:text-xs px-1.5 py-1 border border-gray-400 bg-white focus:outline-none focus:border-blue-500"
-            maxLength={20}
-          />
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value.slice(0, 140))}
-              placeholder="Escribe algo..."
-              className="w-full text-[16px] sm:text-xs px-1.5 py-1 pr-10 border border-gray-400 bg-white focus:outline-none focus:border-blue-500"
-              maxLength={140}
-            />
-            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none">
-              {message.length}/140
-            </span>
-          </div>
-          <button
-            type="submit"
-            disabled={isSubmitting || !message.trim()}
-            className="shrink-0 text-xs px-2 py-1 bg-[#d4d0c8] border border-gray-400 hover:bg-[#c8c4bc] active:bg-[#bfbbb3] disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              boxShadow: "inset 1px 1px 0 #fff, inset -1px -1px 0 #808080",
-            }}
-          >
-            {isSubmitting ? "..." : "Enviar"}
-          </button>
-        </div>
-      </form>
-    </div>
-  )
-}

@@ -3,6 +3,8 @@ import { useState, useEffect } from "react"
 import type React from "react"
 
 import Link from "next/link"
+import { useClock } from "@/hooks/useClock"
+import { Taskbar } from "@/components/Taskbar"
 
 interface Concert {
   id: string
@@ -27,7 +29,7 @@ export default function AdminPage() {
     sala: "",
     link: "",
   })
-  const [time, setTime] = useState("")
+  const time = useClock()
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
 
   // Check existing session on mount
@@ -79,21 +81,6 @@ export default function AdminPage() {
     setPassword("")
   }
 
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date()
-      setTime(
-        now.toLocaleTimeString("es-ES", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }),
-      )
-    }
-    updateTime()
-    const interval = setInterval(updateTime, 1000)
-    return () => clearInterval(interval)
-  }, [])
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -420,18 +407,11 @@ export default function AdminPage() {
       )}
 
       {/* Windows XP Taskbar */}
-      <div className="xp-taskbar">
-        <button className="xp-start-btn" onClick={toggleStartMenu}>
-          <img src="/icons/sistema-operativo.png" alt="Start" width={16} height={16} className="mr-1" />
-          start
-        </button>
-
+      <Taskbar time={time} onStartClick={toggleStartMenu}>
         <div className="xp-taskbar-buttons">
           <button className="xp-taskbar-btn active">Concert Admin Panel</button>
         </div>
-
-        <div className="xp-clock text-white">{time}</div>
-      </div>
+      </Taskbar>
     </div>
   )
 }
