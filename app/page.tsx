@@ -541,18 +541,30 @@ export default function BesmayaDesktop() {
     }
   }, [router, concertsPreloaded])
 
-  // Sync --app-height with visualViewport so mobile windows resize when keyboard opens
+  // Sync --app-height and --app-offset-top with visualViewport for mobile keyboard handling.
+  // On iOS Safari, when the keyboard opens the browser scrolls the layout viewport down
+  // but position:fixed elements stay at the top of the layout viewport (off-screen).
+  // We use visualViewport.offsetTop to reposition them into the visible area.
   useEffect(() => {
-    const updateHeight = () => {
-      const h = window.visualViewport?.height || window.innerHeight
-      document.documentElement.style.setProperty('--app-height', `${h}px`)
+    const update = () => {
+      const vv = window.visualViewport
+      if (vv) {
+        document.documentElement.style.setProperty('--app-height', `${vv.height}px`)
+        document.documentElement.style.setProperty('--app-offset-top', `${vv.offsetTop}px`)
+      } else {
+        document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`)
+        document.documentElement.style.setProperty('--app-offset-top', '0px')
+      }
     }
-    updateHeight()
-    window.visualViewport?.addEventListener('resize', updateHeight)
-    window.addEventListener('resize', updateHeight)
+    update()
+    // Listen for both resize (keyboard open/close) and scroll (viewport shift)
+    window.visualViewport?.addEventListener('resize', update)
+    window.visualViewport?.addEventListener('scroll', update)
+    window.addEventListener('resize', update)
     return () => {
-      window.visualViewport?.removeEventListener('resize', updateHeight)
-      window.removeEventListener('resize', updateHeight)
+      window.visualViewport?.removeEventListener('resize', update)
+      window.visualViewport?.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
     }
   }, [])
 
