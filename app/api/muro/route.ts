@@ -227,14 +227,14 @@ export async function GET() {
   const { data, error } = await supabase
     .from("muro_comments")
     .select("*")
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .limit(50)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json(data)
+  return NextResponse.json(data ? [...data].reverse() : [])
 }
 
 export async function POST(request: Request) {

@@ -1208,7 +1208,7 @@ function MuroContent() {
       <div
         ref={feedRef}
         className="flex-1 bg-white border border-gray-300 mx-1 mt-1 overflow-y-auto"
-        style={{ minHeight: 0 }}
+        style={{ minHeight: 0, overscrollBehavior: 'contain' }}
       >
         {isLoading ? (
           <div className="p-3 text-center text-gray-400 text-xs">Cargando...</div>
