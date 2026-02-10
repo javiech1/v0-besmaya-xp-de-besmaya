@@ -541,6 +541,50 @@ export default function BesmayaDesktop() {
     }
   }, [router, concertsPreloaded])
 
+  // Sync --app-height with visualViewport so mobile windows resize when keyboard opens
+  useEffect(() => {
+    const updateHeight = () => {
+      const h = window.visualViewport?.height || window.innerHeight
+      document.documentElement.style.setProperty('--app-height', `${h}px`)
+    }
+    updateHeight()
+    window.visualViewport?.addEventListener('resize', updateHeight)
+    window.addEventListener('resize', updateHeight)
+    return () => {
+      window.visualViewport?.removeEventListener('resize', updateHeight)
+      window.removeEventListener('resize', updateHeight)
+    }
+  }, [])
+
+  // Prevent body scroll on iOS: block touchmove unless inside a scrollable element
+  useEffect(() => {
+    let startY = 0
+    const onTouchStart = (e: TouchEvent) => {
+      startY = e.touches[0].clientY
+    }
+    const onTouchMove = (e: TouchEvent) => {
+      const dy = e.touches[0].clientY - startY
+      let el = e.target as HTMLElement | null
+      while (el && el !== document.documentElement) {
+        const { overflowY } = window.getComputedStyle(el)
+        if ((overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
+          const { scrollTop, scrollHeight, clientHeight } = el
+          if (dy > 0 && scrollTop > 0) return
+          if (dy < 0 && scrollTop + clientHeight < scrollHeight) return
+          break
+        }
+        el = el.parentElement
+      }
+      e.preventDefault()
+    }
+    document.addEventListener('touchstart', onTouchStart, { passive: true })
+    document.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart)
+      document.removeEventListener('touchmove', onTouchMove)
+    }
+  }, [])
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement
