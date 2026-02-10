@@ -1031,6 +1031,7 @@ interface MuroComment {
   username: string
   content: string
   created_at: string
+  is_nadie?: boolean
 }
 
 function MuroContent() {
@@ -1040,7 +1041,16 @@ function MuroContent() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [sessionUsername] = useState(() => {
+    if (typeof window === "undefined") return ""
+    const stored = sessionStorage.getItem("muro_username")
+    if (stored) return stored
+    const generated = "user" + Math.random().toString(36).slice(2, 6)
+    sessionStorage.setItem("muro_username", generated)
+    return generated
+  })
   const feedRef = useRef<HTMLDivElement>(null)
+  const isPostingRef = useRef(false)
 
   const scrollToBottom = () => {
     if (feedRef.current) {
@@ -1069,6 +1079,34 @@ function MuroContent() {
       .finally(() => setIsLoading(false))
   }, [])
 
+  // Auto-refresh: polling cada 5 segundos para nuevos mensajes
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (isPostingRef.current) return
+      try {
+        const res = await fetch("/api/muro")
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          setComments((prev) => {
+            if (data.length !== prev.length || data[data.length - 1]?.id !== prev[prev.length - 1]?.id) {
+              setToCache("muro_comments", data)
+              // Auto-scroll solo si ya está cerca del fondo
+              if (feedRef.current) {
+                const { scrollTop, scrollHeight, clientHeight } = feedRef.current
+                if (scrollHeight - scrollTop - clientHeight < 80) {
+                  setTimeout(scrollToBottom, 50)
+                }
+              }
+              return data
+            }
+            return prev
+          })
+        }
+      } catch {}
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!message.trim() || isSubmitting) return
@@ -1080,7 +1118,7 @@ function MuroContent() {
     const trimmedUsername = username.trim()
     const optimisticComment: MuroComment = {
       id: tempId,
-      username: trimmedUsername || "anónimo",
+      username: trimmedUsername || sessionUsername || "anónimo",
       content: trimmedContent,
       created_at: new Date().toISOString(),
     }
@@ -1088,13 +1126,14 @@ function MuroContent() {
     setComments((prev) => [...prev, optimisticComment])
     setMessage("")
     setTimeout(scrollToBottom, 50)
+    isPostingRef.current = true
 
     try {
       const res = await fetch("/api/muro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: trimmedUsername || undefined,
+          username: trimmedUsername || sessionUsername,
           content: trimmedContent,
         }),
       })
@@ -1106,12 +1145,18 @@ function MuroContent() {
         return
       }
 
-      const newComment = await res.json()
-      setComments((prev) => prev.map((c) => c.id === tempId ? newComment : c))
+      const { userComment, nadieReply } = await res.json()
+      setComments((prev) => {
+        let updated = prev.map((c) => c.id === tempId ? userComment : c)
+        if (nadieReply) updated = [...updated, nadieReply]
+        return updated
+      })
+      if (nadieReply) setTimeout(scrollToBottom, 100)
     } catch {
       setError("Error de conexión")
       setComments((prev) => prev.filter((c) => c.id !== tempId))
     } finally {
+      isPostingRef.current = false
       setIsSubmitting(false)
     }
   }
@@ -1125,6 +1170,33 @@ function MuroContent() {
     if (hours < 24) return `${hours}h`
     const days = Math.floor(hours / 24)
     return `${days}d`
+  }
+
+  const myUsername = username.trim() || sessionUsername
+
+  const getUsernameClass = (c: MuroComment) => {
+    if (c.is_nadie) return "text-xs font-bold shrink-0"
+    if (c.username === myUsername) return "text-xs font-bold shrink-0 text-green-700"
+    return "text-xs font-bold shrink-0 text-blue-800"
+  }
+
+  const renderContent = (c: MuroComment) => {
+    if (c.is_nadie && c.content.startsWith("@")) {
+      const spaceIdx = c.content.indexOf(" ")
+      if (spaceIdx > 0) {
+        const mention = c.content.slice(0, spaceIdx)
+        const rest = c.content.slice(spaceIdx)
+        const mentionedUser = mention.slice(1)
+        const isMe = mentionedUser === myUsername
+        return (
+          <>
+            <span className={`font-bold ${isMe ? "text-green-700" : "text-blue-800"}`}>{mention}</span>
+            {rest}
+          </>
+        )
+      }
+    }
+    return c.content
   }
 
   return (
@@ -1145,12 +1217,12 @@ function MuroContent() {
         ) : (
           <div className="divide-y divide-gray-100">
             {comments.map((c) => (
-              <div key={c.id} className="px-3 py-2 hover:bg-blue-50/50">
+              <div key={c.id} className={`px-3 py-2 ${c.is_nadie ? "bg-yellow-50/30 hover:bg-yellow-50/50" : "hover:bg-blue-50/50"}`}>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xs font-bold text-blue-800 shrink-0">@{c.username}</span>
+                  <span className={getUsernameClass(c)} style={c.is_nadie ? { color: "#C4A43C" } : undefined}>@{c.username}</span>
                   <span className="text-xs text-gray-400 shrink-0">{timeAgo(c.created_at)}</span>
                 </div>
-                <p className="text-xs text-gray-800 mt-0.5 break-words">{c.content}</p>
+                <p className="text-xs text-gray-800 mt-0.5 break-words">{renderContent(c)}</p>
               </div>
             ))}
           </div>
