@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/client"
 import { getFromCache, setToCache, sortByFechaChronologically, parseFechaToDate } from "@/lib/cache"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useClock } from "@/hooks/useClock"
+import { Taskbar } from "@/components/Taskbar"
 
 interface Event {
   id: string
@@ -39,7 +41,7 @@ function filterPastEvents<T extends { fecha: string }>(items: T[]): T[] {
 }
 
 export default function ConciertosPage() {
-  const [time, setTime] = useState("")
+  const time = useClock()
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('conciertos')
   const [concerts, setConcerts] = useState<Concert[]>(sortByFechaChronologically(filterPastEvents(fallbackConcerts)))
@@ -49,22 +51,6 @@ export default function ConciertosPage() {
   const router = useRouter()
 
   const supabase = createClient()
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date()
-      setTime(
-        now.toLocaleTimeString("es-ES", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }),
-      )
-    }
-    updateTime()
-    const interval = setInterval(updateTime, 1000)
-    return () => clearInterval(interval)
-  }, [])
 
   useEffect(() => {
     fetchConcerts()
@@ -336,18 +322,11 @@ export default function ConciertosPage() {
       )}
 
       {/* Windows XP Taskbar */}
-      <div className="xp-taskbar">
-        <button className="xp-start-btn" onClick={toggleStartMenu} disabled>
-          <img src="/icons/sistema-operativo.png" alt="Start" width={16} height={16} className="mr-1" />
-          start
-        </button>
-
+      <Taskbar time={time} onStartClick={toggleStartMenu} startDisabled>
         <div className="xp-taskbar-buttons">
           <button className="xp-taskbar-btn active">La gira de Nadie - Tour Dates</button>
         </div>
-
-        <div className="xp-clock text-white">{time}</div>
-      </div>
+      </Taskbar>
     </div>
   )
 }
