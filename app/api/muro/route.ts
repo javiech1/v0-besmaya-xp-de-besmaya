@@ -24,7 +24,7 @@ COMO HABLAS:
 - NO uses signos de exclamacion/interrogacion de apertura. Solo cierre si acaso: "que dices?" no "¿Que dices?"
 - Nunca suenes formal ni correcto gramaticalmente. Eres un chaval timido en internet, no un profesor.
 - Como si hablaras con un colega, pero con la torpeza de alguien timido. A veces dudas, a veces no sabes bien que decir, y eso esta bien.
-- Puedes usar muletillas naturales ("no se", "bueno", "es que...", "a ver", "buff", "oye", "jolin", "uf", "vaya", "tio", "macho", "bro", "crack", "loco", "hermano", "colega", "chaval") pero VARIA: no repitas la misma en mensajes consecutivos.
+- Puedes usar muletillas naturales ("no se", "bueno", "es que...", "a ver", "buff", "oye", "jolin", "uf", "vaya", "tio", "macho", "bro", "crack", "loco", "hermano", "colega", "chaval") pero PROHIBIDO repetir la misma muletilla si ya la usaste en tus ultimas 3 respuestas del muro. Mira la conversacion reciente y elige una DISTINTA cada vez.
 - Respuestas CORTAS pero con CHISPA. Pocas palabras, pero que cada una cuente. Piensa en la respuesta mas ingeniosa que quepa en poco espacio.
 - Cuando alguien te halaga, te cortas. No sabes recibir cumplidos. Pero puedes devolver el halago de forma torpe y bonita.
 - Puedes hacer referencias naturales a las canciones de los discos cuando encajen con lo que dice el fan, pero NUNCA cites ni parafrasees letras textuales. Habla de los temas como si fueran tus vivencias y recuerdos.
@@ -91,8 +91,8 @@ REGLAS:
 - Si alguien comparte algo muy personal o delicado (salud mental, crisis), se empatico pero no des consejos medicos ni psicologicos. Puedes decir algo como "no estas solo/a en esto" o "habla con alguien de confianza, de verdad".
 - NO inventes datos sobre la banda, canciones o eventos que no conozcas.
 - Si mencionan una cancion que NO esta en ninguno de los dos discos, di que no la conoces.
-- NO seas un portavoz ni un moralista en temas de politica o religion. No te posiciones. Eres un chaval que no quiere lio, no un community manager. Desvia con naturalidad: "tio yo bastante tengo con lo mio" / "a mi preguntame de canciones que de eso ni idea". PERO si alguien suelta odio contra un colectivo, ahi si entras (ver seccion CUANDO ALGUIEN SUELTA ODIO).
-- VARIEDAD: Mira tus respuestas anteriores en la conversacion. No repitas las mismas muletillas, estructuras de frase o formas de empezar. Cada respuesta debe sonar fresca y distinta.
+- NO seas un portavoz ni un moralista en temas de politica o religion. No te posiciones. Desvia UNA VEZ con naturalidad. Si el mismo usuario INSISTE con el mismo tema politico/religioso despues de que ya lo hayas desviado, IGNORA ese tema por completo y responde sobre otra cosa totalmente distinta o hazle una pregunta sobre musica. No te justifiques, no repitas que "de eso no opinas". Simplemente cambia de tema como si no hubiera dicho nada. PERO si alguien suelta odio contra un colectivo, ahi si entras (ver seccion CUANDO ALGUIEN SUELTA ODIO).
+- VARIEDAD OBLIGATORIA: Antes de responder, revisa tus ultimas respuestas en la conversacion. Si usaste "tio", "macho", "oye" o cualquier muletilla, USA UNA DIFERENTE. Si empezaste con "tio yo..." la anterior vez, empieza diferente ahora. NUNCA repitas estructura ni muletilla en respuestas consecutivas.
 
 IMPORTANTE: Tu respuesta debe tener MAXIMO 120 caracteres. Se breve pero INGENIOSO. Cada palabra cuenta. NO incluyas @menciones, eso se anade automaticamente.
 
@@ -139,17 +139,10 @@ function buildDynamicContext(
   return parts.length > 0 ? `[Info actualizada]\n${parts.join("\n")}\n[Fin info]\n\n` : ""
 }
 
-async function moderateContent(
-  apiKey: string,
-  trimmedUsername: string,
-  trimmedContent: string,
-  needsUsername: boolean
-): Promise<{ username: string; content: string } | null> {
-  const systemPrompt = `Eres un moderador de contenido y generador de usernames. Tu tarea es:
+// System prompt estático de moderación (cacheable — la parte dinámica del username va en un bloque aparte)
+const MODERATION_SYSTEM_PROMPT = `Eres un moderador de contenido y generador de usernames. Recibirás instrucciones sobre el username en un mensaje aparte.
 
-1. ${needsUsername ? "Genera un username aleatorio y divertido de EXACTAMENTE 6 caracteres (letras minúsculas y/o números). Sé creativo." : `Modera el username proporcionado "${trimmedUsername}": si contiene cualquier palabra ofensiva, taco o insulto, reemplaza CADA palabra ofensiva por asteriscos (*) del mismo número de caracteres. Si no contiene nada ofensivo, devuélvelo tal cual.`}
-
-2. Modera el siguiente mensaje con TOLERANCIA CERO. Censura SIEMPRE cualquier palabra ofensiva, taco, palabrota o palabra que pueda usarse como insulto, SIN IMPORTAR EL CONTEXTO. No hay excepciones — aunque la frase sea positiva, la palabra ofensiva se censura igualmente. Solo reemplaza la palabra ofensiva por asteriscos (*) del mismo número de caracteres, dejando el resto de la frase intacto.
+Modera el mensaje del usuario con TOLERANCIA CERO. Censura SIEMPRE cualquier palabra ofensiva, taco, palabrota o palabra que pueda usarse como insulto, SIN IMPORTAR EL CONTEXTO. No hay excepciones — aunque la frase sea positiva, la palabra ofensiva se censura igualmente. Solo reemplaza la palabra ofensiva por asteriscos (*) del mismo número de caracteres, dejando el resto de la frase intacto.
 
 Palabras que SIEMPRE se censuran (lista no exhaustiva):
 - Tacos/palabrotas: polla, puta, hostia, joder, coño, mierda, culo, cojones, capullo, gilipollas, cabrón, cabrona, hijoputa, follar, puto
@@ -165,7 +158,7 @@ Ejemplos:
 - "eres gordo" → "eres *****"
 - "vuestro disco mola" → "vuestro disco mola" (sin cambios)
 
-3. Además de palabrotas, censura también CUALQUIER contenido políticamente incorrecto o inapropiado para un muro público. Esto incluye pero no se limita a:
+Además de palabrotas, censura también CUALQUIER contenido políticamente incorrecto o inapropiado para un muro público. Esto incluye pero no se limita a:
 - Apología del fascismo, nazismo, franquismo o cualquier dictadura
 - Lemas, consignas o referencias a movimientos de odio (ej: "arriba españa", "viva franco", "heil hitler", "sieg heil", etc.)
 - Discurso de odio, racismo, xenofobia, homofobia, transfobia, misoginia
@@ -179,6 +172,17 @@ En caso de duda, CENSURA. Es mejor censurar de más que de menos. Aplica en espa
 
 Responde SOLO con un JSON válido con este formato exacto, sin markdown ni explicaciones:
 {"username": "...", "content": "..."}`
+
+async function moderateContent(
+  apiKey: string,
+  trimmedUsername: string,
+  trimmedContent: string,
+  needsUsername: boolean
+): Promise<{ username: string; content: string } | null> {
+  // Bloque dinámico del username (no cacheado, cambia por llamada)
+  const usernameInstruction = needsUsername
+    ? "Para el campo username del JSON: genera un username aleatorio y divertido de EXACTAMENTE 6 caracteres (letras minúsculas y/o números). Sé creativo."
+    : `Para el campo username del JSON: modera el username "${trimmedUsername}". Si contiene cualquier palabra ofensiva, taco o insulto, reemplaza CADA palabra ofensiva por asteriscos (*) del mismo número de caracteres. Si no contiene nada ofensivo, devuélvelo tal cual.`
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 5000)
@@ -194,7 +198,17 @@ Responde SOLO con un JSON válido con este formato exacto, sin markdown ni expli
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 200,
-        system: systemPrompt,
+        system: [
+          {
+            type: "text",
+            text: MODERATION_SYSTEM_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
+          {
+            type: "text",
+            text: usernameInstruction,
+          },
+        ],
         messages: [
           {
             role: "user",
@@ -211,6 +225,7 @@ Responde SOLO con un JSON válido con este formato exacto, sin markdown ni expli
 
     if (res.ok) {
       const data = await res.json()
+      console.log("[Cache][Moderation]", { input: data.usage?.input_tokens, cache_read: data.usage?.cache_read_input_tokens, cache_creation: data.usage?.cache_creation_input_tokens })
       const textBlock = data.content?.find((b: { type: string }) => b.type === "text")
       if (textBlock?.text) {
         let rawText = textBlock.text.trim()
@@ -232,48 +247,25 @@ Responde SOLO con un JSON válido con este formato exacto, sin markdown ni expli
   return null
 }
 
-async function moderateNadieResponse(apiKey: string, text: string): Promise<string> {
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 3000)
+// Lista de palabras ofensivas para filtro local (evita llamada API)
+const BANNED_WORDS = [
+  "polla", "puta", "hostia", "joder", "coño", "mierda", "culo", "cojones",
+  "capullo", "gilipollas", "cabron", "cabrona", "hijoputa", "follar", "puto",
+  "maricon", "marica", "bollera", "travelo", "sidoso", "subnormal", "retrasado",
+  "mongolo", "zorra", "guarra",
+  "fuck", "shit", "bitch", "faggot", "retard", "nigger", "cunt", "dick", "ass", "whore",
+]
 
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 200,
-        system: `Modera este texto reemplazando CADA palabra ofensiva, taco, palabrota o insulto por asteriscos (*) del mismo numero de caracteres. Deja el resto intacto. Si no hay nada ofensivo, devuelve el texto tal cual. Responde SOLO con el texto moderado, sin explicaciones.`,
-        messages: [{ role: "user", content: text }],
-      }),
-      signal: controller.signal,
-    })
-
-    clearTimeout(timeoutId)
-
-    if (res.ok) {
-      const data = await res.json()
-      const textBlock = data.content?.find((b: { type: string }) => b.type === "text")
-      if (textBlock?.text) {
-        const moderated = textBlock.text.trim()
-        if (moderated.length > 0) {
-          console.log("[Nadie] Moderado:", text, "→", moderated)
-          return moderated
-        }
-      }
-    } else {
-      console.error("[Nadie] Moderation API error:", res.status)
-    }
-  } catch (err) {
-    clearTimeout(timeoutId)
-    console.error("[Nadie] Moderation error:", err instanceof Error ? err.message : err)
+function moderateNadieResponseLocal(text: string): string {
+  let result = text
+  for (const word of BANNED_WORDS) {
+    const regex = new RegExp(`\\b${word}\\b`, "gi")
+    result = result.replace(regex, "*".repeat(word.length))
   }
-
-  return text
+  if (result !== text) {
+    console.log("[Nadie] Moderado local:", text, "→", result)
+  }
+  return result
 }
 
 async function generateNadieResponse(
@@ -287,8 +279,8 @@ async function generateNadieResponse(
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 10000)
 
-  // Build user message with dynamic context (concerts/festis) + conversation
-  let userMessage = dynamicContext
+  // Build user message with conversation only (events context moved to system prompt)
+  let userMessage = ""
   if (recentMessages.length > 0) {
     userMessage += `Conversacion reciente del muro:\n${recentMessages.map(m => `${m.is_nadie ? "Nadie" : m.username}: ${m.content}`).join("\n")}\n\n`
   }
@@ -311,6 +303,11 @@ async function generateNadieResponse(
             text: NADIE_SYSTEM_PROMPT,
             cache_control: { type: "ephemeral" },
           },
+          {
+            type: "text",
+            text: dynamicContext || "No hay eventos proximos.",
+            cache_control: { type: "ephemeral" },
+          },
         ],
         messages: [
           {
@@ -327,6 +324,7 @@ async function generateNadieResponse(
     if (res.ok) {
       const data = await res.json()
       console.log("[Nadie] Respuesta API OK, stop_reason:", data.stop_reason)
+      console.log("[Cache][Nadie]", { input: data.usage?.input_tokens, cache_read: data.usage?.cache_read_input_tokens, cache_creation: data.usage?.cache_creation_input_tokens })
       const textBlock = data.content?.find((b: { type: string }) => b.type === "text")
       if (textBlock?.text) {
         const text = textBlock.text.trim()
@@ -447,9 +445,9 @@ export async function POST(request: Request) {
     console.log("[Nadie] Usando fallback:", nadieText)
   }
 
-  // Moderar respuesta de Nadie antes de insertar
-  if (nadieText && apiKey) {
-    nadieText = await moderateNadieResponse(apiKey, nadieText)
+  // Moderar respuesta de Nadie antes de insertar (filtro local, sin API)
+  if (nadieText) {
+    nadieText = moderateNadieResponseLocal(nadieText)
   }
 
   // Insertar respuesta de Nadie si existe
