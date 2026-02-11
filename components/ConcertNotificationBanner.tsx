@@ -37,8 +37,8 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
   const [visible, setVisible] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [sliding, setSliding] = useState<"in" | "out" | "idle">("idle")
-  // 'location-prompt' = asking user for GPS permission, 'nearby' = found nearby concerts, 'gira' = generic fallback
-  const [mode, setMode] = useState<"location-prompt" | "nearby" | "gira">("gira")
+  // 'nearby' = found nearby concerts, 'gira' = generic fallback
+  const [mode, setMode] = useState<"nearby" | "gira">("gira")
   const router = useRouter()
   const mountTimeRef = useRef(Date.now())
   const isMobileRef = useRef(isMobile)
@@ -105,7 +105,7 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
   }, [getEventData])
 
   // Helper: show the notification with a delay relative to mount time
-  const showWithDelay = useCallback((notificationMode: "location-prompt" | "nearby" | "gira") => {
+  const showWithDelay = useCallback((notificationMode: "nearby" | "gira") => {
     const elapsed = Date.now() - mountTimeRef.current
     const delay = Math.max(0, 1000 - elapsed)
     setTimeout(() => {
@@ -176,8 +176,20 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
         }
         if (isMobileRef.current) showWithDelay("gira")
       } else if (permission === 'prompt') {
-        // Permission not yet decided — show our custom Y2K pre-prompt
-        showWithDelay("location-prompt")
+        // Permission not yet decided — trigger native browser GPS prompt directly
+        try {
+          const gpsLocation = await getBrowserLocation()
+          if (cancelledRef.current) return
+          const found = await processLocation(gpsLocation)
+          if (cancelledRef.current) return
+          if (found) {
+            showWithDelay("nearby")
+            return
+          }
+        } catch {
+          // User denied or GPS failed
+        }
+        if (isMobileRef.current) showWithDelay("gira")
       } else {
         // Permission denied — fallback
         if (isMobileRef.current) showWithDelay("gira")
@@ -188,32 +200,6 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
 
     return () => { cancelledRef.current = true }
   }, [dismissed, processLocation, showWithDelay])
-
-  // Handle user accepting GPS from our custom pre-prompt:
-  // 1. Slide out the Y2K notification
-  // 2. Trigger browser geolocation (browser shows its own prompt)
-  // 3. On result, slide in the appropriate notification
-  const handleAllowLocation = useCallback(() => {
-    // Step 1: slide out the pre-prompt notification
-    setSliding("out")
-    setTimeout(async () => {
-      setVisible(false)
-      // Step 2: trigger browser GPS (this shows the native browser prompt)
-      let resultMode: "nearby" | "gira" = "gira"
-      try {
-        const gpsLocation = await getBrowserLocation()
-        const found = await processLocation(gpsLocation)
-        if (found) resultMode = "nearby"
-      } catch {
-        // GPS denied or failed
-      }
-      // Step 3: slide in the result notification
-      setMode(resultMode)
-      setVisible(true)
-      setSliding("in")
-      setTimeout(() => setSliding("idle"), 400)
-    }, 350) // wait for slide-out animation to finish
-  }, [processLocation])
 
   const handleDismiss = useCallback(() => {
     setSliding("out")
@@ -268,12 +254,7 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
           <img src="/icons/conciertos.png" alt="" width={28} height={28} style={{ objectFit: "contain" }} />
         </div>
         <div className="y2k-notification-message">
-          {mode === "location-prompt" ? (
-            <>
-              <span className="y2k-notification-sender">Nadie</span>{" "}
-              <span className="y2k-notification-text">necesita tu ubicación para recomendarte conciertos cerca</span>
-            </>
-          ) : mode === "nearby" ? (
+          {mode === "nearby" ? (
             <>
               <span className="y2k-notification-sender">Los Besmaya</span>{" "}
               <span className="y2k-notification-text">van a tu ciudad</span>
@@ -286,15 +267,9 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
 
       {/* Action */}
       <div className="y2k-notification-actions">
-        {mode === "location-prompt" ? (
-          <button className="y2k-notification-btn" onClick={handleAllowLocation}>
-            Permitir
-          </button>
-        ) : (
-          <button className="y2k-notification-btn" onClick={handleOpenConcerts}>
-            {mode === "gira" ? "Comprar Entradas" : "Ver conciertos"}
-          </button>
-        )}
+        <button className="y2k-notification-btn" onClick={handleOpenConcerts}>
+          {mode === "gira" ? "Comprar Entradas" : "Ver conciertos"}
+        </button>
       </div>
     </div>
   )

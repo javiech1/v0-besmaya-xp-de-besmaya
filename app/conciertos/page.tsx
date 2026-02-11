@@ -93,15 +93,15 @@ export default function ConciertosPage() {
         // IP geo failed
       }
 
-      // 2. If IP failed, try GPS silently (only if permission already granted)
+      // 2. If IP failed, try GPS (silently if granted, or trigger native prompt if 'prompt')
       if (!location && !cancelled) {
         try {
           const permission = await checkGeolocationPermission()
-          if (permission === 'granted') {
+          if (permission === 'granted' || permission === 'prompt') {
             location = await getBrowserLocation()
           }
         } catch {
-          // GPS also failed
+          // GPS denied or failed
         }
       }
 
