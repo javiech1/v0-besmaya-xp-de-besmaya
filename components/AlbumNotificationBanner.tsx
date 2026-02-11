@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 
 interface AlbumNotificationBannerProps {
   nadieVisible: boolean
@@ -11,6 +11,8 @@ export function AlbumNotificationBanner({ nadieVisible, onDismiss }: AlbumNotifi
   const [visible, setVisible] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [sliding, setSliding] = useState<"in" | "out" | "idle">("idle")
+  const onDismissRef = useRef(onDismiss)
+  onDismissRef.current = onDismiss
 
   useEffect(() => {
     if (dismissed) return
@@ -19,7 +21,7 @@ export function AlbumNotificationBanner({ nadieVisible, onDismiss }: AlbumNotifi
     try {
       if (sessionStorage.getItem("album_notification_shown") === "true") {
         setDismissed(true)
-        onDismiss?.()
+        onDismissRef.current?.()
         return
       }
     } catch {
@@ -34,7 +36,7 @@ export function AlbumNotificationBanner({ nadieVisible, onDismiss }: AlbumNotifi
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [dismissed, onDismiss])
+  }, [dismissed])
 
   const handleDismiss = useCallback(() => {
     setSliding("out")

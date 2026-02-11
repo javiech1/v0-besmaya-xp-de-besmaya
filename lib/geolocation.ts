@@ -126,12 +126,13 @@ export function findAllNearbyConcerts<T extends { ciudad: string }>(
 }
 
 /**
- * Get user's location using multiple strategies:
- * 1. Server-side IP geolocation (Vercel headers + ipwho.is fallback) — fast, no prompt
- * 2. Browser Geolocation API (GPS on mobile) — accurate, may show permission prompt
+ * Get user's location using IP geolocation (no browser permission prompt).
+ * 1. Server-side IP geolocation (Vercel headers + ipwho.is fallback) — fast, works well on WiFi
+ * 2. Client-side IP geolocation (direct call to ipwho.is from the browser) — works better on
+ *    mobile data because the service sees the actual carrier IP instead of Vercel's edge IP
  */
 export async function getUserLocation(): Promise<{ lat: number; lon: number }> {
-  // 1. Try server-side IP geolocation first (no permission needed)
+  // 1. Try server-side IP geolocation first (Vercel headers — fastest)
   try {
     const res = await fetch('/api/geo')
     if (res.ok) {
@@ -141,27 +142,78 @@ export async function getUserLocation(): Promise<{ lat: number; lon: number }> {
       }
     }
   } catch {
-    // Server geo failed, try browser fallback
+    // Server geo failed, try client-side fallback
   }
 
-  // 2. Fallback: browser Geolocation API (GPS on mobile — very accurate)
-  if (typeof navigator !== 'undefined' && navigator.geolocation) {
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Browser geolocation timed out')), 5000)
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          clearTimeout(timeout)
-          resolve({ lat: position.coords.latitude, lon: position.coords.longitude })
-        },
-        () => {
-          clearTimeout(timeout)
-          reject(new Error('Browser geolocation denied or failed'))
-        },
-        { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
-      )
+  // 2. Fallback: call IP geolocation directly from the browser.
+  //    On mobile data, Vercel headers/proxy may lose the real carrier IP.
+  //    Calling ipwho.is directly lets the service see the actual client IP.
+  try {
+    const res = await fetch('https://ipwho.is/', {
+      signal: AbortSignal.timeout(5000),
     })
+    if (res.ok) {
+      const data = await res.json()
+      if (data.success && data.latitude && data.longitude) {
+        return { lat: data.latitude, lon: data.longitude }
+      }
+    }
+  } catch {
+    // Client-side IP geo failed
+  }
+
+  // 3. Try ipapi.co as a second client-side fallback (different IP database, HTTPS)
+  try {
+    const res = await fetch('https://ipapi.co/json/', {
+      signal: AbortSignal.timeout(5000),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      if (data.latitude && data.longitude) {
+        return { lat: data.latitude, lon: data.longitude }
+      }
+    }
+  } catch {
+    // Second fallback also failed
   }
 
   throw new Error('Location not available')
+}
+
+/**
+ * Check browser geolocation permission state without triggering a prompt.
+ * Returns 'granted', 'prompt', or 'denied'.
+ */
+export async function checkGeolocationPermission(): Promise<'granted' | 'prompt' | 'denied'> {
+  if (typeof navigator === 'undefined' || !navigator.permissions) return 'denied'
+  try {
+    const status = await navigator.permissions.query({ name: 'geolocation' })
+    return status.state as 'granted' | 'prompt' | 'denied'
+  } catch {
+    return 'prompt' // Assume prompt if Permissions API not supported
+  }
+}
+
+/**
+ * Get location using the browser Geolocation API (GPS).
+ * This WILL trigger a permission prompt if not already granted.
+ */
+export function getBrowserLocation(): Promise<{ lat: number; lon: number }> {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      return reject(new Error('Geolocation API not available'))
+    }
+    const timeout = setTimeout(() => reject(new Error('Browser geolocation timed out')), 10000)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        clearTimeout(timeout)
+        resolve({ lat: position.coords.latitude, lon: position.coords.longitude })
+      },
+      (error) => {
+        clearTimeout(timeout)
+        reject(new Error(`Browser geolocation failed: ${error.message}`))
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    )
+  })
 }
