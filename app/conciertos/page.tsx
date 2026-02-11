@@ -1,11 +1,12 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { getFromCache, setToCache, sortByFechaChronologically, parseFechaToDate } from "@/lib/cache"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useClock } from "@/hooks/useClock"
 import { Taskbar } from "@/components/Taskbar"
+import { getUserLocation, findNearbyConcert } from "@/lib/geolocation"
 
 interface Event {
   id: string
@@ -48,6 +49,7 @@ export default function ConciertosPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [festivals, setFestivals] = useState<Festival[]>([])
   const [isFestivalsLoading, setIsFestivalsLoading] = useState(true)
+  const [nearbyConcertCity, setNearbyConcertCity] = useState<string | null>(null)
   const router = useRouter()
 
   const supabase = createClient()
@@ -56,6 +58,43 @@ export default function ConciertosPage() {
     fetchConcerts()
     fetchFestivals()
   }, [])
+
+  // Check sessionStorage for nearby concert or detect via geolocation
+  useEffect(() => {
+    const stored = sessionStorage.getItem("nearby_concert_city")
+    if (stored) {
+      setNearbyConcertCity(stored)
+      return
+    }
+  }, [])
+
+  // When concerts are loaded and no nearby city from session, try geolocation
+  useEffect(() => {
+    if (nearbyConcertCity) return
+    if (isLoading || concerts.length === 0) return
+
+    getUserLocation()
+      .then(location => {
+        const result = findNearbyConcert(location.lat, location.lon, concerts, 100)
+        if (result) {
+          setNearbyConcertCity(result.concert.ciudad)
+          sessionStorage.setItem("nearby_concert_city", result.concert.ciudad)
+        }
+      })
+      .catch(() => {})
+  }, [isLoading, concerts, nearbyConcertCity])
+
+  // Compute display order: nearby concert first, rest chronological
+  const displayConcerts = useMemo(() => {
+    if (!nearbyConcertCity) return concerts
+    const list = [...concerts]
+    const idx = list.findIndex(c => c.ciudad.toLowerCase() === nearbyConcertCity.toLowerCase())
+    if (idx > 0) {
+      const [nearby] = list.splice(idx, 1)
+      list.unshift(nearby)
+    }
+    return list
+  }, [concerts, nearbyConcertCity])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -210,19 +249,27 @@ export default function ConciertosPage() {
               {/* Panel de Conciertos */}
               <div className={`xp-tab-panel ${activeTab === 'conciertos' ? 'active' : ''}`}>
                 <div className="grid gap-2 sm:gap-3 md:gap-4">
-                  {concerts.map((concert) => (
-                    <div key={concert.id} className="concert-row">
-                      <span className="concert-fecha">{concert.fecha}</span>
-                      <span className="concert-ciudad">{concert.ciudad}</span>
-                      <span className="concert-sala">{concert.sala}</span>
-                      <button
-                        className="concert-btn"
-                        onClick={() => window.open(concert.link, "_blank")}
-                      >
-                        Tickets
-                      </button>
-                    </div>
-                  ))}
+                  {displayConcerts.map((concert) => {
+                    const isNearby = nearbyConcertCity
+                      ? concert.ciudad.toLowerCase() === nearbyConcertCity.toLowerCase()
+                      : false
+                    return (
+                      <div key={concert.id} className={`concert-row ${isNearby ? 'concert-row-nearby' : ''}`}>
+                        <span className="concert-fecha">{concert.fecha}</span>
+                        <span className="concert-ciudad">
+                          {concert.ciudad}
+                          {isNearby && <span className="concert-nearby-badge">CERCA DE TI</span>}
+                        </span>
+                        <span className="concert-sala">{concert.sala}</span>
+                        <button
+                          className="concert-btn"
+                          onClick={() => window.open(concert.link, "_blank")}
+                        >
+                          Tickets
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
                 <div className="mt-4 sm:mt-6 text-center">
                   <p className="text-gray-600 text-xs sm:text-sm italic">Muchos más por confirmar</p>
