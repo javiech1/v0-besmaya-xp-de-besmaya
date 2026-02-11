@@ -47,9 +47,6 @@ export function Y2KNotificationBanner({ onOpenMuro }: Y2KNotificationBannerProps
     >
       {/* Title bar */}
       <div className="y2k-notification-header">
-        <div className="y2k-notification-header-icon">
-          <img src="/icons/muro.svg" alt="" width={14} height={14} />
-        </div>
         <span className="y2k-notification-header-title">Notificación del sistema</span>
         <button
           className="y2k-notification-close"
