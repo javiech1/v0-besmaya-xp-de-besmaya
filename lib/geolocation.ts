@@ -126,17 +126,42 @@ export function findAllNearbyConcerts<T extends { ciudad: string }>(
 }
 
 /**
- * Get user's approximate location via server-side IP geolocation (Vercel headers).
- * No browser permission prompt required.
+ * Get user's location using multiple strategies:
+ * 1. Server-side IP geolocation (Vercel headers + ipwho.is fallback) — fast, no prompt
+ * 2. Browser Geolocation API (GPS on mobile) — accurate, may show permission prompt
  */
 export async function getUserLocation(): Promise<{ lat: number; lon: number }> {
-  const res = await fetch('/api/geo')
-  if (!res.ok) throw new Error('Geo API failed')
-
-  const data = await res.json()
-  if (data.lat === null || data.lon === null) {
-    throw new Error('Location not available')
+  // 1. Try server-side IP geolocation first (no permission needed)
+  try {
+    const res = await fetch('/api/geo')
+    if (res.ok) {
+      const data = await res.json()
+      if (data.lat !== null && data.lon !== null) {
+        return { lat: data.lat, lon: data.lon }
+      }
+    }
+  } catch {
+    // Server geo failed, try browser fallback
   }
 
-  return { lat: data.lat, lon: data.lon }
+  // 2. Fallback: browser Geolocation API (GPS on mobile — very accurate)
+  if (typeof navigator !== 'undefined' && navigator.geolocation) {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Browser geolocation timed out')), 5000)
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          clearTimeout(timeout)
+          resolve({ lat: position.coords.latitude, lon: position.coords.longitude })
+        },
+        () => {
+          clearTimeout(timeout)
+          reject(new Error('Browser geolocation denied or failed'))
+        },
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
+      )
+    })
+  }
+
+  throw new Error('Location not available')
 }
