@@ -1553,9 +1553,10 @@ body {
 
 .y2k-notification {
   position: fixed;
-  bottom: 52px;
+  top: 12px;
   right: 12px;
   width: 260px;
+  max-width: calc(100vw - 24px);
   z-index: 998;
   font-family: "Tahoma", "Verdana", sans-serif;
   box-shadow:
@@ -1577,22 +1578,22 @@ body {
 
 @keyframes y2kSlideIn {
   from {
-    transform: translateY(100%) translateX(20px);
+    transform: translateX(110%);
     opacity: 0;
   }
   to {
-    transform: translateY(0) translateX(0);
+    transform: translateX(0);
     opacity: 1;
   }
 }
 
 @keyframes y2kSlideOut {
   from {
-    transform: translateY(0) translateX(0);
+    transform: translateX(0);
     opacity: 1;
   }
   to {
-    transform: translateY(20px) translateX(40px);
+    transform: translateX(110%);
     opacity: 0;
   }
 }
@@ -1756,17 +1757,19 @@ body {
 /* Mobile adjustments */
 @media (max-width: 639px) {
   .y2k-notification {
-    bottom: 56px;
+    top: 8px;
     right: 8px;
-    left: 8px;
-    width: auto;
+    left: auto;
+    width: 260px;
+    max-width: calc(100vw - 16px);
   }
 }
 
 /* Landscape mobile */
 .landscape-mobile .y2k-notification {
-  bottom: 44px;
+  top: 8px;
   right: 8px;
   left: auto;
   width: 240px;
+  max-width: calc(100vw - 16px);
 }
