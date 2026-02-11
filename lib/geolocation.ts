@@ -126,30 +126,17 @@ export function findAllNearbyConcerts<T extends { ciudad: string }>(
 }
 
 /**
- * Request user's geolocation. Returns a promise with lat/lon coordinates.
+ * Get user's approximate location via server-side IP geolocation (Vercel headers).
+ * No browser permission prompt required.
  */
-export function getUserLocation(): Promise<{ lat: number; lon: number }> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error("Geolocation not supported"))
-      return
-    }
+export async function getUserLocation(): Promise<{ lat: number; lon: number }> {
+  const res = await fetch('/api/geo')
+  if (!res.ok) throw new Error('Geo API failed')
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          lat: position.coords.latitude,
-          lon: position.coords.longitude,
-        })
-      },
-      (error) => {
-        reject(error)
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 10000,
-        maximumAge: 300000,
-      }
-    )
-  })
+  const data = await res.json()
+  if (data.lat === null || data.lon === null) {
+    throw new Error('Location not available')
+  }
+
+  return { lat: data.lat, lon: data.lon }
 }
