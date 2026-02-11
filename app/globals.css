@@ -1545,3 +1545,214 @@ body {
   max-height: 60dvh !important;
   bottom: 36px !important;
 }
+
+/* ================================================
+   Y2K NOTIFICATION BANNER
+   Estilo MSN Messenger / Windows Messenger popup
+   ================================================ */
+
+.y2k-notification {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  width: 230px;
+  max-width: calc(100vw - 20px);
+  z-index: 998;
+  font-family: "Tahoma", "Verdana", sans-serif;
+  box-shadow:
+    2px 2px 6px rgba(0, 0, 0, 0.35),
+    0 0 1px rgba(0, 0, 0, 0.25);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid #4a6ea5;
+}
+
+/* Slide-in animation */
+.y2k-slide-in {
+  animation: y2kSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.y2k-slide-out {
+  animation: y2kSlideOut 0.35s ease-in forwards;
+}
+
+@keyframes y2kSlideIn {
+  from {
+    transform: translateX(110%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes y2kSlideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(110%);
+    opacity: 0;
+  }
+}
+
+/* Header bar - estilo MSN Messenger */
+.y2k-notification-header {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 3px;
+  background: linear-gradient(
+    to bottom,
+    #4d8cff 0%,
+    #2968e8 40%,
+    #1244d0 100%
+  );
+  border-bottom: 1px solid #0d38c8;
+}
+
+.y2k-notification-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.y2k-notification-header-icon img {
+  filter: brightness(10);
+}
+
+.y2k-notification-header-title {
+  flex: 1;
+  font-size: 10px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.y2k-notification-close {
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(to bottom, #ff6b6b 0%, #d32f2f 100%);
+  border: 1px solid #b71c1c;
+  border-top-color: #ff8a80;
+  border-left-color: #ff8a80;
+  border-radius: 2px;
+  color: white;
+  font-size: 9px;
+  font-weight: bold;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+.y2k-notification-close:hover {
+  background: linear-gradient(to bottom, #ff8a80 0%, #e53935 100%);
+}
+
+/* Body */
+.y2k-notification-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: linear-gradient(to bottom, #fefefe, #f0f4fa);
+  border-bottom: 1px solid #d0d8e8;
+}
+
+.y2k-notification-avatar {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.y2k-notification-avatar img {
+  width: 22px;
+  height: 22px;
+}
+
+.y2k-notification-message {
+  font-size: 11px;
+  color: #333;
+  line-height: 1.3;
+}
+
+.y2k-notification-sender {
+  font-weight: bold;
+  color: #1a3a6e;
+}
+
+.y2k-notification-text {
+  color: #444;
+}
+
+/* Actions */
+.y2k-notification-actions {
+  padding: 4px 8px 5px;
+  background: #ece9d8;
+  display: flex;
+  justify-content: center;
+}
+
+.y2k-notification-btn {
+  padding: 2px 12px;
+  font-size: 10px;
+  font-family: "Tahoma", sans-serif;
+  font-weight: normal;
+  color: #000;
+  background: linear-gradient(to bottom, #ffffff 0%, #f0f0f0 50%, #e0e0e0 100%);
+  border: 1px solid #808080;
+  border-top-color: #ffffff;
+  border-left-color: #ffffff;
+  border-right-color: #404040;
+  border-bottom-color: #404040;
+  border-radius: 3px;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.y2k-notification-btn:hover {
+  background: linear-gradient(to bottom, #ffffff 0%, #f8f8f8 50%, #e8e8e8 100%);
+}
+
+.y2k-notification-btn:active {
+  background: linear-gradient(to bottom, #e0e0e0 0%, #e8e8e8 50%, #f0f0f0 100%);
+  border-top-color: #404040;
+  border-left-color: #404040;
+  border-right-color: #ffffff;
+  border-bottom-color: #ffffff;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile adjustments */
+@media (max-width: 639px) {
+  .y2k-notification {
+    top: 6px;
+    right: 6px;
+    width: 220px;
+    max-width: calc(100vw - 12px);
+  }
+}
+
+/* Landscape mobile */
+.landscape-mobile .y2k-notification {
+  top: 6px;
+  right: 6px;
+  width: 210px;
+  max-width: calc(100vw - 12px);
+}
