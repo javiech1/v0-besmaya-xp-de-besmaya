@@ -1756,3 +1756,82 @@ body {
   width: 210px;
   max-width: calc(100vw - 12px);
 }
+
+.landscape-mobile .y2k-notification-concert {
+  top: 96px;
+}
+
+.landscape-mobile .y2k-notification-concert.y2k-notification-top {
+  top: 6px;
+}
+
+/* ================================================
+   CONCERT NOTIFICATION BANNER - offset below Nadie
+   ================================================ */
+
+.y2k-notification-concert {
+  top: 100px;
+  transition: top 0.35s ease;
+}
+
+/* When Nadie notification is dismissed, slide up to top position */
+.y2k-notification-concert.y2k-notification-top {
+  top: 10px;
+}
+
+@media (max-width: 639px) {
+  .y2k-notification-concert {
+    top: 90px;
+  }
+  .y2k-notification-concert.y2k-notification-top {
+    top: 6px;
+  }
+}
+
+/* ================================================
+   NEARBY CONCERT HIGHLIGHT
+   Visual indicator for concert near user location
+   ================================================ */
+
+.concert-row-nearby {
+  background-color: #fff8e1 !important;
+  border-left: 3px solid #f59e0b !important;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3), 0 2px 8px rgba(245, 158, 11, 0.15);
+  animation: nearbyPulse 2s ease-in-out 1;
+}
+
+.concert-row-nearby:hover {
+  background-color: #fef3c7 !important;
+}
+
+.concert-nearby-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
+  background: linear-gradient(to bottom, #fbbf24, #f59e0b);
+  color: white;
+  font-size: 0.55em;
+  font-weight: bold;
+  padding: 0.1em 0.5em;
+  border-radius: 3px;
+  margin-left: 0.5em;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  border: 1px solid #d97706;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  vertical-align: middle;
+  line-height: 1.4;
+}
+
+@keyframes nearbyPulse {
+  0% {
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3), 0 2px 8px rgba(245, 158, 11, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4), 0 2px 12px rgba(245, 158, 11, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3), 0 2px 8px rgba(245, 158, 11, 0.15);
+  }
+}
