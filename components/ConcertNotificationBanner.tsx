@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { getUserLocation, findAllNearbyConcerts } from "@/lib/geolocation"
+import { getUserLocation, findAllNearbyConcerts, checkGeolocationPermission, getBrowserLocation } from "@/lib/geolocation"
 import { createClient } from "@/lib/supabase/client"
 import { getFromCache, setToCache, parseFechaToDate } from "@/lib/cache"
 
@@ -37,152 +37,189 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
   const [visible, setVisible] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [sliding, setSliding] = useState<"in" | "out" | "idle">("idle")
-  const [isGiraFallback, setIsGiraFallback] = useState(false)
+  // 'location-prompt' = asking user for GPS permission, 'nearby' = found nearby concerts, 'gira' = generic fallback
+  const [mode, setMode] = useState<"location-prompt" | "nearby" | "gira">("gira")
   const router = useRouter()
   const mountTimeRef = useRef(Date.now())
   const isMobileRef = useRef(isMobile)
   isMobileRef.current = isMobile
+  const cancelledRef = useRef(false)
+
+  // Helper: fetch event data from cache or Supabase
+  const getEventData = useCallback(async () => {
+    let concerts: Event[] = fallbackConcerts
+    let festivals: Event[] = []
+
+    try {
+      const cachedConcerts = getFromCache<Event[]>('concerts_cache')
+      if (cachedConcerts) {
+        concerts = cachedConcerts
+      } else {
+        const supabase = createClient()
+        const { data, error } = await supabase.from("concerts").select("*")
+        if (!error && data) {
+          concerts = data
+          setToCache('concerts_cache', data)
+        }
+      }
+    } catch { /* Use fallback */ }
+
+    try {
+      const cachedFestivals = getFromCache<Event[]>('festivals_cache')
+      if (cachedFestivals) {
+        festivals = cachedFestivals
+      } else {
+        const supabase = createClient()
+        const { data, error } = await supabase.from("festis").select("*")
+        if (!error && data) {
+          festivals = data
+          setToCache('festivals_cache', data)
+        }
+      }
+    } catch { /* No festivals */ }
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return {
+      concerts: concerts.filter(c => parseFechaToDate(c.fecha) >= today),
+      festivals: festivals.filter(f => parseFechaToDate(f.fecha) >= today),
+    }
+  }, [])
+
+  // Helper: given a location, find nearby events and show notification
+  const processLocation = useCallback(async (location: { lat: number; lon: number }) => {
+    if (cancelledRef.current) return false
+    const { concerts, festivals } = await getEventData()
+    if (cancelledRef.current) return false
+
+    const nearbyConcerts = findAllNearbyConcerts(location.lat, location.lon, concerts, 100)
+    const nearbyFestivals = findAllNearbyConcerts(location.lat, location.lon, festivals, 100)
+    const allNearby = [...nearbyConcerts, ...nearbyFestivals]
+
+    if (allNearby.length > 0) {
+      const nearbyCities = [...new Set(allNearby.map(r => r.concert.ciudad))]
+      try { sessionStorage.setItem("nearby_concert_cities", JSON.stringify(nearbyCities)) } catch {}
+      return true // found nearby events
+    }
+    return false // no nearby events
+  }, [getEventData])
+
+  // Helper: show the notification with a delay relative to mount time
+  const showWithDelay = useCallback((notificationMode: "location-prompt" | "nearby" | "gira") => {
+    const elapsed = Date.now() - mountTimeRef.current
+    const delay = Math.max(0, 1000 - elapsed)
+    setTimeout(() => {
+      if (!cancelledRef.current) {
+        setMode(notificationMode)
+        setVisible(true)
+        setSliding("in")
+        setTimeout(() => setSliding("idle"), 400)
+      }
+    }, delay)
+  }, [])
 
   useEffect(() => {
     if (dismissed) return
 
-    // Don't show again if already shown this session
     try {
       if (sessionStorage.getItem("concert_notification_shown") === "true") {
         setDismissed(true)
         return
       }
-    } catch {
-      // sessionStorage not available
-    }
+    } catch {}
 
-    let cancelled = false
+    cancelledRef.current = false
 
     const checkNearbyEvents = async () => {
+      // 1. Try IP geolocation
+      let ipLocation: { lat: number; lon: number } | null = null
       try {
-        const location = await getUserLocation()
-        if (cancelled) return
-
-        // Get concerts from cache or Supabase
-        let concerts: Event[] = fallbackConcerts
-        let festivals: Event[] = []
-
-        try {
-          const cachedConcerts = getFromCache<Event[]>('concerts_cache')
-          if (cachedConcerts) {
-            concerts = cachedConcerts
-          } else {
-            const supabase = createClient()
-            const { data, error } = await supabase.from("concerts").select("*")
-            if (!error && data) {
-              concerts = data
-              setToCache('concerts_cache', data)
-            }
-          }
-        } catch {
-          // Use fallback concerts
-        }
-
-        try {
-          const cachedFestivals = getFromCache<Event[]>('festivals_cache')
-          if (cachedFestivals) {
-            festivals = cachedFestivals
-          } else {
-            const supabase = createClient()
-            const { data, error } = await supabase.from("festis").select("*")
-            if (!error && data) {
-              festivals = data
-              setToCache('festivals_cache', data)
-            }
-          }
-        } catch {
-          // No festivals available
-        }
-
-        if (cancelled) return
-
-        // Filter past events
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const futureConcerts = concerts.filter(c => parseFechaToDate(c.fecha) >= today)
-        const futureFestivals = festivals.filter(f => parseFechaToDate(f.fecha) >= today)
-
-        // Find ALL nearby events (concerts + festivals)
-        const nearbyConcerts = findAllNearbyConcerts(location.lat, location.lon, futureConcerts, 100)
-        const nearbyFestivals = findAllNearbyConcerts(location.lat, location.lon, futureFestivals, 100)
-
-        const allNearbyResults = [...nearbyConcerts, ...nearbyFestivals]
-
-        if (allNearbyResults.length > 0 && !cancelled) {
-          // Extract unique city names
-          const nearbyCities = [...new Set(allNearbyResults.map(r => r.concert.ciudad))]
-
-          // Store for the concerts page
-          try {
-            sessionStorage.setItem("nearby_concert_cities", JSON.stringify(nearbyCities))
-          } catch {
-            // sessionStorage not available
-          }
-
-          // Show notification ~1s after page load (or immediately if geo took longer)
-          const elapsed = Date.now() - mountTimeRef.current
-          const delay = Math.max(0, 1000 - elapsed)
-
-          setTimeout(() => {
-            if (!cancelled) {
-              setIsGiraFallback(false)
-              setVisible(true)
-              setSliding("in")
-              setTimeout(() => setSliding("idle"), 400)
-            }
-          }, delay)
-        } else if (isMobileRef.current && !cancelled) {
-          // En móvil, si no hay conciertos cerca, mostrar notificación de la gira
-          const elapsed = Date.now() - mountTimeRef.current
-          const delay = Math.max(0, 1000 - elapsed)
-
-          setTimeout(() => {
-            if (!cancelled) {
-              setIsGiraFallback(true)
-              setVisible(true)
-              setSliding("in")
-              setTimeout(() => setSliding("idle"), 400)
-            }
-          }, delay)
-        }
+        ipLocation = await getUserLocation()
       } catch {
-        // Geolocation denied or failed
-        // En móvil, mostrar la notificación de gira como fallback
-        if (isMobileRef.current && !cancelled) {
-          const elapsed = Date.now() - mountTimeRef.current
-          const delay = Math.max(0, 1000 - elapsed)
+        // IP geo failed entirely
+      }
 
-          setTimeout(() => {
-            if (!cancelled) {
-              setIsGiraFallback(true)
-              setVisible(true)
-              setSliding("in")
-              setTimeout(() => setSliding("idle"), 400)
-            }
-          }, delay)
+      if (cancelledRef.current) return
+
+      // 2. If IP geo worked, check for nearby events
+      if (ipLocation) {
+        const found = await processLocation(ipLocation)
+        if (cancelledRef.current) return
+        if (found) {
+          showWithDelay("nearby")
+          return
         }
+        // IP geo gave a location but no nearby events — show gira on mobile
+        if (isMobileRef.current) {
+          showWithDelay("gira")
+        }
+        return
+      }
+
+      // 3. IP geo failed — try silent GPS if permission already granted
+      const permission = await checkGeolocationPermission()
+      if (cancelledRef.current) return
+
+      if (permission === 'granted') {
+        // Permission already granted — use GPS silently
+        try {
+          const gpsLocation = await getBrowserLocation()
+          if (cancelledRef.current) return
+          const found = await processLocation(gpsLocation)
+          if (cancelledRef.current) return
+          if (found) {
+            showWithDelay("nearby")
+            return
+          }
+        } catch {
+          // GPS failed even though granted
+        }
+        if (isMobileRef.current) showWithDelay("gira")
+      } else if (permission === 'prompt') {
+        // Permission not yet decided — show our custom Y2K pre-prompt
+        showWithDelay("location-prompt")
+      } else {
+        // Permission denied — fallback
+        if (isMobileRef.current) showWithDelay("gira")
       }
     }
 
     checkNearbyEvents()
 
-    return () => {
-      cancelled = true
-    }
-  }, [dismissed])
+    return () => { cancelledRef.current = true }
+  }, [dismissed, processLocation, showWithDelay])
+
+  // Handle user accepting GPS from our custom pre-prompt:
+  // 1. Slide out the Y2K notification
+  // 2. Trigger browser geolocation (browser shows its own prompt)
+  // 3. On result, slide in the appropriate notification
+  const handleAllowLocation = useCallback(() => {
+    // Step 1: slide out the pre-prompt notification
+    setSliding("out")
+    setTimeout(async () => {
+      setVisible(false)
+      // Step 2: trigger browser GPS (this shows the native browser prompt)
+      let resultMode: "nearby" | "gira" = "gira"
+      try {
+        const gpsLocation = await getBrowserLocation()
+        const found = await processLocation(gpsLocation)
+        if (found) resultMode = "nearby"
+      } catch {
+        // GPS denied or failed
+      }
+      // Step 3: slide in the result notification
+      setMode(resultMode)
+      setVisible(true)
+      setSliding("in")
+      setTimeout(() => setSliding("idle"), 400)
+    }, 350) // wait for slide-out animation to finish
+  }, [processLocation])
 
   const handleDismiss = useCallback(() => {
     setSliding("out")
     try {
       sessionStorage.setItem("concert_notification_shown", "true")
-    } catch {
-      // sessionStorage not available
-    }
+    } catch {}
     setTimeout(() => {
       setVisible(false)
       setDismissed(true)
@@ -199,7 +236,6 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
   // Determine CSS class based on how many notifications are above
   let positionClass = 'y2k-notification-concert'
   if (albumVisible) {
-    // Both nadie and album are above
     positionClass = 'y2k-notification-concert y2k-notification-concert-below-album'
     if (!nadieVisible) {
       positionClass = 'y2k-notification-concert y2k-notification-concert-below-album y2k-notification-album-top'
@@ -210,8 +246,6 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
     <div
       className={`y2k-notification ${positionClass} ${
         !albumVisible && !nadieVisible ? 'y2k-notification-top' : ''
-      } ${
-        !albumVisible && nadieVisible ? '' : ''
       } ${
         sliding === "in" ? "y2k-slide-in" : sliding === "out" ? "y2k-slide-out" : ""
       }`}
@@ -234,22 +268,33 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
           <img src="/icons/conciertos.png" alt="" width={28} height={28} style={{ objectFit: "contain" }} />
         </div>
         <div className="y2k-notification-message">
-          {isGiraFallback ? (
-            <span className="y2k-notification-text">La gira de Nadie</span>
-          ) : (
+          {mode === "location-prompt" ? (
+            <>
+              <span className="y2k-notification-sender">Nadie</span>{" "}
+              <span className="y2k-notification-text">necesita tu ubicación para recomendarte conciertos cerca</span>
+            </>
+          ) : mode === "nearby" ? (
             <>
               <span className="y2k-notification-sender">Los Besmaya</span>{" "}
               <span className="y2k-notification-text">van a tu ciudad</span>
             </>
+          ) : (
+            <span className="y2k-notification-text">La gira de Nadie</span>
           )}
         </div>
       </div>
 
       {/* Action */}
       <div className="y2k-notification-actions">
-        <button className="y2k-notification-btn" onClick={handleOpenConcerts}>
-          {isGiraFallback ? "Comprar Entradas" : "Ver conciertos"}
-        </button>
+        {mode === "location-prompt" ? (
+          <button className="y2k-notification-btn" onClick={handleAllowLocation}>
+            Permitir
+          </button>
+        ) : (
+          <button className="y2k-notification-btn" onClick={handleOpenConcerts}>
+            {mode === "gira" ? "Comprar Entradas" : "Ver conciertos"}
+          </button>
+        )}
       </div>
     </div>
   )

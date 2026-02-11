@@ -179,3 +179,41 @@ export async function getUserLocation(): Promise<{ lat: number; lon: number }> {
 
   throw new Error('Location not available')
 }
+
+/**
+ * Check browser geolocation permission state without triggering a prompt.
+ * Returns 'granted', 'prompt', or 'denied'.
+ */
+export async function checkGeolocationPermission(): Promise<'granted' | 'prompt' | 'denied'> {
+  if (typeof navigator === 'undefined' || !navigator.permissions) return 'denied'
+  try {
+    const status = await navigator.permissions.query({ name: 'geolocation' })
+    return status.state as 'granted' | 'prompt' | 'denied'
+  } catch {
+    return 'prompt' // Assume prompt if Permissions API not supported
+  }
+}
+
+/**
+ * Get location using the browser Geolocation API (GPS).
+ * This WILL trigger a permission prompt if not already granted.
+ */
+export function getBrowserLocation(): Promise<{ lat: number; lon: number }> {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      return reject(new Error('Geolocation API not available'))
+    }
+    const timeout = setTimeout(() => reject(new Error('Browser geolocation timed out')), 10000)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        clearTimeout(timeout)
+        resolve({ lat: position.coords.latitude, lon: position.coords.longitude })
+      },
+      (error) => {
+        clearTimeout(timeout)
+        reject(new Error(`Browser geolocation failed: ${error.message}`))
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    )
+  })
+}

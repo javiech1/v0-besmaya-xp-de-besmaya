@@ -6,7 +6,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useClock } from "@/hooks/useClock"
 import { Taskbar } from "@/components/Taskbar"
-import { getUserLocation, findAllNearbyConcerts } from "@/lib/geolocation"
+import { getUserLocation, findAllNearbyConcerts, checkGeolocationPermission, getBrowserLocation } from "@/lib/geolocation"
 
 interface Event {
   id: string
@@ -81,8 +81,31 @@ export default function ConciertosPage() {
     if (isLoading || isFestivalsLoading) return
     if (concerts.length === 0 && festivals.length === 0) return
 
-    getUserLocation()
-      .then(location => {
+    let cancelled = false
+
+    const detectLocation = async () => {
+      let location: { lat: number; lon: number } | null = null
+
+      // 1. Try IP geolocation
+      try {
+        location = await getUserLocation()
+      } catch {
+        // IP geo failed
+      }
+
+      // 2. If IP failed, try GPS silently (only if permission already granted)
+      if (!location && !cancelled) {
+        try {
+          const permission = await checkGeolocationPermission()
+          if (permission === 'granted') {
+            location = await getBrowserLocation()
+          }
+        } catch {
+          // GPS also failed
+        }
+      }
+
+      if (location && !cancelled) {
         const allEvents = [...concerts, ...festivals]
         const results = findAllNearbyConcerts(location.lat, location.lon, allEvents, 100)
         if (results.length > 0) {
@@ -90,12 +113,13 @@ export default function ConciertosPage() {
           setNearbyCities(cities)
           try {
             sessionStorage.setItem("nearby_concert_cities", JSON.stringify(cities))
-          } catch {
-            // sessionStorage not available
-          }
+          } catch {}
         }
-      })
-      .catch(() => {})
+      }
+    }
+
+    detectLocation()
+    return () => { cancelled = true }
   }, [isLoading, isFestivalsLoading, concerts, festivals, nearbyCities.length])
 
   // Compute display order: ALL nearby concerts first (preserving their chronological order), rest chronological
