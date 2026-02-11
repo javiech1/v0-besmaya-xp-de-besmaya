@@ -2,19 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react"
 
+
 interface Y2KNotificationBannerProps {
   onOpenMuro: () => void
 }
 
-const MESSAGES = [
-  { sender: "Laura", text: "quiere hablar contigo" },
-  { sender: "Nadie", text: "quiere hablar contigo" },
-]
-
 export function Y2KNotificationBanner({ onOpenMuro }: Y2KNotificationBannerProps) {
   const [visible, setVisible] = useState(false)
   const [dismissed, setDismissed] = useState(false)
-  const [messageIndex, setMessageIndex] = useState(0)
   const [sliding, setSliding] = useState<"in" | "out" | "idle">("idle")
 
   // Show the notification after a delay
@@ -28,15 +23,6 @@ export function Y2KNotificationBanner({ onOpenMuro }: Y2KNotificationBannerProps
     }, 3000)
     return () => clearTimeout(timer)
   }, [dismissed])
-
-  // Cycle through messages
-  useEffect(() => {
-    if (!visible || dismissed) return
-    const interval = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % MESSAGES.length)
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [visible, dismissed])
 
   const handleDismiss = useCallback(() => {
     setSliding("out")
@@ -52,8 +38,6 @@ export function Y2KNotificationBanner({ onOpenMuro }: Y2KNotificationBannerProps
   }, [onOpenMuro, handleDismiss])
 
   if (!visible && sliding !== "out") return null
-
-  const msg = MESSAGES[messageIndex]
 
   return (
     <div
@@ -79,15 +63,11 @@ export function Y2KNotificationBanner({ onOpenMuro }: Y2KNotificationBannerProps
       {/* Body */}
       <div className="y2k-notification-body">
         <div className="y2k-notification-avatar">
-          {msg.sender === "Nadie" ? (
-            <img src="/icons/muro.svg" alt="" width={28} height={28} />
-          ) : (
-            <div className="y2k-notification-avatar-placeholder">L</div>
-          )}
+          <img src="/icons/muro.svg" alt="" width={28} height={28} />
         </div>
         <div className="y2k-notification-message">
-          <span className="y2k-notification-sender">{msg.sender}</span>{" "}
-          <span className="y2k-notification-text">{msg.text}</span>
+          <span className="y2k-notification-sender">Nadie</span>{" "}
+          <span className="y2k-notification-text">quiere hablar contigo</span>
         </div>
       </div>
 
