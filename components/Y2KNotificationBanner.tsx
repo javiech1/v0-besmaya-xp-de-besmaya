@@ -16,15 +16,32 @@ export function Y2KNotificationBanner({ onOpenMuro, onDismiss }: Y2KNotification
   // Show the notification immediately on mount
   useEffect(() => {
     if (dismissed) return
+
+    // Don't show again if already dismissed this session
+    try {
+      if (sessionStorage.getItem("nadie_notification_shown") === "true") {
+        setDismissed(true)
+        onDismiss?.()
+        return
+      }
+    } catch {
+      // sessionStorage not available
+    }
+
     setVisible(true)
     setSliding("in")
     const inTimer = setTimeout(() => setSliding("idle"), 400)
     return () => clearTimeout(inTimer)
-  }, [dismissed])
+  }, [dismissed, onDismiss])
 
   const handleDismiss = useCallback(() => {
     setSliding("out")
     onDismiss?.()
+    try {
+      sessionStorage.setItem("nadie_notification_shown", "true")
+    } catch {
+      // sessionStorage not available
+    }
     setTimeout(() => {
       setVisible(false)
       setDismissed(true)

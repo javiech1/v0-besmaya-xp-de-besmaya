@@ -40,6 +40,8 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
   const [isGiraFallback, setIsGiraFallback] = useState(false)
   const router = useRouter()
   const mountTimeRef = useRef(Date.now())
+  const isMobileRef = useRef(isMobile)
+  isMobileRef.current = isMobile
 
   useEffect(() => {
     if (dismissed) return
@@ -134,7 +136,7 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
               setTimeout(() => setSliding("idle"), 400)
             }
           }, delay)
-        } else if (isMobile && !cancelled) {
+        } else if (isMobileRef.current && !cancelled) {
           // En móvil, si no hay conciertos cerca, mostrar notificación de la gira
           const elapsed = Date.now() - mountTimeRef.current
           const delay = Math.max(0, 1000 - elapsed)
@@ -151,7 +153,7 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
       } catch {
         // Geolocation denied or failed
         // En móvil, mostrar la notificación de gira como fallback
-        if (isMobile && !cancelled) {
+        if (isMobileRef.current && !cancelled) {
           const elapsed = Date.now() - mountTimeRef.current
           const delay = Math.max(0, 1000 - elapsed)
 
@@ -172,7 +174,7 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
     return () => {
       cancelled = true
     }
-  }, [dismissed, isMobile])
+  }, [dismissed])
 
   const handleDismiss = useCallback(() => {
     setSliding("out")
