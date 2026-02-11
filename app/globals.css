@@ -1761,17 +1761,30 @@ body {
   top: 96px;
 }
 
+.landscape-mobile .y2k-notification-concert.y2k-notification-top {
+  top: 6px;
+}
+
 /* ================================================
    CONCERT NOTIFICATION BANNER - offset below Nadie
    ================================================ */
 
 .y2k-notification-concert {
   top: 100px;
+  transition: top 0.35s ease;
+}
+
+/* When Nadie notification is dismissed, slide up to top position */
+.y2k-notification-concert.y2k-notification-top {
+  top: 10px;
 }
 
 @media (max-width: 639px) {
   .y2k-notification-concert {
     top: 90px;
+  }
+  .y2k-notification-concert.y2k-notification-top {
+    top: 6px;
   }
 }
 

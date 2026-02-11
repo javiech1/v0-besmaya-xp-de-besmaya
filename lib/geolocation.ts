@@ -101,27 +101,28 @@ function getCityCoordinates(city: string): { lat: number; lon: number } | null {
 }
 
 /**
- * Find the nearest concert within a given radius from the user's position.
+ * Find ALL concerts within a given radius from the user's position.
+ * Returns results sorted by distance (closest first).
  */
-export function findNearbyConcert<T extends { ciudad: string }>(
+export function findAllNearbyConcerts<T extends { ciudad: string }>(
   userLat: number,
   userLon: number,
   concerts: T[],
   radiusKm: number = 100
-): { concert: T; distance: number } | null {
-  let nearest: { concert: T; distance: number } | null = null
+): { concert: T; distance: number }[] {
+  const results: { concert: T; distance: number }[] = []
 
   for (const concert of concerts) {
     const coords = getCityCoordinates(concert.ciudad)
     if (!coords) continue
 
     const distance = haversineDistance(userLat, userLon, coords.lat, coords.lon)
-    if (distance <= radiusKm && (!nearest || distance < nearest.distance)) {
-      nearest = { concert, distance }
+    if (distance <= radiusKm) {
+      results.push({ concert, distance })
     }
   }
 
-  return nearest
+  return results.sort((a, b) => a.distance - b.distance)
 }
 
 /**

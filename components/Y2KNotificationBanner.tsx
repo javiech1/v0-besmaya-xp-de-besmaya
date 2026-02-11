@@ -5,32 +5,31 @@ import { useState, useEffect, useCallback } from "react"
 
 interface Y2KNotificationBannerProps {
   onOpenMuro: () => void
+  onDismiss?: () => void
 }
 
-export function Y2KNotificationBanner({ onOpenMuro }: Y2KNotificationBannerProps) {
+export function Y2KNotificationBanner({ onOpenMuro, onDismiss }: Y2KNotificationBannerProps) {
   const [visible, setVisible] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [sliding, setSliding] = useState<"in" | "out" | "idle">("idle")
 
-  // Show the notification after a delay
+  // Show the notification immediately on mount
   useEffect(() => {
     if (dismissed) return
-    const timer = setTimeout(() => {
-      setVisible(true)
-      setSliding("in")
-      const inTimer = setTimeout(() => setSliding("idle"), 400)
-      return () => clearTimeout(inTimer)
-    }, 3000)
-    return () => clearTimeout(timer)
+    setVisible(true)
+    setSliding("in")
+    const inTimer = setTimeout(() => setSliding("idle"), 400)
+    return () => clearTimeout(inTimer)
   }, [dismissed])
 
   const handleDismiss = useCallback(() => {
     setSliding("out")
+    onDismiss?.()
     setTimeout(() => {
       setVisible(false)
       setDismissed(true)
     }, 350)
-  }, [])
+  }, [onDismiss])
 
   const handleOpenMuro = useCallback(() => {
     onOpenMuro()

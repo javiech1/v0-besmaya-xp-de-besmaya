@@ -60,6 +60,7 @@ export default function BesmayaDesktop() {
   const [isLandscapeMobile, setIsLandscapeMobile] = useState(false)
   const [hasFinePointer, setHasFinePointer] = useState(false)
   const [initialWindowsCreated, setInitialWindowsCreated] = useState(false)
+  const [nadieNotificationVisible, setNadieNotificationVisible] = useState(true)
   const router = useRouter()
   const iconsContainerRef = useRef<HTMLDivElement>(null)
   const forcedMobileByCollision = useRef(false)
@@ -785,8 +786,11 @@ export default function BesmayaDesktop() {
         </div>
       )}
 
-      <Y2KNotificationBanner onOpenMuro={() => openWindow("muro", "El Muro de Nadie", <MuroContent />)} />
-      <ConcertNotificationBanner />
+      <Y2KNotificationBanner
+        onOpenMuro={() => openWindow("muro", "El Muro de Nadie", <MuroContent />)}
+        onDismiss={() => setNadieNotificationVisible(false)}
+      />
+      <ConcertNotificationBanner nadieVisible={nadieNotificationVisible} />
 
       <Taskbar time={time} onStartClick={toggleStartMenu} showSocialLinks>
           {/* Indicadores de ventanas en móvil */}

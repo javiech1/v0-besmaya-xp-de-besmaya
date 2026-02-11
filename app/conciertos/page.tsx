@@ -6,7 +6,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useClock } from "@/hooks/useClock"
 import { Taskbar } from "@/components/Taskbar"
-import { getUserLocation, findNearbyConcert } from "@/lib/geolocation"
+import { getUserLocation, findAllNearbyConcerts } from "@/lib/geolocation"
 
 interface Event {
   id: string
@@ -49,7 +49,7 @@ export default function ConciertosPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [festivals, setFestivals] = useState<Festival[]>([])
   const [isFestivalsLoading, setIsFestivalsLoading] = useState(true)
-  const [nearbyConcertCity, setNearbyConcertCity] = useState<string | null>(null)
+  const [nearbyCities, setNearbyCities] = useState<string[]>([])
   const router = useRouter()
 
   const supabase = createClient()
@@ -59,42 +59,76 @@ export default function ConciertosPage() {
     fetchFestivals()
   }, [])
 
-  // Check sessionStorage for nearby concert or detect via geolocation
+  // Check sessionStorage for nearby cities or detect via geolocation
   useEffect(() => {
-    const stored = sessionStorage.getItem("nearby_concert_city")
-    if (stored) {
-      setNearbyConcertCity(stored)
-      return
+    try {
+      const stored = sessionStorage.getItem("nearby_concert_cities")
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setNearbyCities(parsed)
+          return
+        }
+      }
+    } catch {
+      // sessionStorage or JSON parse failed
     }
   }, [])
 
-  // When concerts are loaded and no nearby city from session, try geolocation
+  // When data is loaded and no nearby cities from session, try geolocation
   useEffect(() => {
-    if (nearbyConcertCity) return
-    if (isLoading || concerts.length === 0) return
+    if (nearbyCities.length > 0) return
+    if (isLoading || isFestivalsLoading) return
+    if (concerts.length === 0 && festivals.length === 0) return
 
     getUserLocation()
       .then(location => {
-        const result = findNearbyConcert(location.lat, location.lon, concerts, 100)
-        if (result) {
-          setNearbyConcertCity(result.concert.ciudad)
-          sessionStorage.setItem("nearby_concert_city", result.concert.ciudad)
+        const allEvents = [...concerts, ...festivals]
+        const results = findAllNearbyConcerts(location.lat, location.lon, allEvents, 100)
+        if (results.length > 0) {
+          const cities = [...new Set(results.map(r => r.concert.ciudad))]
+          setNearbyCities(cities)
+          try {
+            sessionStorage.setItem("nearby_concert_cities", JSON.stringify(cities))
+          } catch {
+            // sessionStorage not available
+          }
         }
       })
       .catch(() => {})
-  }, [isLoading, concerts, nearbyConcertCity])
+  }, [isLoading, isFestivalsLoading, concerts, festivals, nearbyCities.length])
 
-  // Compute display order: nearby concert first, rest chronological
+  // Compute display order: ALL nearby concerts first (preserving their chronological order), rest chronological
+  const nearbyCitiesLower = useMemo(() => nearbyCities.map(c => c.toLowerCase()), [nearbyCities])
+
   const displayConcerts = useMemo(() => {
-    if (!nearbyConcertCity) return concerts
-    const list = [...concerts]
-    const idx = list.findIndex(c => c.ciudad.toLowerCase() === nearbyConcertCity.toLowerCase())
-    if (idx > 0) {
-      const [nearby] = list.splice(idx, 1)
-      list.unshift(nearby)
+    if (nearbyCitiesLower.length === 0) return concerts
+    const nearby: Concert[] = []
+    const rest: Concert[] = []
+    for (const concert of concerts) {
+      if (nearbyCitiesLower.includes(concert.ciudad.toLowerCase())) {
+        nearby.push(concert)
+      } else {
+        rest.push(concert)
+      }
     }
-    return list
-  }, [concerts, nearbyConcertCity])
+    return [...nearby, ...rest]
+  }, [concerts, nearbyCitiesLower])
+
+  // Same for festivals
+  const displayFestivals = useMemo(() => {
+    if (nearbyCitiesLower.length === 0) return festivals
+    const nearby: Festival[] = []
+    const rest: Festival[] = []
+    for (const festival of festivals) {
+      if (nearbyCitiesLower.includes(festival.ciudad.toLowerCase())) {
+        nearby.push(festival)
+      } else {
+        rest.push(festival)
+      }
+    }
+    return [...nearby, ...rest]
+  }, [festivals, nearbyCitiesLower])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -250,9 +284,7 @@ export default function ConciertosPage() {
               <div className={`xp-tab-panel ${activeTab === 'conciertos' ? 'active' : ''}`}>
                 <div className="grid gap-2 sm:gap-3 md:gap-4">
                   {displayConcerts.map((concert) => {
-                    const isNearby = nearbyConcertCity
-                      ? concert.ciudad.toLowerCase() === nearbyConcertCity.toLowerCase()
-                      : false
+                    const isNearby = nearbyCitiesLower.includes(concert.ciudad.toLowerCase())
                     return (
                       <div key={concert.id} className={`concert-row ${isNearby ? 'concert-row-nearby' : ''}`}>
                         <span className="concert-fecha">{concert.fecha}</span>
@@ -291,19 +323,25 @@ export default function ConciertosPage() {
                   </div>
                 ) : festivals.length > 0 ? (
                   <div className="grid gap-2 sm:gap-3 md:gap-4">
-                    {festivals.map((festival) => (
-                      <div key={festival.id} className="concert-row">
-                        <span className="concert-fecha">{festival.fecha}</span>
-                        <span className="concert-ciudad">{festival.ciudad}</span>
-                        <span className="concert-sala">{festival.sala}</span>
-                        <button
-                          className="concert-btn"
-                          onClick={() => window.open(festival.link, "_blank")}
-                        >
-                          Tickets
-                        </button>
-                      </div>
-                    ))}
+                    {displayFestivals.map((festival) => {
+                      const isNearby = nearbyCitiesLower.includes(festival.ciudad.toLowerCase())
+                      return (
+                        <div key={festival.id} className={`concert-row ${isNearby ? 'concert-row-nearby' : ''}`}>
+                          <span className="concert-fecha">{festival.fecha}</span>
+                          <span className="concert-ciudad">
+                            {festival.ciudad}
+                            {isNearby && <span className="concert-nearby-badge">CERCA DE TI</span>}
+                          </span>
+                          <span className="concert-sala">{festival.sala}</span>
+                          <button
+                            className="concert-btn"
+                            onClick={() => window.open(festival.link, "_blank")}
+                          >
+                            Tickets
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-8">

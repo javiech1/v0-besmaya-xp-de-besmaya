@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { getUserLocation, findNearbyConcert } from "@/lib/geolocation"
+import { getUserLocation, findAllNearbyConcerts } from "@/lib/geolocation"
 import { createClient } from "@/lib/supabase/client"
 import { getFromCache, setToCache, parseFechaToDate } from "@/lib/cache"
 
@@ -27,77 +27,116 @@ const fallbackConcerts: Event[] = [
   { id: "10", fecha: "21-mar", ciudad: "Valladolid", sala: "Sala Lava", link: "https://merchandtour.com/besmaya/" },
 ]
 
-export function ConcertNotificationBanner() {
+interface ConcertNotificationBannerProps {
+  nadieVisible: boolean
+}
+
+export function ConcertNotificationBanner({ nadieVisible }: ConcertNotificationBannerProps) {
   const [visible, setVisible] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [sliding, setSliding] = useState<"in" | "out" | "idle">("idle")
   const router = useRouter()
+  const mountTimeRef = useRef(Date.now())
 
   useEffect(() => {
     if (dismissed) return
 
     // Don't show again if already shown this session
-    if (sessionStorage.getItem("concert_notification_shown") === "true") {
-      setDismissed(true)
-      return
+    try {
+      if (sessionStorage.getItem("concert_notification_shown") === "true") {
+        setDismissed(true)
+        return
+      }
+    } catch {
+      // sessionStorage not available
     }
 
     let cancelled = false
 
-    const checkNearbyConcerts = async () => {
+    const checkNearbyEvents = async () => {
       try {
-        // Small delay before requesting geolocation so the Nadie notification
-        // appears first and the permission prompt doesn't interfere
-        await new Promise(r => setTimeout(r, 5000))
-        if (cancelled) return
-
         const location = await getUserLocation()
         if (cancelled) return
 
         // Get concerts from cache or Supabase
         let concerts: Event[] = fallbackConcerts
-        const cached = getFromCache<Event[]>('concerts_cache')
-        if (cached) {
-          concerts = cached
-        } else {
-          try {
+        let festivals: Event[] = []
+
+        try {
+          const cachedConcerts = getFromCache<Event[]>('concerts_cache')
+          if (cachedConcerts) {
+            concerts = cachedConcerts
+          } else {
             const supabase = createClient()
             const { data, error } = await supabase.from("concerts").select("*")
             if (!error && data) {
               concerts = data
               setToCache('concerts_cache', data)
             }
-          } catch {
-            // Use fallback
           }
+        } catch {
+          // Use fallback concerts
         }
+
+        try {
+          const cachedFestivals = getFromCache<Event[]>('festivals_cache')
+          if (cachedFestivals) {
+            festivals = cachedFestivals
+          } else {
+            const supabase = createClient()
+            const { data, error } = await supabase.from("festis").select("*")
+            if (!error && data) {
+              festivals = data
+              setToCache('festivals_cache', data)
+            }
+          }
+        } catch {
+          // No festivals available
+        }
+
+        if (cancelled) return
 
         // Filter past events
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         const futureConcerts = concerts.filter(c => parseFechaToDate(c.fecha) >= today)
+        const futureFestivals = festivals.filter(f => parseFechaToDate(f.fecha) >= today)
 
-        const result = findNearbyConcert(location.lat, location.lon, futureConcerts, 100)
+        // Find ALL nearby events (concerts + festivals)
+        const nearbyConcerts = findAllNearbyConcerts(location.lat, location.lon, futureConcerts, 100)
+        const nearbyFestivals = findAllNearbyConcerts(location.lat, location.lon, futureFestivals, 100)
 
-        if (result && !cancelled) {
+        const allNearbyResults = [...nearbyConcerts, ...nearbyFestivals]
+
+        if (allNearbyResults.length > 0 && !cancelled) {
+          // Extract unique city names
+          const nearbyCities = [...new Set(allNearbyResults.map(r => r.concert.ciudad))]
+
           // Store for the concerts page
-          sessionStorage.setItem("nearby_concert_city", result.concert.ciudad)
+          try {
+            sessionStorage.setItem("nearby_concert_cities", JSON.stringify(nearbyCities))
+          } catch {
+            // sessionStorage not available
+          }
 
-          // Show notification after a short delay
+          // Show notification ~1s after page load (or immediately if geo took longer)
+          const elapsed = Date.now() - mountTimeRef.current
+          const delay = Math.max(0, 1000 - elapsed)
+
           setTimeout(() => {
             if (!cancelled) {
               setVisible(true)
               setSliding("in")
               setTimeout(() => setSliding("idle"), 400)
             }
-          }, 2000)
+          }, delay)
         }
       } catch {
         // Geolocation denied or failed - don't show notification
       }
     }
 
-    checkNearbyConcerts()
+    checkNearbyEvents()
 
     return () => {
       cancelled = true
@@ -106,7 +145,11 @@ export function ConcertNotificationBanner() {
 
   const handleDismiss = useCallback(() => {
     setSliding("out")
-    sessionStorage.setItem("concert_notification_shown", "true")
+    try {
+      sessionStorage.setItem("concert_notification_shown", "true")
+    } catch {
+      // sessionStorage not available
+    }
     setTimeout(() => {
       setVisible(false)
       setDismissed(true)
@@ -123,6 +166,8 @@ export function ConcertNotificationBanner() {
   return (
     <div
       className={`y2k-notification y2k-notification-concert ${
+        nadieVisible ? '' : 'y2k-notification-top'
+      } ${
         sliding === "in" ? "y2k-slide-in" : sliding === "out" ? "y2k-slide-out" : ""
       }`}
     >
