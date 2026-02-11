@@ -29,12 +29,15 @@ const fallbackConcerts: Event[] = [
 
 interface ConcertNotificationBannerProps {
   nadieVisible: boolean
+  albumVisible?: boolean
+  isMobile?: boolean
 }
 
-export function ConcertNotificationBanner({ nadieVisible }: ConcertNotificationBannerProps) {
+export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, isMobile = false }: ConcertNotificationBannerProps) {
   const [visible, setVisible] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [sliding, setSliding] = useState<"in" | "out" | "idle">("idle")
+  const [isGiraFallback, setIsGiraFallback] = useState(false)
   const router = useRouter()
   const mountTimeRef = useRef(Date.now())
 
@@ -125,6 +128,20 @@ export function ConcertNotificationBanner({ nadieVisible }: ConcertNotificationB
 
           setTimeout(() => {
             if (!cancelled) {
+              setIsGiraFallback(false)
+              setVisible(true)
+              setSliding("in")
+              setTimeout(() => setSliding("idle"), 400)
+            }
+          }, delay)
+        } else if (isMobile && !cancelled) {
+          // En móvil, si no hay conciertos cerca, mostrar notificación de la gira
+          const elapsed = Date.now() - mountTimeRef.current
+          const delay = Math.max(0, 1000 - elapsed)
+
+          setTimeout(() => {
+            if (!cancelled) {
+              setIsGiraFallback(true)
               setVisible(true)
               setSliding("in")
               setTimeout(() => setSliding("idle"), 400)
@@ -132,7 +149,21 @@ export function ConcertNotificationBanner({ nadieVisible }: ConcertNotificationB
           }, delay)
         }
       } catch {
-        // Geolocation denied or failed - don't show notification
+        // Geolocation denied or failed
+        // En móvil, mostrar la notificación de gira como fallback
+        if (isMobile && !cancelled) {
+          const elapsed = Date.now() - mountTimeRef.current
+          const delay = Math.max(0, 1000 - elapsed)
+
+          setTimeout(() => {
+            if (!cancelled) {
+              setIsGiraFallback(true)
+              setVisible(true)
+              setSliding("in")
+              setTimeout(() => setSliding("idle"), 400)
+            }
+          }, delay)
+        }
       }
     }
 
@@ -141,7 +172,7 @@ export function ConcertNotificationBanner({ nadieVisible }: ConcertNotificationB
     return () => {
       cancelled = true
     }
-  }, [dismissed])
+  }, [dismissed, isMobile])
 
   const handleDismiss = useCallback(() => {
     setSliding("out")
@@ -163,10 +194,22 @@ export function ConcertNotificationBanner({ nadieVisible }: ConcertNotificationB
 
   if (!visible && sliding !== "out") return null
 
+  // Determine CSS class based on how many notifications are above
+  let positionClass = 'y2k-notification-concert'
+  if (albumVisible) {
+    // Both nadie and album are above
+    positionClass = 'y2k-notification-concert y2k-notification-concert-below-album'
+    if (!nadieVisible) {
+      positionClass = 'y2k-notification-concert y2k-notification-concert-below-album y2k-notification-album-top'
+    }
+  }
+
   return (
     <div
-      className={`y2k-notification y2k-notification-concert ${
-        nadieVisible ? '' : 'y2k-notification-top'
+      className={`y2k-notification ${positionClass} ${
+        !albumVisible && !nadieVisible ? 'y2k-notification-top' : ''
+      } ${
+        !albumVisible && nadieVisible ? '' : ''
       } ${
         sliding === "in" ? "y2k-slide-in" : sliding === "out" ? "y2k-slide-out" : ""
       }`}
@@ -189,15 +232,21 @@ export function ConcertNotificationBanner({ nadieVisible }: ConcertNotificationB
           <img src="/icons/conciertos.png" alt="" width={28} height={28} style={{ objectFit: "contain" }} />
         </div>
         <div className="y2k-notification-message">
-          <span className="y2k-notification-sender">Los Besmaya</span>{" "}
-          <span className="y2k-notification-text">van a tu ciudad</span>
+          {isGiraFallback ? (
+            <span className="y2k-notification-text">La gira de Nadie</span>
+          ) : (
+            <>
+              <span className="y2k-notification-sender">Los Besmaya</span>{" "}
+              <span className="y2k-notification-text">van a tu ciudad</span>
+            </>
+          )}
         </div>
       </div>
 
       {/* Action */}
       <div className="y2k-notification-actions">
         <button className="y2k-notification-btn" onClick={handleOpenConcerts}>
-          Ver conciertos
+          {isGiraFallback ? "Comprar Entradas" : "Ver conciertos"}
         </button>
       </div>
     </div>

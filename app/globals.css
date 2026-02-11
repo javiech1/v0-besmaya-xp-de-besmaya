@@ -1757,12 +1757,51 @@ body {
   max-width: calc(100vw - 12px);
 }
 
+.landscape-mobile .y2k-notification-album {
+  top: 96px;
+}
+
+.landscape-mobile .y2k-notification-album.y2k-notification-album-top {
+  top: 6px;
+}
+
 .landscape-mobile .y2k-notification-concert {
   top: 96px;
 }
 
 .landscape-mobile .y2k-notification-concert.y2k-notification-top {
   top: 6px;
+}
+
+.landscape-mobile .y2k-notification-concert.y2k-notification-concert-below-album {
+  top: 180px;
+}
+
+.landscape-mobile .y2k-notification-concert.y2k-notification-concert-below-album.y2k-notification-album-top {
+  top: 96px;
+}
+
+/* ================================================
+   ALBUM NOTIFICATION BANNER - offset below Nadie
+   ================================================ */
+
+.y2k-notification-album {
+  top: 100px;
+  transition: top 0.35s ease;
+}
+
+/* When Nadie notification is dismissed, slide up to top position */
+.y2k-notification-album.y2k-notification-album-top {
+  top: 10px;
+}
+
+@media (max-width: 639px) {
+  .y2k-notification-album {
+    top: 90px;
+  }
+  .y2k-notification-album.y2k-notification-album-top {
+    top: 6px;
+  }
 }
 
 /* ================================================
@@ -1779,12 +1818,28 @@ body {
   top: 10px;
 }
 
+/* When album notification is above (mobile only) */
+.y2k-notification-concert.y2k-notification-concert-below-album {
+  top: 190px;
+}
+
+/* Album above but nadie dismissed */
+.y2k-notification-concert.y2k-notification-concert-below-album.y2k-notification-album-top {
+  top: 100px;
+}
+
 @media (max-width: 639px) {
   .y2k-notification-concert {
     top: 90px;
   }
   .y2k-notification-concert.y2k-notification-top {
     top: 6px;
+  }
+  .y2k-notification-concert.y2k-notification-concert-below-album {
+    top: 175px;
+  }
+  .y2k-notification-concert.y2k-notification-concert-below-album.y2k-notification-album-top {
+    top: 90px;
   }
 }
 

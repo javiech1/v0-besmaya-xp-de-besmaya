@@ -13,6 +13,7 @@ import { MuroContent } from "@/components/windows/MuroWindow"
 import { UnderConstructionPage } from "@/components/windows/UnderConstructionPage"
 import { Y2KNotificationBanner } from "@/components/Y2KNotificationBanner"
 import { ConcertNotificationBanner } from "@/components/ConcertNotificationBanner"
+import { AlbumNotificationBanner } from "@/components/AlbumNotificationBanner"
 
 interface WindowState {
   id: string
@@ -61,6 +62,7 @@ export default function BesmayaDesktop() {
   const [hasFinePointer, setHasFinePointer] = useState(false)
   const [initialWindowsCreated, setInitialWindowsCreated] = useState(false)
   const [nadieNotificationVisible, setNadieNotificationVisible] = useState(true)
+  const [albumNotificationVisible, setAlbumNotificationVisible] = useState(true)
   const router = useRouter()
   const iconsContainerRef = useRef<HTMLDivElement>(null)
   const forcedMobileByCollision = useRef(false)
@@ -246,36 +248,10 @@ export default function BesmayaDesktop() {
     const screenWidth = typeof window !== "undefined" ? window.innerWidth : 1024
     const screenHeight = typeof window !== "undefined" ? window.innerHeight : 768
 
-    // En móvil: mostrar las 2 ventanas apiladas debajo de los iconos
+    // En móvil: no abrir ventanas, usar notificaciones en su lugar
     if (!isDesktop) {
-      const initialWindows: WindowState[] = [
-        {
-          id: "welcome-poster",
-          title: "La gira de Nadie",
-          content: <WelcomePosterContent />,
-          x: 0,
-          y: 0,
-          width: screenWidth,
-          height: "auto",
-          isMinimized: false,
-          zIndex: 102,
-          isInitial: true,
-        },
-        {
-          id: "album",
-          title: "La vida de Nadie",
-          content: <AlbumContent />,
-          x: 0,
-          y: 0,
-          width: screenWidth,
-          height: "auto",
-          isMinimized: false,
-          zIndex: 101,
-          isInitial: true,
-        },
-      ]
-      setWindows(initialWindows)
-      setNextZIndex(103)
+      setWindows([])
+      setNextZIndex(100)
       setInitialWindowsCreated(true)
       sessionStorage.setItem("initialWindowsCreated", "true")
       return
@@ -790,7 +766,17 @@ export default function BesmayaDesktop() {
         onOpenMuro={() => openWindow("muro", "El Muro de Nadie", <MuroContent />)}
         onDismiss={() => setNadieNotificationVisible(false)}
       />
-      <ConcertNotificationBanner nadieVisible={nadieNotificationVisible} />
+      {!isDesktop && (
+        <AlbumNotificationBanner
+          nadieVisible={nadieNotificationVisible}
+          onDismiss={() => setAlbumNotificationVisible(false)}
+        />
+      )}
+      <ConcertNotificationBanner
+        nadieVisible={nadieNotificationVisible}
+        albumVisible={!isDesktop && albumNotificationVisible}
+        isMobile={!isDesktop}
+      />
 
       <Taskbar time={time} onStartClick={toggleStartMenu} showSocialLinks>
           {/* Indicadores de ventanas en móvil */}
