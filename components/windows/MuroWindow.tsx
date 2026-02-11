@@ -28,7 +28,9 @@ export function MuroContent() {
     return generated
   })
   const feedRef = useRef<HTMLDivElement>(null)
+  const messageInputRef = useRef<HTMLInputElement>(null)
   const isPostingRef = useRef(false)
+  const isAtBottomRef = useRef(true)
 
   const scrollToBottom = () => {
     if (feedRef.current) {
@@ -84,6 +86,27 @@ export function MuroContent() {
     return () => clearInterval(interval)
   }, [])
 
+  // Auto-scroll to bottom when mobile keyboard opens (viewport shrinks)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+
+    let prevHeight = vv.height
+
+    const onResize = () => {
+      const newHeight = vv.height
+      // Keyboard opened (viewport got shorter) - scroll to bottom if user was at bottom
+      if (newHeight < prevHeight && isAtBottomRef.current) {
+        setTimeout(scrollToBottom, 50)
+        setTimeout(scrollToBottom, 150)
+      }
+      prevHeight = newHeight
+    }
+
+    vv.addEventListener('resize', onResize)
+    return () => vv.removeEventListener('resize', onResize)
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!message.trim() || isSubmitting) return
@@ -102,6 +125,7 @@ export function MuroContent() {
 
     setComments((prev) => [...prev, optimisticComment])
     setMessage("")
+    messageInputRef.current?.focus()
     setTimeout(scrollToBottom, 50)
     isPostingRef.current = true
 
@@ -186,6 +210,12 @@ export function MuroContent() {
         ref={feedRef}
         className="flex-1 bg-white border border-gray-300 mx-1 mt-1 overflow-y-auto"
         style={{ minHeight: 0, overscrollBehavior: 'contain' }}
+        onScroll={() => {
+          if (feedRef.current) {
+            const { scrollTop, scrollHeight, clientHeight } = feedRef.current
+            isAtBottomRef.current = scrollHeight - scrollTop - clientHeight < 50
+          }
+        }}
       >
         {isLoading ? (
           <div className="p-3 text-center text-gray-400 text-xs">Cargando...</div>
@@ -221,6 +251,7 @@ export function MuroContent() {
           />
           <div className="flex-1 relative">
             <input
+              ref={messageInputRef}
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value.slice(0, 140))}
@@ -235,6 +266,7 @@ export function MuroContent() {
           <button
             type="submit"
             disabled={isSubmitting || !message.trim()}
+            onMouseDown={(e) => e.preventDefault()}
             className="shrink-0 text-xs px-2 py-1 bg-[#d4d0c8] border border-gray-400 hover:bg-[#c8c4bc] active:bg-[#bfbbb3] disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               boxShadow: "inset 1px 1px 0 #fff, inset -1px -1px 0 #808080",
