@@ -11,6 +11,7 @@ import { WelcomePosterContent } from "@/components/windows/WelcomePosterWindow"
 import { AlbumContent } from "@/components/windows/AlbumWindow"
 import { MuroContent } from "@/components/windows/MuroWindow"
 import { UnderConstructionPage } from "@/components/windows/UnderConstructionPage"
+import { Y2KNotificationBanner } from "@/components/Y2KNotificationBanner"
 
 interface WindowState {
   id: string
@@ -782,6 +783,8 @@ export default function BesmayaDesktop() {
           </div>
         </div>
       )}
+
+      <Y2KNotificationBanner onOpenMuro={() => openWindow("muro", "El Muro de Nadie", <MuroContent />)} />
 
       <Taskbar time={time} onStartClick={toggleStartMenu} showSocialLinks>
           {/* Indicadores de ventanas en móvil */}
