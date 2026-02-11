@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useClock } from "@/hooks/useClock"
 import { Taskbar } from "@/components/Taskbar"
@@ -40,6 +40,9 @@ interface DragState {
 // Altura del taskbar XP
 const TASKBAR_HEIGHT = 40
 
+// Key used to persist open window IDs across navigations
+const OPEN_WINDOWS_KEY = "open_window_ids"
+
 export default function BesmayaDesktop() {
   const [windows, setWindows] = useState<WindowState[]>([])
   const [dragState, setDragState] = useState<DragState>({
@@ -67,6 +70,15 @@ export default function BesmayaDesktop() {
   const iconsContainerRef = useRef<HTMLDivElement>(null)
   const forcedMobileByCollision = useRef(false)
   const collisionEntryHeight = useRef<number>(0)
+
+  // Helper: build window title & content from an ID
+  const windowMeta = useMemo(() => ({
+    "welcome-poster": { title: "La gira de Nadie", content: <WelcomePosterContent /> },
+    "album": { title: "La vida de Nadie", content: <AlbumContent /> },
+    "muro": { title: "El Muro de Nadie", content: <MuroContent /> },
+    "musica": { title: "Música", content: <MusicaContent /> },
+    "bio": { title: "Bio", content: <BioContent /> },
+  } as Record<string, { title: string; content: React.ReactNode }>), [])
 
   useEffect(() => {
     // Detectar capacidad de puntero fino (ratón)
@@ -133,6 +145,17 @@ export default function BesmayaDesktop() {
       pointerQuery.removeEventListener('change', updatePointer)
     }
   }, [])
+
+  // Persist open window IDs to sessionStorage so they survive navigation to /conciertos
+  useEffect(() => {
+    if (!initialWindowsCreated) return
+    try {
+      const ids = windows.map(w => w.id)
+      sessionStorage.setItem(OPEN_WINDOWS_KEY, JSON.stringify(ids))
+    } catch {
+      // sessionStorage not available
+    }
+  }, [windows, initialWindowsCreated])
 
   // Clamping de ventanas cuando el viewport se reduce (solo en desktop)
   useEffect(() => {
@@ -241,6 +264,69 @@ export default function BesmayaDesktop() {
 
     // Check if windows were already created in this session
     if (typeof window !== "undefined" && sessionStorage.getItem("initialWindowsCreated") === "true") {
+      // Restore previously open windows (e.g. after navigating back from /conciertos)
+      try {
+        const savedIds = sessionStorage.getItem(OPEN_WINDOWS_KEY)
+        if (savedIds) {
+          const ids: string[] = JSON.parse(savedIds)
+          const screenWidth = window.innerWidth
+          const screenHeight = window.innerHeight
+          const isSmall = screenWidth < 1024
+          const scale = isSmall ? Math.max(0.75, screenWidth / 1024) : 1
+          let zIdx = 100
+
+          const restored: WindowState[] = ids
+            .filter(id => windowMeta[id])
+            .map((id, i) => {
+              const meta = windowMeta[id]
+              const isInitialWindow = id === "welcome-poster" || id === "album" || id === "muro"
+              let w: number, h: number | "auto", x: number, y: number
+              if (!isDesktop) {
+                w = screenWidth; h = "auto"; x = 0; y = 0
+              } else if (id === "welcome-poster") {
+                w = Math.min(384, screenWidth * 0.4) * scale
+                const offsetX = isSmall ? Math.min(100, screenWidth * 0.1) : 200
+                x = Math.max(20, screenWidth / 2 - w / 2 - offsetX)
+                y = Math.max(20, screenHeight / 2 - 275 - 80)
+                h = "auto"
+              } else if (id === "album") {
+                w = Math.min(384, screenWidth * 0.4) * scale
+                const offsetX = isSmall ? Math.min(100, screenWidth * 0.1) : 200
+                x = Math.min(screenWidth - w - 20, screenWidth / 2 - w / 2 + offsetX)
+                y = Math.max(20, screenHeight / 2 - 230 + (isSmall ? 60 : 120))
+                h = "auto"
+              } else if (id === "muro") {
+                w = Math.min(400, screenWidth * 0.45) * scale
+                x = Math.max(20, screenWidth / 2 - w / 2)
+                y = Math.max(20, (screenHeight - TASKBAR_HEIGHT) / 2 - 250)
+                h = 500
+              } else {
+                w = Math.min(400, screenWidth * 0.4) * scale
+                const cascadeOffset = (i % 5) * (isSmall ? 20 : 30)
+                x = Math.max(0, Math.min(50 + cascadeOffset, screenWidth - w))
+                y = Math.max(0, Math.min(50 + cascadeOffset, screenHeight - 400 - TASKBAR_HEIGHT))
+                h = 400
+              }
+              zIdx++
+              return {
+                id,
+                title: meta.title,
+                content: meta.content,
+                x, y, width: w, height: h,
+                isMinimized: false,
+                zIndex: zIdx,
+                isInitial: isInitialWindow,
+              }
+            })
+
+          if (restored.length > 0) {
+            setWindows(restored)
+            setNextZIndex(zIdx + 1)
+          }
+        }
+      } catch {
+        // Failed to restore, start fresh
+      }
       setInitialWindowsCreated(true)
       return
     }
@@ -480,6 +566,15 @@ export default function BesmayaDesktop() {
   const toggleStartMenu = () => {
     setIsStartMenuOpen(!isStartMenuOpen)
   }
+
+  // Stable callbacks for notification banners to prevent animation replay
+  const openWindowRef = useRef(openWindow)
+  openWindowRef.current = openWindow
+  const handleOpenMuroFromNotification = useCallback(() => {
+    openWindowRef.current("muro", "El Muro de Nadie", <MuroContent />)
+  }, [])
+  const handleNadieDismiss = useCallback(() => setNadieNotificationVisible(false), [])
+  const handleAlbumDismiss = useCallback(() => setAlbumNotificationVisible(false), [])
 
 
   // Sync --app-height and --app-offset-top with visualViewport for mobile keyboard handling.
@@ -763,13 +858,13 @@ export default function BesmayaDesktop() {
       )}
 
       <Y2KNotificationBanner
-        onOpenMuro={() => openWindow("muro", "El Muro de Nadie", <MuroContent />)}
-        onDismiss={() => setNadieNotificationVisible(false)}
+        onOpenMuro={handleOpenMuroFromNotification}
+        onDismiss={handleNadieDismiss}
       />
       {!isDesktop && (
         <AlbumNotificationBanner
           nadieVisible={nadieNotificationVisible}
-          onDismiss={() => setAlbumNotificationVisible(false)}
+          onDismiss={handleAlbumDismiss}
         />
       )}
       <ConcertNotificationBanner

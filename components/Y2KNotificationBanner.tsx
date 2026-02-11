@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 
 
 interface Y2KNotificationBannerProps {
@@ -12,6 +12,8 @@ export function Y2KNotificationBanner({ onOpenMuro, onDismiss }: Y2KNotification
   const [visible, setVisible] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [sliding, setSliding] = useState<"in" | "out" | "idle">("idle")
+  const onDismissRef = useRef(onDismiss)
+  onDismissRef.current = onDismiss
 
   // Show the notification immediately on mount
   useEffect(() => {
@@ -21,7 +23,7 @@ export function Y2KNotificationBanner({ onOpenMuro, onDismiss }: Y2KNotification
     try {
       if (sessionStorage.getItem("nadie_notification_shown") === "true") {
         setDismissed(true)
-        onDismiss?.()
+        onDismissRef.current?.()
         return
       }
     } catch {
@@ -32,7 +34,7 @@ export function Y2KNotificationBanner({ onOpenMuro, onDismiss }: Y2KNotification
     setSliding("in")
     const inTimer = setTimeout(() => setSliding("idle"), 400)
     return () => clearTimeout(inTimer)
-  }, [dismissed, onDismiss])
+  }, [dismissed])
 
   const handleDismiss = useCallback(() => {
     setSliding("out")
