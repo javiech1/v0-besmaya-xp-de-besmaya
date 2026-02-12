@@ -23,8 +23,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          ref: claude/twitter-bot-setup-VWjNQ
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
