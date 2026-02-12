@@ -1,13 +1,5 @@
 import { TwitterApi, type TweetV2 } from "twitter-api-v2"
 
-interface DMEvent {
-  id: string
-  event_type: string
-  text?: string
-  sender_id?: string
-  dm_conversation_id?: string
-  created_at?: string
-}
 import { config } from "./config.js"
 import type { ThreadMessage } from "./types.js"
 
@@ -161,30 +153,6 @@ export async function fetchFollowedAccountsTweets(since: string | null): Promise
   }
 }
 
-// --- DMs ---
-
-export async function fetchNewDMs(sinceId: string | null): Promise<DMEvent[]> {
-  try {
-    const params: Record<string, unknown> = {
-      max_results: 100,
-      "dm_event.fields": ["dm_conversation_id", "sender_id", "text", "created_at"],
-      event_types: "MessageCreate",
-    }
-    if (sinceId) params.since_id = sinceId
-
-    const response = await v2User.listDmEvents(params)
-    const events: DMEvent[] = response.events ?? []
-
-    // Filtrar solo DMs de otros (no los nuestros)
-    const botId = getBotUserId()
-    const incoming = events.filter(e => e.sender_id !== botId)
-    console.log(`[Twitter] ${incoming.length} DMs nuevos`)
-    return incoming
-  } catch (err) {
-    console.error("[Twitter] Error fetching DMs:", err)
-    return []
-  }
-}
 
 // --- Contexto de hilos ---
 
@@ -239,22 +207,6 @@ export async function replyToTweet(tweetId: string, text: string): Promise<strin
   }
 }
 
-// --- Acciones: enviar DM ---
-
-export async function sendDM(conversationId: string, text: string): Promise<boolean> {
-  if (config.bot.dryRun) {
-    console.log(`[DRY RUN] Enviaria DM a conversacion ${conversationId}: "${text}"`)
-    return true
-  }
-  try {
-    await v2User.sendDmInConversation(conversationId, { text })
-    console.log(`[Twitter] DM enviado a conversacion ${conversationId}`)
-    return true
-  } catch (err) {
-    console.error(`[Twitter] Error enviando DM a ${conversationId}:`, err)
-    return false
-  }
-}
 
 // --- Acciones: publicar tweet propio ---
 

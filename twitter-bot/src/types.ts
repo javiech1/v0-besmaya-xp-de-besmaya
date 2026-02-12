@@ -4,14 +4,14 @@ export interface PendingReply {
   /** ID unico para mapear resultado del batch */
   customId: string
   /** Tipo de interaccion */
-  type: "mention" | "dm" | "followed_band" | "indirect_mention"
-  /** ID del tweet al que responder (o dm_conversation_id para DMs) */
+  type: "mention" | "followed_band" | "indirect_mention"
+  /** ID del tweet al que responder */
   targetId: string
   /** Conversation ID del hilo de Twitter */
   conversationId?: string
   /** Username del autor del tweet */
   authorUsername: string
-  /** Texto del tweet/DM original */
+  /** Texto del tweet original */
   text: string
   /** Contexto del hilo formateado */
   threadContext: string
@@ -51,14 +51,10 @@ export interface BotState {
   lastMentionId: string | null
   /** Ultimo ID de busqueda indirecta procesada (cursor independiente) */
   lastIndirectSearchId: string | null
-  /** Ultimo ID de evento DM procesado */
-  lastDmEventId: string | null
   /** Ultimo timestamp de tweet de banda seguida procesado */
   lastFollowedTweetTime: string | null
   /** IDs de tweets a los que ya hemos respondido */
   repliedTweetIds: string[]
-  /** IDs de DMs a los que ya hemos respondido */
-  repliedDmIds: string[]
   /** Hilos en los que participamos: conversation_id -> nuestros tweet IDs */
   activeThreads: Record<string, string[]>
   /** Contador de respuestas hoy */

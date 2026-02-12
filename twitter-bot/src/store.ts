@@ -5,10 +5,8 @@ import type { BotState } from "./types.js"
 const DEFAULT_STATE: BotState = {
   lastMentionId: null,
   lastIndirectSearchId: null,
-  lastDmEventId: null,
   lastFollowedTweetTime: null,
   repliedTweetIds: [],
-  repliedDmIds: [],
   activeThreads: {},
   dailyReplyCount: 0,
   dailyReplyDate: new Date().toISOString().slice(0, 10),
@@ -45,9 +43,6 @@ export function saveState(): void {
   if (state.repliedTweetIds.length > MAX_REPLIED_IDS) {
     state.repliedTweetIds = state.repliedTweetIds.slice(-MAX_REPLIED_IDS)
   }
-  if (state.repliedDmIds.length > MAX_REPLIED_IDS) {
-    state.repliedDmIds = state.repliedDmIds.slice(-MAX_REPLIED_IDS)
-  }
   writeFileSync(config.bot.stateFile, JSON.stringify(state, null, 2))
 }
 
@@ -59,21 +54,9 @@ export function hasRepliedToTweet(tweetId: string): boolean {
   return state.repliedTweetIds.includes(tweetId)
 }
 
-export function hasRepliedToDm(dmId: string): boolean {
-  return state.repliedDmIds.includes(dmId)
-}
-
 export function markTweetReplied(tweetId: string): void {
   if (!state.repliedTweetIds.includes(tweetId)) {
     state.repliedTweetIds.push(tweetId)
-  }
-  incrementDailyCount()
-  saveState()
-}
-
-export function markDmReplied(dmId: string): void {
-  if (!state.repliedDmIds.includes(dmId)) {
-    state.repliedDmIds.push(dmId)
   }
   incrementDailyCount()
   saveState()
@@ -86,11 +69,6 @@ export function setLastMentionId(id: string): void {
 
 export function setLastIndirectSearchId(id: string): void {
   state.lastIndirectSearchId = id
-  saveState()
-}
-
-export function setLastDmEventId(id: string): void {
-  state.lastDmEventId = id
   saveState()
 }
 

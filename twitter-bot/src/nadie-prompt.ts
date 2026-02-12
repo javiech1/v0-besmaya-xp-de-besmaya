@@ -123,7 +123,7 @@ export function formatThreadContext(
  * Construye el prompt de usuario para una interaccion especifica.
  */
 export function buildUserPrompt(params: {
-  type: "mention" | "dm" | "followed_band" | "indirect_mention"
+  type: "mention" | "followed_band" | "indirect_mention"
   authorUsername: string
   text: string
   threadContext: string
@@ -146,9 +146,6 @@ export function buildUserPrompt(params: {
   switch (type) {
     case "mention":
       prompt += `Un usuario te ha mencionado en Twitter.\n@${authorUsername}: "${text}"\n\nResponde como Nadie.`
-      break
-    case "dm":
-      prompt += `Un usuario te ha enviado un mensaje directo en Twitter.\n@${authorUsername}: "${text}"\n\nResponde como Nadie. Puedes ser un poco mas abierto y personal en DMs que en tweets publicos, pero sin pasarte.`
       break
     case "followed_band":
       prompt += `Una banda/artista que sigues ha publicado esto en Twitter.\n@${authorUsername}: "${text}"\n\nSi te inspira, comenta como un colega musico. Si no tienes nada interesante que aportar, responde EXACTAMENTE con "SKIP" y nada mas.`

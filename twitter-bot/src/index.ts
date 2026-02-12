@@ -4,10 +4,8 @@ import {
   fetchMentions,
   searchIndirectMentions,
   fetchFollowedAccountsTweets,
-  fetchNewDMs,
   fetchThreadContext,
   replyToTweet,
-  sendDM,
   resolveUsername,
   getBotUserId,
 } from "./twitter-client.js"
@@ -18,12 +16,9 @@ import {
   getState,
   saveState,
   hasRepliedToTweet,
-  hasRepliedToDm,
   markTweetReplied,
-  markDmReplied,
   setLastMentionId,
   setLastIndirectSearchId,
-  setLastDmEventId,
   setLastFollowedTweetTime,
   addActiveThread,
   canReplyToday,
@@ -211,38 +206,7 @@ async function pollCycle(): Promise<void> {
     })
   }
 
-  // 4. DMs
-  console.log("\n--- Buscando DMs nuevos ---")
-  const dms = await fetchNewDMs(state.lastDmEventId)
-  if (dms.length > 0) {
-    setLastDmEventId(dms[0].id)
-  }
-
-  for (const dm of dms) {
-    if (hasRepliedToDm(dm.id)) continue
-    if (!canReplyToday()) break
-
-    const senderUsername = await resolveUsername(dm.sender_id ?? "")
-
-    const customId = `dm-${counter++}`
-    pendingReplies.push({
-      customId,
-      type: "dm",
-      targetId: dm.dm_conversation_id ?? dm.id,
-      authorUsername: senderUsername,
-      text: dm.text ?? "",
-      threadContext: "",
-      userPrompt: buildUserPrompt({
-        type: "dm",
-        authorUsername: senderUsername,
-        text: dm.text ?? "",
-        threadContext: "",
-        recentReplies: recentNadieReplies.slice(-MAX_RECENT_REPLIES),
-      }),
-    })
-  }
-
-  // 5. Enviar batch a Claude
+  // 4. Enviar batch a Claude
   if (pendingReplies.length === 0) {
     console.log("\n[Ciclo] Nada que responder este ciclo")
     logCycleDuration(cycleStart)
@@ -258,7 +222,7 @@ async function pollCycle(): Promise<void> {
     return
   }
 
-  // 6. Esperar resultados
+  // 5. Esperar resultados
   const completed = await waitForBatch(batchId)
 
   if (!completed) {
@@ -270,7 +234,7 @@ async function pollCycle(): Promise<void> {
     return
   }
 
-  // 7. Procesar resultados
+  // 6. Procesar resultados
   await processResults(batchId, pendingReplies)
   logCycleDuration(cycleStart)
 }
@@ -288,7 +252,7 @@ async function processResults(batchId: string, pendingReplies: PendingReply[]): 
 
     // Si no hay respuesta de Claude:
     // - Para followed_band e indirect_mention, mejor SKIP que decir algo random
-    // - Para mention y dm, usar fallback porque alguien espera respuesta
+    // - Para mention, usar fallback porque alguien espera respuesta
     if (!responseText) {
       if (reply.type === "followed_band" || reply.type === "indirect_mention") {
         responseText = "SKIP"
@@ -300,12 +264,7 @@ async function processResults(batchId: string, pendingReplies: PendingReply[]): 
     // Si Claude devolvio "SKIP", no responder
     if (responseText.trim().toUpperCase() === "SKIP") {
       console.log(`[Resultados] SKIP para ${reply.customId} (${reply.type} de @${reply.authorUsername})`)
-      // Marcar como procesado para no reintentarlo
-      if (reply.type === "dm") {
-        markDmReplied(reply.targetId)
-      } else {
-        markTweetReplied(reply.targetId)
-      }
+      markTweetReplied(reply.targetId)
       continue
     }
 
@@ -315,20 +274,12 @@ async function processResults(batchId: string, pendingReplies: PendingReply[]): 
     console.log(`[Resultados] ${reply.customId}: @${reply.authorUsername} -> "${responseText}"`)
 
     // Publicar respuesta
-    if (reply.type === "dm") {
-      const sent = await sendDM(reply.targetId, responseText)
-      if (sent) {
-        markDmReplied(reply.targetId)
-        trackRecentReply(responseText)
-      }
-    } else {
-      const tweetId = await replyToTweet(reply.targetId, responseText)
-      if (tweetId) {
-        markTweetReplied(reply.targetId)
-        trackRecentReply(responseText)
-        if (reply.conversationId) {
-          addActiveThread(reply.conversationId, tweetId)
-        }
+    const tweetId = await replyToTweet(reply.targetId, responseText)
+    if (tweetId) {
+      markTweetReplied(reply.targetId)
+      trackRecentReply(responseText)
+      if (reply.conversationId) {
+        addActiveThread(reply.conversationId, tweetId)
       }
     }
 
