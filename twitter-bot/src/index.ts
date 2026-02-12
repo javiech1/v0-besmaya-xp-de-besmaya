@@ -90,11 +90,17 @@ async function pollCycle(): Promise<void> {
   const seenTargetIds = new Set<string>() // Dedup global dentro del ciclo
   let counter = 0
 
+  // Cursores candidatos: no se persisten hasta que el batch se cree con exito
+  // para evitar perder tweets si algo falla antes de procesarlos
+  let newMentionId: string | null = null
+  let newIndirectSearchId: string | null = null
+  let newFollowedTweetTime: string | null = null
+
   // 1. Menciones directas (@nadiedebesmaya y @somosbesmaya)
   console.log("\n--- Buscando menciones directas ---")
   const mentions = await fetchMentions(state.lastMentionId)
   if (mentions.length > 0) {
-    setLastMentionId(mentions[0].id) // El mas reciente
+    newMentionId = mentions[0].id // Candidato, no persistido aun
   }
 
   for (const tweet of mentions) {
@@ -132,7 +138,7 @@ async function pollCycle(): Promise<void> {
   console.log("\n--- Buscando menciones indirectas ---")
   const indirectMentions = await searchIndirectMentions(state.lastIndirectSearchId)
   if (indirectMentions.length > 0) {
-    setLastIndirectSearchId(indirectMentions[0].id)
+    newIndirectSearchId = indirectMentions[0].id
   }
 
   for (const tweet of indirectMentions) {
@@ -170,13 +176,13 @@ async function pollCycle(): Promise<void> {
   console.log("\n--- Buscando tweets de bandas seguidas ---")
   const followedTweets = await fetchFollowedAccountsTweets(state.lastFollowedTweetTime)
   if (followedTweets.length > 0) {
-    // Guardar el timestamp mas reciente
+    // Guardar el timestamp mas reciente (candidato, no persistido aun)
     const mostRecent = followedTweets
       .map(t => (t as TweetV2 & { created_at?: string }).created_at)
       .filter(Boolean)
       .sort()
       .pop()
-    if (mostRecent) setLastFollowedTweetTime(mostRecent)
+    if (mostRecent) newFollowedTweetTime = mostRecent
   }
 
   for (const tweet of followedTweets) {
@@ -213,8 +219,17 @@ async function pollCycle(): Promise<void> {
     })
   }
 
+  // Helper para persistir cursores (solo cuando los tweets estan contabilizados)
+  const commitCursors = () => {
+    if (newMentionId) setLastMentionId(newMentionId)
+    if (newIndirectSearchId) setLastIndirectSearchId(newIndirectSearchId)
+    if (newFollowedTweetTime) setLastFollowedTweetTime(newFollowedTweetTime)
+  }
+
   // 4. Enviar batch a Claude
   if (pendingReplies.length === 0) {
+    // Todos filtrados (ya respondidos, muy viejos, etc.) — avanzar cursores
+    commitCursors()
     console.log("\n[Ciclo] Nada que responder este ciclo")
     logCycleDuration(cycleStart)
     return
@@ -224,10 +239,14 @@ async function pollCycle(): Promise<void> {
   const batchId = await createBatch(pendingReplies)
 
   if (!batchId) {
-    console.error("[Ciclo] Error creando batch, saltando ciclo")
+    // NO avanzar cursores: los tweets se reintentaran en el proximo ciclo
+    console.error("[Ciclo] Error creando batch, tweets se reintentaran en proximo ciclo")
     logCycleDuration(cycleStart)
     return
   }
+
+  // Batch creado con exito — los tweets estan contabilizados (se procesaran ahora o como pendientes)
+  commitCursors()
 
   // 5. Esperar resultados
   const completed = await waitForBatch(batchId)
