@@ -1,4 +1,13 @@
-import { TwitterApi, type TweetV2, type DirectMessageEventV2 } from "twitter-api-v2"
+import { TwitterApi, type TweetV2 } from "twitter-api-v2"
+
+interface DMEvent {
+  id: string
+  event_type: string
+  text?: string
+  sender_id?: string
+  dm_conversation_id?: string
+  created_at?: string
+}
 import { config } from "./config.js"
 import type { ThreadMessage } from "./types.js"
 
@@ -114,7 +123,7 @@ export async function fetchFollowedAccountsTweets(since: string | null): Promise
       max_results: 1000,
       "user.fields": ["username"],
     })
-    const followedUsers = following.data?.data ?? []
+    const followedUsers = following.data ?? []
     console.log(`[Twitter] Siguiendo ${followedUsers.length} cuentas`)
 
     if (followedUsers.length === 0) return []
@@ -154,7 +163,7 @@ export async function fetchFollowedAccountsTweets(since: string | null): Promise
 
 // --- DMs ---
 
-export async function fetchNewDMs(sinceId: string | null): Promise<DirectMessageEventV2[]> {
+export async function fetchNewDMs(sinceId: string | null): Promise<DMEvent[]> {
   try {
     const params: Record<string, unknown> = {
       max_results: 100,
@@ -163,9 +172,8 @@ export async function fetchNewDMs(sinceId: string | null): Promise<DirectMessage
     }
     if (sinceId) params.since_id = sinceId
 
-    // @ts-expect-error - dm_events puede no estar tipado en la version actual
     const response = await v2User.listDmEvents(params)
-    const events: DirectMessageEventV2[] = response.data?.data ?? []
+    const events: DMEvent[] = response.events ?? []
 
     // Filtrar solo DMs de otros (no los nuestros)
     const botId = getBotUserId()
@@ -239,7 +247,6 @@ export async function sendDM(conversationId: string, text: string): Promise<bool
     return true
   }
   try {
-    // @ts-expect-error - sendDm puede variar segun version
     await v2User.sendDmInConversation(conversationId, { text })
     console.log(`[Twitter] DM enviado a conversacion ${conversationId}`)
     return true
