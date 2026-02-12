@@ -571,8 +571,10 @@ export default function BesmayaDesktop() {
   const openWindowRef = useRef(openWindow)
   openWindowRef.current = openWindow
   const handleOpenMuroFromNotification = useCallback(() => {
-    openWindowRef.current("muro", "El Muro de Nadie", <MuroContent />)
-  }, [])
+    if (isDesktop) {
+      openWindowRef.current("muro", "El Muro de Nadie", <MuroContent />)
+    }
+  }, [isDesktop])
   const handleNadieDismiss = useCallback(() => setNadieNotificationVisible(false), [])
   const handleAlbumDismiss = useCallback(() => setAlbumNotificationVisible(false), [])
 
