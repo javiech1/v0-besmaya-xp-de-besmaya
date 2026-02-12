@@ -4,10 +4,8 @@ import {
   fetchMentions,
   searchIndirectMentions,
   fetchFollowedAccountsTweets,
-  fetchNewDMs,
   fetchThreadContext,
   replyToTweet,
-  sendDM,
   resolveUsername,
   getBotUserId,
 } from "./twitter-client.js"
@@ -18,12 +16,9 @@ import {
   getState,
   saveState,
   hasRepliedToTweet,
-  hasRepliedToDm,
   markTweetReplied,
-  markDmReplied,
   setLastMentionId,
   setLastIndirectSearchId,
-  setLastDmEventId,
   setLastFollowedTweetTime,
   addActiveThread,
   canReplyToday,
@@ -37,6 +32,7 @@ import type { TweetV2 } from "twitter-api-v2"
 // Ultimas respuestas generadas (para evitar repetir muletillas)
 const recentNadieReplies: string[] = []
 const MAX_RECENT_REPLIES = 5
+const MAX_TWEET_AGE_MS = 24 * 60 * 60 * 1000 // 24h
 
 const RUN_ONCE = process.env.RUN_ONCE === "true"
 
@@ -103,6 +99,7 @@ async function pollCycle(): Promise<void> {
   for (const tweet of mentions) {
     if (hasRepliedToTweet(tweet.id)) continue
     if (!canReplyToday()) break
+    if (isTweetTooOld(tweet)) continue
 
     const authorUsername = await resolveAuthor(tweet)
     // No respondernos a nosotros mismos
@@ -140,8 +137,8 @@ async function pollCycle(): Promise<void> {
   for (const tweet of indirectMentions) {
     if (hasRepliedToTweet(tweet.id)) continue
     if (!canReplyToday()) break
-    // Dedup global: evitar duplicados con menciones directas u otros tipos
     if (seenTargetIds.has(tweet.id)) continue
+    if (isTweetTooOld(tweet)) continue
 
     const authorUsername = await resolveAuthor(tweet)
     if (tweet.author_id === getBotUserId()) continue
@@ -184,8 +181,8 @@ async function pollCycle(): Promise<void> {
   for (const tweet of followedTweets) {
     if (hasRepliedToTweet(tweet.id)) continue
     if (!canReplyToday()) break
-    // Dedup global: un tweet de banda seguida podria contener "besmaya"
     if (seenTargetIds.has(tweet.id)) continue
+    if (isTweetTooOld(tweet)) continue
 
     const authorUsername = (tweet as TweetV2 & { author_username?: string }).author_username
       ?? await resolveAuthor(tweet)
@@ -211,38 +208,7 @@ async function pollCycle(): Promise<void> {
     })
   }
 
-  // 4. DMs
-  console.log("\n--- Buscando DMs nuevos ---")
-  const dms = await fetchNewDMs(state.lastDmEventId)
-  if (dms.length > 0) {
-    setLastDmEventId(dms[0].id)
-  }
-
-  for (const dm of dms) {
-    if (hasRepliedToDm(dm.id)) continue
-    if (!canReplyToday()) break
-
-    const senderUsername = await resolveUsername(dm.sender_id ?? "")
-
-    const customId = `dm-${counter++}`
-    pendingReplies.push({
-      customId,
-      type: "dm",
-      targetId: dm.dm_conversation_id ?? dm.id,
-      authorUsername: senderUsername,
-      text: dm.text ?? "",
-      threadContext: "",
-      userPrompt: buildUserPrompt({
-        type: "dm",
-        authorUsername: senderUsername,
-        text: dm.text ?? "",
-        threadContext: "",
-        recentReplies: recentNadieReplies.slice(-MAX_RECENT_REPLIES),
-      }),
-    })
-  }
-
-  // 5. Enviar batch a Claude
+  // 4. Enviar batch a Claude
   if (pendingReplies.length === 0) {
     console.log("\n[Ciclo] Nada que responder este ciclo")
     logCycleDuration(cycleStart)
@@ -258,7 +224,7 @@ async function pollCycle(): Promise<void> {
     return
   }
 
-  // 6. Esperar resultados
+  // 5. Esperar resultados
   const completed = await waitForBatch(batchId)
 
   if (!completed) {
@@ -270,7 +236,7 @@ async function pollCycle(): Promise<void> {
     return
   }
 
-  // 7. Procesar resultados
+  // 6. Procesar resultados
   await processResults(batchId, pendingReplies)
   logCycleDuration(cycleStart)
 }
@@ -288,7 +254,7 @@ async function processResults(batchId: string, pendingReplies: PendingReply[]): 
 
     // Si no hay respuesta de Claude:
     // - Para followed_band e indirect_mention, mejor SKIP que decir algo random
-    // - Para mention y dm, usar fallback porque alguien espera respuesta
+    // - Para mention, usar fallback porque alguien espera respuesta
     if (!responseText) {
       if (reply.type === "followed_band" || reply.type === "indirect_mention") {
         responseText = "SKIP"
@@ -300,12 +266,7 @@ async function processResults(batchId: string, pendingReplies: PendingReply[]): 
     // Si Claude devolvio "SKIP", no responder
     if (responseText.trim().toUpperCase() === "SKIP") {
       console.log(`[Resultados] SKIP para ${reply.customId} (${reply.type} de @${reply.authorUsername})`)
-      // Marcar como procesado para no reintentarlo
-      if (reply.type === "dm") {
-        markDmReplied(reply.targetId)
-      } else {
-        markTweetReplied(reply.targetId)
-      }
+      markTweetReplied(reply.targetId)
       continue
     }
 
@@ -315,20 +276,12 @@ async function processResults(batchId: string, pendingReplies: PendingReply[]): 
     console.log(`[Resultados] ${reply.customId}: @${reply.authorUsername} -> "${responseText}"`)
 
     // Publicar respuesta
-    if (reply.type === "dm") {
-      const sent = await sendDM(reply.targetId, responseText)
-      if (sent) {
-        markDmReplied(reply.targetId)
-        trackRecentReply(responseText)
-      }
-    } else {
-      const tweetId = await replyToTweet(reply.targetId, responseText)
-      if (tweetId) {
-        markTweetReplied(reply.targetId)
-        trackRecentReply(responseText)
-        if (reply.conversationId) {
-          addActiveThread(reply.conversationId, tweetId)
-        }
+    const tweetId = await replyToTweet(reply.targetId, responseText)
+    if (tweetId) {
+      markTweetReplied(reply.targetId)
+      trackRecentReply(responseText)
+      if (reply.conversationId) {
+        addActiveThread(reply.conversationId, tweetId)
       }
     }
 
@@ -359,6 +312,12 @@ async function processPendingBatches(): Promise<void> {
 }
 
 // --- Helpers ---
+
+function isTweetTooOld(tweet: TweetV2): boolean {
+  const createdAt = (tweet as TweetV2 & { created_at?: string }).created_at
+  if (!createdAt) return false
+  return Date.now() - new Date(createdAt).getTime() > MAX_TWEET_AGE_MS
+}
 
 async function resolveAuthor(tweet: TweetV2): Promise<string> {
   return tweet.author_id ? await resolveUsername(tweet.author_id) : "desconocido"

@@ -1,13 +1,5 @@
 import { TwitterApi, type TweetV2 } from "twitter-api-v2"
 
-interface DMEvent {
-  id: string
-  event_type: string
-  text?: string
-  sender_id?: string
-  dm_conversation_id?: string
-  created_at?: string
-}
 import { config } from "./config.js"
 import type { ThreadMessage } from "./types.js"
 
@@ -62,6 +54,8 @@ export async function fetchMentions(sinceId: string | null): Promise<TweetV2[]> 
       "user.fields": ["username"],
     }
     if (sinceId) params.since_id = sinceId
+    // Limitar a las ultimas 24h para no gastar API en tweets viejos
+    if (!sinceId) params.start_time = get24hAgoISO()
 
     const response = await v2User.userMentionTimeline(botId, params)
     const tweets = response.data?.data ?? []
@@ -69,7 +63,6 @@ export async function fetchMentions(sinceId: string | null): Promise<TweetV2[]> 
     // Si tambien queremos menciones a @somosbesmaya, buscar tambien ahi
     if (_bandUserId && _bandUserId !== botId) {
       const bandParams = { ...params }
-      if (sinceId) bandParams.since_id = sinceId
       const bandResponse = await v2User.userMentionTimeline(_bandUserId, bandParams)
       const bandTweets = bandResponse.data?.data ?? []
 
@@ -102,6 +95,7 @@ export async function searchIndirectMentions(sinceId: string | null): Promise<Tw
       "user.fields": ["username"],
     }
     if (sinceId) params.since_id = sinceId
+    if (!sinceId) params.start_time = get24hAgoISO()
 
     const response = await v2App.search(query, params)
     const tweets = response.data?.data ?? []
@@ -139,7 +133,7 @@ export async function fetchFollowedAccountsTweets(since: string | null): Promise
           "tweet.fields": ["conversation_id", "author_id", "created_at", "referenced_tweets"],
           exclude: ["retweets", "replies"],
         }
-        if (since) params.start_time = since
+        params.start_time = since ?? get24hAgoISO()
 
         const timeline = await v2App.userTimeline(user.id, params)
         const tweets = timeline.data?.data ?? []
@@ -161,30 +155,6 @@ export async function fetchFollowedAccountsTweets(since: string | null): Promise
   }
 }
 
-// --- DMs ---
-
-export async function fetchNewDMs(sinceId: string | null): Promise<DMEvent[]> {
-  try {
-    const params: Record<string, unknown> = {
-      max_results: 100,
-      "dm_event.fields": ["dm_conversation_id", "sender_id", "text", "created_at"],
-      event_types: "MessageCreate",
-    }
-    if (sinceId) params.since_id = sinceId
-
-    const response = await v2User.listDmEvents(params)
-    const events: DMEvent[] = response.events ?? []
-
-    // Filtrar solo DMs de otros (no los nuestros)
-    const botId = getBotUserId()
-    const incoming = events.filter(e => e.sender_id !== botId)
-    console.log(`[Twitter] ${incoming.length} DMs nuevos`)
-    return incoming
-  } catch (err) {
-    console.error("[Twitter] Error fetching DMs:", err)
-    return []
-  }
-}
 
 // --- Contexto de hilos ---
 
@@ -239,22 +209,6 @@ export async function replyToTweet(tweetId: string, text: string): Promise<strin
   }
 }
 
-// --- Acciones: enviar DM ---
-
-export async function sendDM(conversationId: string, text: string): Promise<boolean> {
-  if (config.bot.dryRun) {
-    console.log(`[DRY RUN] Enviaria DM a conversacion ${conversationId}: "${text}"`)
-    return true
-  }
-  try {
-    await v2User.sendDmInConversation(conversationId, { text })
-    console.log(`[Twitter] DM enviado a conversacion ${conversationId}`)
-    return true
-  } catch (err) {
-    console.error(`[Twitter] Error enviando DM a ${conversationId}:`, err)
-    return false
-  }
-}
 
 // --- Acciones: publicar tweet propio ---
 
@@ -271,6 +225,12 @@ export async function postTweet(text: string): Promise<string | null> {
     console.error("[Twitter] Error publicando tweet:", err)
     return null
   }
+}
+
+// --- Helpers ---
+
+function get24hAgoISO(): string {
+  return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 }
 
 // --- Resolver username por author_id ---
