@@ -264,6 +264,13 @@ export default function BesmayaDesktop() {
 
     // Check if windows were already created in this session
     if (typeof window !== "undefined" && sessionStorage.getItem("initialWindowsCreated") === "true") {
+      // On mobile, don't restore windows — they are opened on demand via notifications/icons
+      if (!isDesktop) {
+        setWindows([])
+        setNextZIndex(100)
+        setInitialWindowsCreated(true)
+        return
+      }
       // Restore previously open windows (e.g. after navigating back from /conciertos)
       try {
         const savedIds = sessionStorage.getItem(OPEN_WINDOWS_KEY)
