@@ -283,6 +283,13 @@ async function processResults(batchId: string, pendingReplies: PendingReply[]): 
       break
     }
 
+    // Dedup defensivo: comprobar de nuevo antes de publicar
+    // (protege contra batches pendientes que se procesan despues de que otro ciclo ya respondio)
+    if (hasRepliedToTweet(reply.targetId)) {
+      console.log(`[Resultados] Ya respondido a ${reply.targetId}, saltando (dedup defensivo)`)
+      continue
+    }
+
     let responseText = results.get(reply.customId)
 
     // Si no hay respuesta de Claude:
@@ -314,10 +321,13 @@ async function processResults(batchId: string, pendingReplies: PendingReply[]): 
 
     console.log(`[Resultados] ${reply.customId}: @${reply.authorUsername} -> "${responseText}"`)
 
+    // Marcar como respondido ANTES de publicar para evitar duplicados.
+    // Es preferible perder una respuesta (si replyToTweet falla) que duplicarla.
+    markTweetReplied(reply.targetId)
+
     // Publicar respuesta
     const tweetId = await replyToTweet(reply.targetId, responseText)
     if (tweetId) {
-      markTweetReplied(reply.targetId)
       trackRecentReply(responseText)
       if (reply.conversationId) {
         addActiveThread(reply.conversationId, tweetId)
