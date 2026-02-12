@@ -20,6 +20,14 @@ const v2App = appClient.v2
 let _botUserId: string | null = null
 let _bandUserId: string | null = null
 
+// --- Cache de usernames para evitar llamadas redundantes a la API ---
+const usernameCache = new Map<string, string>()
+
+// --- Cache de lista de cuentas seguidas (cambia poco, no pedir cada ciclo) ---
+const FOLLOWING_CACHE_TTL_MS = 6 * 60 * 60 * 1000 // 6 horas
+let _followingCache: Array<{ id: string; username: string }> | null = null
+let _followingCacheTime = 0
+
 // --- Inicializacion ---
 
 export async function initTwitter(): Promise<void> {
@@ -61,14 +69,22 @@ export async function fetchMentions(sinceId: string | null): Promise<TweetV2[]> 
     // Limitar a las ultimas 24h para no gastar API en tweets viejos
     if (!sinceId) params.start_time = get24hAgoISO()
 
-    const response = await v2User.userMentionTimeline(botId, params)
+    const response = await withRateLimitRetry(
+      () => v2User.userMentionTimeline(botId, params),
+      "mentions-bot"
+    )
     const tweets = response.data?.data ?? []
+    cacheUsersFromExpansions(response.includes?.users)
 
     // Si tambien queremos menciones a @somosbesmaya, buscar tambien ahi
     if (_bandUserId && _bandUserId !== botId) {
       const bandParams = { ...params }
-      const bandResponse = await v2User.userMentionTimeline(_bandUserId, bandParams)
+      const bandResponse = await withRateLimitRetry(
+        () => v2User.userMentionTimeline(_bandUserId!, bandParams),
+        "mentions-band"
+      )
       const bandTweets = bandResponse.data?.data ?? []
+      cacheUsersFromExpansions(bandResponse.includes?.users)
 
       // Combinar y deduplicar
       const allIds = new Set(tweets.map(t => t.id))
@@ -101,8 +117,12 @@ export async function searchIndirectMentions(sinceId: string | null): Promise<Tw
     if (sinceId) params.since_id = sinceId
     if (!sinceId) params.start_time = get24hAgoISO()
 
-    const response = await v2App.search(query, params)
+    const response = await withRateLimitRetry(
+      () => v2App.search(query, params),
+      "search-indirect"
+    )
     const tweets = response.data?.data ?? []
+    cacheUsersFromExpansions(response.includes?.users)
     console.log(`[Twitter] ${tweets.length} menciones indirectas de "besmaya"`)
     return tweets
   } catch (err) {
@@ -116,13 +136,27 @@ export async function searchIndirectMentions(sinceId: string | null): Promise<Tw
 export async function fetchFollowedAccountsTweets(since: string | null): Promise<TweetV2[]> {
   const botId = getBotUserId()
   try {
-    // Obtener cuentas que seguimos
-    const following = await v2User.following(botId, {
-      max_results: 1000,
-      "user.fields": ["username"],
-    })
-    const followedUsers = following.data ?? []
-    console.log(`[Twitter] Siguiendo ${followedUsers.length} cuentas`)
+    // Obtener cuentas que seguimos (con cache de 6h para no gastar API)
+    let followedUsers: Array<{ id: string; username: string }>
+    const cacheExpired = Date.now() - _followingCacheTime > FOLLOWING_CACHE_TTL_MS
+
+    if (_followingCache && !cacheExpired) {
+      followedUsers = _followingCache
+      console.log(`[Twitter] Siguiendo ${followedUsers.length} cuentas (cache)`)
+    } else {
+      const following = await withRateLimitRetry(
+        () => v2User.following(botId, { max_results: 1000, "user.fields": ["username"] }),
+        "following-list"
+      )
+      followedUsers = (following.data ?? []).map(u => ({ id: u.id, username: u.username }))
+      _followingCache = followedUsers
+      _followingCacheTime = Date.now()
+      // Cachear usernames de las cuentas seguidas
+      for (const u of followedUsers) {
+        usernameCache.set(u.id, u.username)
+      }
+      console.log(`[Twitter] Siguiendo ${followedUsers.length} cuentas (API)`)
+    }
 
     if (followedUsers.length === 0) return []
 
@@ -139,7 +173,10 @@ export async function fetchFollowedAccountsTweets(since: string | null): Promise
         }
         params.start_time = since ?? get24hAgoISO()
 
-        const timeline = await v2App.userTimeline(user.id, params)
+        const timeline = await withRateLimitRetry(
+          () => v2App.userTimeline(user.id, params),
+          `timeline-${user.username}`
+        )
         const tweets = timeline.data?.data ?? []
         for (const t of tweets) {
           // Anadimos el username manualmente ya que no viene en la expansion aqui
@@ -166,16 +203,20 @@ export async function fetchThreadContext(conversationId: string, maxTweets = 20)
   try {
     // Buscar todos los tweets de esta conversacion
     const query = `conversation_id:${conversationId}`
-    const response = await v2App.search(query, {
-      max_results: Math.min(maxTweets, 100),
-      "tweet.fields": ["in_reply_to_user_id", "author_id", "created_at", "conversation_id"],
-      expansions: ["author_id"],
-      "user.fields": ["username"],
-      sort_order: "recency",
-    })
+    const response = await withRateLimitRetry(
+      () => v2App.search(query, {
+        max_results: Math.min(maxTweets, 100),
+        "tweet.fields": ["in_reply_to_user_id", "author_id", "created_at", "conversation_id"],
+        expansions: ["author_id"],
+        "user.fields": ["username"],
+        sort_order: "recency",
+      }),
+      `thread-${conversationId}`
+    )
 
     const tweets = response.data?.data ?? []
     const users = response.includes?.users ?? []
+    cacheUsersFromExpansions(users)
     const userMap = new Map(users.map(u => [u.id, u.username]))
 
     const thread: ThreadMessage[] = tweets
@@ -237,12 +278,48 @@ function get24hAgoISO(): string {
   return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 }
 
-// --- Resolver username por author_id ---
+// --- Rate limit: esperar y reintentar si recibimos 429 ---
+
+async function withRateLimitRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
+  try {
+    return await fn()
+  } catch (err: unknown) {
+    const apiErr = err as { code?: number; data?: { status?: number }; rateLimit?: { reset?: number } }
+    if (apiErr?.code === 429 || apiErr?.data?.status === 429) {
+      const resetEpoch = apiErr?.rateLimit?.reset
+      let waitMs = 60_000 // Default: 1 min
+      if (resetEpoch) {
+        waitMs = Math.max((resetEpoch * 1000) - Date.now() + 1000, 5000)
+      }
+      console.warn(`[Twitter] Rate limit en ${label}, esperando ${Math.round(waitMs / 1000)}s...`)
+      await new Promise(r => setTimeout(r, waitMs))
+      return fn() // Un solo reintento
+    }
+    throw err
+  }
+}
+
+// --- Cache de usernames: poblar desde expansions ---
+
+function cacheUsersFromExpansions(users: Array<{ id: string; username: string }> | undefined): void {
+  if (!users) return
+  for (const u of users) {
+    usernameCache.set(u.id, u.username)
+  }
+}
+
+// --- Resolver username por author_id (con cache) ---
 
 export async function resolveUsername(authorId: string): Promise<string> {
+  // Primero buscar en cache para evitar llamada API
+  const cached = usernameCache.get(authorId)
+  if (cached) return cached
+
   try {
     const user = await v2App.user(authorId, { "user.fields": ["username"] })
-    return user.data?.username ?? "desconocido"
+    const username = user.data?.username ?? "desconocido"
+    if (username !== "desconocido") usernameCache.set(authorId, username)
+    return username
   } catch {
     return "desconocido"
   }
