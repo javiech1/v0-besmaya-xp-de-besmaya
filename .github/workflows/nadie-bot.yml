@@ -68,10 +68,17 @@ jobs:
           RUN_ONCE: "true"
         run: node dist/index.js
 
+      # Borrar cache anterior para poder guardar con la misma key
+      - name: Delete old bot state cache
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh cache delete nadie-bot-state --repo ${{ github.repository }} || true
+
       # Guardar estado para el siguiente ciclo
       - name: Save bot state
         uses: actions/cache/save@v4
         if: always()
         with:
           path: twitter-bot/bot-state.json
-          key: nadie-bot-state-${{ github.run_id }}
+          key: nadie-bot-state
