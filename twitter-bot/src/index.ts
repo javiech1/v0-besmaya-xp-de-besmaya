@@ -26,6 +26,8 @@ import {
   getDailyReplyCount,
   addPendingBatch,
   removePendingBatch,
+  hasRepliedToFollowedToday,
+  markFollowedRepliedToday,
 } from "./store.js"
 import type { PendingReply, ThreadMessage } from "./types.js"
 import type { TweetV2 } from "twitter-api-v2"
@@ -199,6 +201,12 @@ async function pollCycle(): Promise<void> {
     const isBesmaTweet = tweet.author_id === getBandUserId()
     const tweetType = isBesmaTweet ? "besma_tweet" as const : "followed_band" as const
 
+    // Limite: max 1 respuesta al dia por cuenta seguida (excepto Besmaya, siempre respondemos)
+    if (!isBesmaTweet && tweet.author_id && hasRepliedToFollowedToday(tweet.author_id)) {
+      console.log(`[Ciclo] Saltando tweet de @${authorUsername} - ya respondido hoy a esta cuenta`)
+      continue
+    }
+
     const customId = `band-${counter++}`
     seenTargetIds.add(tweet.id)
     pendingReplies.push({
@@ -206,6 +214,7 @@ async function pollCycle(): Promise<void> {
       type: tweetType,
       targetId: tweet.id,
       conversationId: tweet.conversation_id,
+      authorId: tweet.author_id,
       authorUsername,
       text: tweet.text,
       threadContext: "", // No necesitamos hilo para tweets nuevos de bandas
@@ -312,6 +321,10 @@ async function processResults(batchId: string, pendingReplies: PendingReply[]): 
       trackRecentReply(responseText)
       if (reply.conversationId) {
         addActiveThread(reply.conversationId, tweetId)
+      }
+      // Marcar cuenta seguida como respondida hoy (1 respuesta/dia por cuenta)
+      if (reply.type === "followed_band" && reply.authorId) {
+        markFollowedRepliedToday(reply.authorId)
       }
     }
 
