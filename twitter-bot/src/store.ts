@@ -4,6 +4,7 @@ import type { BotState } from "./types.js"
 
 const DEFAULT_STATE: BotState = {
   lastMentionId: null,
+  lastIndirectSearchId: null,
   lastDmEventId: null,
   lastFollowedTweetTime: null,
   repliedTweetIds: [],
@@ -80,6 +81,11 @@ export function markDmReplied(dmId: string): void {
 
 export function setLastMentionId(id: string): void {
   state.lastMentionId = id
+  saveState()
+}
+
+export function setLastIndirectSearchId(id: string): void {
+  state.lastIndirectSearchId = id
   saveState()
 }
 

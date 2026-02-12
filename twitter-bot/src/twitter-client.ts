@@ -83,7 +83,9 @@ export async function fetchMentions(sinceId: string | null): Promise<TweetV2[]> 
 
 export async function searchIndirectMentions(sinceId: string | null): Promise<TweetV2[]> {
   try {
-    const query = `"besmaya" -from:${config.twitter.botUsername} -from:${config.twitter.bandUsername} -is:retweet`
+    // Filtrar por idioma espanol y excluir cuentas propias para evitar
+    // falsos positivos (base militar Besmaya en Irak, localizaciones, etc.)
+    const query = `"besmaya" lang:es -from:${config.twitter.botUsername} -from:${config.twitter.bandUsername} -is:retweet`
     const params: Record<string, unknown> = {
       max_results: 50,
       "tweet.fields": ["conversation_id", "in_reply_to_user_id", "author_id", "created_at"],

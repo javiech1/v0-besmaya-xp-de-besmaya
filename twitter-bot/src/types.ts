@@ -49,6 +49,8 @@ export interface BatchResult {
 export interface BotState {
   /** Ultimo ID de mencion procesada (para paginacion) */
   lastMentionId: string | null
+  /** Ultimo ID de busqueda indirecta procesada (cursor independiente) */
+  lastIndirectSearchId: string | null
   /** Ultimo ID de evento DM procesado */
   lastDmEventId: string | null
   /** Ultimo timestamp de tweet de banda seguida procesado */

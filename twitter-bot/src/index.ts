@@ -22,6 +22,7 @@ import {
   markTweetReplied,
   markDmReplied,
   setLastMentionId,
+  setLastIndirectSearchId,
   setLastDmEventId,
   setLastFollowedTweetTime,
   addActiveThread,
@@ -89,6 +90,7 @@ async function pollCycle(): Promise<void> {
 
   const state = getState()
   const pendingReplies: PendingReply[] = []
+  const seenTargetIds = new Set<string>() // Dedup global dentro del ciclo
   let counter = 0
 
   // 1. Menciones directas (@nadiedebesmaya y @somosbesmaya)
@@ -109,6 +111,7 @@ async function pollCycle(): Promise<void> {
     const threadContext = await getThreadContextForTweet(tweet)
 
     const customId = `mention-${counter++}`
+    seenTargetIds.add(tweet.id)
     pendingReplies.push({
       customId,
       type: "mention",
@@ -129,13 +132,16 @@ async function pollCycle(): Promise<void> {
 
   // 2. Menciones indirectas (busqueda de "besmaya")
   console.log("\n--- Buscando menciones indirectas ---")
-  const indirectMentions = await searchIndirectMentions(state.lastMentionId)
+  const indirectMentions = await searchIndirectMentions(state.lastIndirectSearchId)
+  if (indirectMentions.length > 0) {
+    setLastIndirectSearchId(indirectMentions[0].id)
+  }
 
   for (const tweet of indirectMentions) {
     if (hasRepliedToTweet(tweet.id)) continue
     if (!canReplyToday()) break
-    // Evitar duplicados con menciones directas
-    if (pendingReplies.some(p => p.targetId === tweet.id)) continue
+    // Dedup global: evitar duplicados con menciones directas u otros tipos
+    if (seenTargetIds.has(tweet.id)) continue
 
     const authorUsername = await resolveAuthor(tweet)
     if (tweet.author_id === getBotUserId()) continue
@@ -143,6 +149,7 @@ async function pollCycle(): Promise<void> {
     const threadContext = await getThreadContextForTweet(tweet)
 
     const customId = `indirect-${counter++}`
+    seenTargetIds.add(tweet.id)
     pendingReplies.push({
       customId,
       type: "indirect_mention",
@@ -177,12 +184,15 @@ async function pollCycle(): Promise<void> {
   for (const tweet of followedTweets) {
     if (hasRepliedToTweet(tweet.id)) continue
     if (!canReplyToday()) break
+    // Dedup global: un tweet de banda seguida podria contener "besmaya"
+    if (seenTargetIds.has(tweet.id)) continue
 
     const authorUsername = (tweet as TweetV2 & { author_username?: string }).author_username
       ?? await resolveAuthor(tweet)
     if (tweet.author_id === getBotUserId()) continue
 
     const customId = `band-${counter++}`
+    seenTargetIds.add(tweet.id)
     pendingReplies.push({
       customId,
       type: "followed_band",
@@ -276,9 +286,15 @@ async function processResults(batchId: string, pendingReplies: PendingReply[]): 
 
     let responseText = results.get(reply.customId)
 
-    // Si no hay respuesta, usar fallback
+    // Si no hay respuesta de Claude:
+    // - Para followed_band e indirect_mention, mejor SKIP que decir algo random
+    // - Para mention y dm, usar fallback porque alguien espera respuesta
     if (!responseText) {
-      responseText = NADIE_FALLBACKS[Math.floor(Math.random() * NADIE_FALLBACKS.length)]
+      if (reply.type === "followed_band" || reply.type === "indirect_mention") {
+        responseText = "SKIP"
+      } else {
+        responseText = NADIE_FALLBACKS[Math.floor(Math.random() * NADIE_FALLBACKS.length)]
+      }
     }
 
     // Si Claude devolvio "SKIP", no responder
