@@ -32,6 +32,7 @@ import type { TweetV2 } from "twitter-api-v2"
 // Ultimas respuestas generadas (para evitar repetir muletillas)
 const recentNadieReplies: string[] = []
 const MAX_RECENT_REPLIES = 5
+const MAX_TWEET_AGE_MS = 24 * 60 * 60 * 1000 // 24h
 
 const RUN_ONCE = process.env.RUN_ONCE === "true"
 
@@ -98,6 +99,7 @@ async function pollCycle(): Promise<void> {
   for (const tweet of mentions) {
     if (hasRepliedToTweet(tweet.id)) continue
     if (!canReplyToday()) break
+    if (isTweetTooOld(tweet)) continue
 
     const authorUsername = await resolveAuthor(tweet)
     // No respondernos a nosotros mismos
@@ -135,8 +137,8 @@ async function pollCycle(): Promise<void> {
   for (const tweet of indirectMentions) {
     if (hasRepliedToTweet(tweet.id)) continue
     if (!canReplyToday()) break
-    // Dedup global: evitar duplicados con menciones directas u otros tipos
     if (seenTargetIds.has(tweet.id)) continue
+    if (isTweetTooOld(tweet)) continue
 
     const authorUsername = await resolveAuthor(tweet)
     if (tweet.author_id === getBotUserId()) continue
@@ -179,8 +181,8 @@ async function pollCycle(): Promise<void> {
   for (const tweet of followedTweets) {
     if (hasRepliedToTweet(tweet.id)) continue
     if (!canReplyToday()) break
-    // Dedup global: un tweet de banda seguida podria contener "besmaya"
     if (seenTargetIds.has(tweet.id)) continue
+    if (isTweetTooOld(tweet)) continue
 
     const authorUsername = (tweet as TweetV2 & { author_username?: string }).author_username
       ?? await resolveAuthor(tweet)
@@ -310,6 +312,12 @@ async function processPendingBatches(): Promise<void> {
 }
 
 // --- Helpers ---
+
+function isTweetTooOld(tweet: TweetV2): boolean {
+  const createdAt = (tweet as TweetV2 & { created_at?: string }).created_at
+  if (!createdAt) return false
+  return Date.now() - new Date(createdAt).getTime() > MAX_TWEET_AGE_MS
+}
 
 async function resolveAuthor(tweet: TweetV2): Promise<string> {
   return tweet.author_id ? await resolveUsername(tweet.author_id) : "desconocido"

@@ -54,6 +54,8 @@ export async function fetchMentions(sinceId: string | null): Promise<TweetV2[]> 
       "user.fields": ["username"],
     }
     if (sinceId) params.since_id = sinceId
+    // Limitar a las ultimas 24h para no gastar API en tweets viejos
+    if (!sinceId) params.start_time = get24hAgoISO()
 
     const response = await v2User.userMentionTimeline(botId, params)
     const tweets = response.data?.data ?? []
@@ -61,7 +63,6 @@ export async function fetchMentions(sinceId: string | null): Promise<TweetV2[]> 
     // Si tambien queremos menciones a @somosbesmaya, buscar tambien ahi
     if (_bandUserId && _bandUserId !== botId) {
       const bandParams = { ...params }
-      if (sinceId) bandParams.since_id = sinceId
       const bandResponse = await v2User.userMentionTimeline(_bandUserId, bandParams)
       const bandTweets = bandResponse.data?.data ?? []
 
@@ -94,6 +95,7 @@ export async function searchIndirectMentions(sinceId: string | null): Promise<Tw
       "user.fields": ["username"],
     }
     if (sinceId) params.since_id = sinceId
+    if (!sinceId) params.start_time = get24hAgoISO()
 
     const response = await v2App.search(query, params)
     const tweets = response.data?.data ?? []
@@ -131,7 +133,7 @@ export async function fetchFollowedAccountsTweets(since: string | null): Promise
           "tweet.fields": ["conversation_id", "author_id", "created_at", "referenced_tweets"],
           exclude: ["retweets", "replies"],
         }
-        if (since) params.start_time = since
+        params.start_time = since ?? get24hAgoISO()
 
         const timeline = await v2App.userTimeline(user.id, params)
         const tweets = timeline.data?.data ?? []
@@ -223,6 +225,12 @@ export async function postTweet(text: string): Promise<string | null> {
     console.error("[Twitter] Error publicando tweet:", err)
     return null
   }
+}
+
+// --- Helpers ---
+
+function get24hAgoISO(): string {
+  return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 }
 
 // --- Resolver username por author_id ---
