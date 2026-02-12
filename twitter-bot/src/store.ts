@@ -11,6 +11,7 @@ const DEFAULT_STATE: BotState = {
   dailyReplyCount: 0,
   dailyReplyDate: new Date().toISOString().slice(0, 10),
   pendingBatchIds: [],
+  dailyFollowedReplies: {},
 }
 
 const MAX_REPLIED_IDS = 5000
@@ -114,6 +115,17 @@ export function getDailyReplyCount(): number {
   return state.dailyReplyCount
 }
 
+export function hasRepliedToFollowedToday(authorId: string): boolean {
+  const today = new Date().toISOString().slice(0, 10)
+  return state.dailyFollowedReplies[authorId] === today
+}
+
+export function markFollowedRepliedToday(authorId: string): void {
+  const today = new Date().toISOString().slice(0, 10)
+  state.dailyFollowedReplies[authorId] = today
+  saveState()
+}
+
 function incrementDailyCount(): void {
   resetDailyCountIfNeeded()
   state.dailyReplyCount++
@@ -124,5 +136,7 @@ function resetDailyCountIfNeeded(): void {
   if (state.dailyReplyDate !== today) {
     state.dailyReplyCount = 0
     state.dailyReplyDate = today
+    // Limpiar respuestas de dias anteriores
+    state.dailyFollowedReplies = {}
   }
 }

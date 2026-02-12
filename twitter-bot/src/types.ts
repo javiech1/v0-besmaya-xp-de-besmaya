@@ -9,6 +9,8 @@ export interface PendingReply {
   targetId: string
   /** Conversation ID del hilo de Twitter */
   conversationId?: string
+  /** ID del autor del tweet */
+  authorId?: string
   /** Username del autor del tweet */
   authorUsername: string
   /** Texto del tweet original */
@@ -63,6 +65,8 @@ export interface BotState {
   dailyReplyDate: string
   /** IDs de batches pendientes de ciclos anteriores */
   pendingBatchIds: string[]
+  /** Respuestas a cuentas seguidas hoy: author_id -> fecha YYYY-MM-DD de ultima respuesta */
+  dailyFollowedReplies: Record<string, string>
 }
 
 export interface ThreadMessage {
