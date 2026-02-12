@@ -4,7 +4,7 @@ export interface PendingReply {
   /** ID unico para mapear resultado del batch */
   customId: string
   /** Tipo de interaccion */
-  type: "mention" | "followed_band" | "indirect_mention"
+  type: "mention" | "followed_band" | "indirect_mention" | "besma_tweet"
   /** ID del tweet al que responder */
   targetId: string
   /** Conversation ID del hilo de Twitter */

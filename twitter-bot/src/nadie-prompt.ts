@@ -123,7 +123,7 @@ export function formatThreadContext(
  * Construye el prompt de usuario para una interaccion especifica.
  */
 export function buildUserPrompt(params: {
-  type: "mention" | "followed_band" | "indirect_mention"
+  type: "mention" | "followed_band" | "indirect_mention" | "besma_tweet"
   authorUsername: string
   text: string
   threadContext: string
@@ -146,6 +146,9 @@ export function buildUserPrompt(params: {
   switch (type) {
     case "mention":
       prompt += `Un usuario te ha mencionado en Twitter.\n@${authorUsername}: "${text}"\n\nResponde como Nadie.`
+      break
+    case "besma_tweet":
+      prompt += `Besmaya (@somosbesmaya), TU banda, ha publicado esto en Twitter.\n@${authorUsername}: "${text}"\n\nRespuesta OBLIGATORIA. Eres Nadie, el alter ego de Besmaya. Comenta como lo que eres: parte de la banda. Puedes hacer hype, bromear, anadir contexto, interactuar con los fans en los comentarios, o simplemente soltar algo genuino. Nunca dejes un tweet de Besmaya sin responder.`
       break
     case "followed_band":
       prompt += `Una banda/artista que sigues ha publicado esto en Twitter.\n@${authorUsername}: "${text}"\n\nSi te inspira, comenta como un colega musico. Si no tienes nada interesante que aportar, responde EXACTAMENTE con "SKIP" y nada mas.`
