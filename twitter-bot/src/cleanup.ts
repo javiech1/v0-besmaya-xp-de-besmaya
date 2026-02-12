@@ -10,70 +10,49 @@ const userClient = new TwitterApi({
 
 const v2User = userClient.v2
 
-const MAX_TWEET_AGE_MS = 24 * 60 * 60 * 1000 // 24h
-
 async function cleanup() {
-  // Obtener info del bot
   const me = await v2User.me()
   const botId = me.data.id
   console.log(`Bot: @${me.data.username} (${botId})`)
 
-  // Obtener tweets recientes del bot
-  const timeline = await v2User.userTimeline(botId, {
-    max_results: 100,
-    "tweet.fields": ["created_at", "referenced_tweets", "in_reply_to_user_id"],
-    exclude: ["retweets"],
-  })
+  let totalDeleted = 0
+  let paginationToken: string | undefined
+  let page = 0
 
-  const tweets = timeline.data?.data ?? []
-  console.log(`Tweets recientes encontrados: ${tweets.length}`)
+  // Paginar para borrar TODOS los tweets del bot
+  do {
+    page++
+    console.log(`\n--- Pagina ${page} ---`)
 
-  // Filtrar: solo replies a tweets viejos (>24h)
-  const now = Date.now()
-  const toDelete: Array<{ id: string; text: string; createdAt: string }> = []
-
-  for (const tweet of tweets) {
-    const createdAt = (tweet as any).created_at
-    const isReply = tweet.referenced_tweets?.some(r => r.type === "replied_to")
-
-    // Solo borrar replies (no tweets originales del bot)
-    if (!isReply) continue
-
-    // Todos los replies del bot de hoy son del batch erroneo
-    toDelete.push({ id: tweet.id, text: tweet.text.slice(0, 60), createdAt })
-  }
-
-  console.log(`\nTweets a borrar: ${toDelete.length}`)
-
-  if (toDelete.length === 0) {
-    console.log("Nada que borrar.")
-    return
-  }
-
-  // Mostrar los tweets que se van a borrar
-  for (const t of toDelete) {
-    console.log(`  [${t.createdAt}] ${t.id}: "${t.text}..."`)
-  }
-
-  // Borrar
-  console.log(`\nBorrando ${toDelete.length} tweets...`)
-  let deleted = 0
-  let errors = 0
-
-  for (const t of toDelete) {
-    try {
-      await v2User.deleteTweet(t.id)
-      deleted++
-      console.log(`  Borrado: ${t.id}`)
-      // Pausa para no exceder rate limit
-      await new Promise(r => setTimeout(r, 1000))
-    } catch (err: any) {
-      errors++
-      console.error(`  Error borrando ${t.id}: ${err.message ?? err}`)
+    const params: Record<string, unknown> = {
+      max_results: 100,
+      "tweet.fields": ["created_at", "referenced_tweets"],
+      exclude: ["retweets"],
     }
-  }
+    if (paginationToken) params.pagination_token = paginationToken
 
-  console.log(`\nResultado: ${deleted} borrados, ${errors} errores`)
+    const timeline = await v2User.userTimeline(botId, params)
+    const tweets = timeline.data?.data ?? []
+    paginationToken = timeline.meta?.next_token
+
+    console.log(`Tweets encontrados: ${tweets.length}`)
+
+    if (tweets.length === 0) break
+
+    for (const tweet of tweets) {
+      const createdAt = (tweet as any).created_at ?? "?"
+      try {
+        await v2User.deleteTweet(tweet.id)
+        totalDeleted++
+        console.log(`  Borrado: ${tweet.id} [${createdAt}] "${tweet.text.slice(0, 50)}..."`)
+        await new Promise(r => setTimeout(r, 500))
+      } catch (err: any) {
+        console.error(`  Error borrando ${tweet.id}: ${err.message ?? err}`)
+      }
+    }
+  } while (paginationToken)
+
+  console.log(`\nTotal borrados: ${totalDeleted}`)
 }
 
 cleanup().catch(err => {
