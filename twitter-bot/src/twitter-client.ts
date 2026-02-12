@@ -42,6 +42,10 @@ export function getBotUserId(): string {
   return _botUserId
 }
 
+export function getBandUserId(): string | null {
+  return _bandUserId
+}
+
 // --- Menciones ---
 
 export async function fetchMentions(sinceId: string | null): Promise<TweetV2[]> {

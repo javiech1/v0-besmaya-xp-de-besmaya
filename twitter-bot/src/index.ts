@@ -8,6 +8,7 @@ import {
   replyToTweet,
   resolveUsername,
   getBotUserId,
+  getBandUserId,
 } from "./twitter-client.js"
 import { createBatch, waitForBatch, getBatchResults } from "./claude-batch.js"
 import { formatThreadContext, buildUserPrompt, NADIE_FALLBACKS } from "./nadie-prompt.js"
@@ -188,18 +189,22 @@ async function pollCycle(): Promise<void> {
       ?? await resolveAuthor(tweet)
     if (tweet.author_id === getBotUserId()) continue
 
+    // Detectar si el tweet es de @somosbesmaya (la banda)
+    const isBesmaTweet = tweet.author_id === getBandUserId()
+    const tweetType = isBesmaTweet ? "besma_tweet" as const : "followed_band" as const
+
     const customId = `band-${counter++}`
     seenTargetIds.add(tweet.id)
     pendingReplies.push({
       customId,
-      type: "followed_band",
+      type: tweetType,
       targetId: tweet.id,
       conversationId: tweet.conversation_id,
       authorUsername,
       text: tweet.text,
       threadContext: "", // No necesitamos hilo para tweets nuevos de bandas
       userPrompt: buildUserPrompt({
-        type: "followed_band",
+        type: tweetType,
         authorUsername,
         text: tweet.text,
         threadContext: "",
@@ -254,7 +259,7 @@ async function processResults(batchId: string, pendingReplies: PendingReply[]): 
 
     // Si no hay respuesta de Claude:
     // - Para followed_band e indirect_mention, mejor SKIP que decir algo random
-    // - Para mention, usar fallback porque alguien espera respuesta
+    // - Para mention y besma_tweet, usar fallback porque siempre queremos responder
     if (!responseText) {
       if (reply.type === "followed_band" || reply.type === "indirect_mention") {
         responseText = "SKIP"
@@ -263,11 +268,17 @@ async function processResults(batchId: string, pendingReplies: PendingReply[]): 
       }
     }
 
-    // Si Claude devolvio "SKIP", no responder
+    // Si Claude devolvio "SKIP", no responder (excepto besma_tweet, siempre respondemos a Besmaya)
     if (responseText.trim().toUpperCase() === "SKIP") {
-      console.log(`[Resultados] SKIP para ${reply.customId} (${reply.type} de @${reply.authorUsername})`)
-      markTweetReplied(reply.targetId)
-      continue
+      if (reply.type === "besma_tweet") {
+        // Nunca saltamos tweets de Besmaya, usar fallback
+        responseText = NADIE_FALLBACKS[Math.floor(Math.random() * NADIE_FALLBACKS.length)]
+        console.log(`[Resultados] SKIP evitado para besma_tweet ${reply.customId}, usando fallback`)
+      } else {
+        console.log(`[Resultados] SKIP para ${reply.customId} (${reply.type} de @${reply.authorUsername})`)
+        markTweetReplied(reply.targetId)
+        continue
+      }
     }
 
     // Truncar a 280 chars
