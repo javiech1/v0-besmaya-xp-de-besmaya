@@ -37,9 +37,11 @@ import type { TweetV2 } from "twitter-api-v2"
 const recentNadieReplies: string[] = []
 const MAX_RECENT_REPLIES = 5
 
+const RUN_ONCE = process.env.RUN_ONCE === "true"
+
 async function main(): Promise<void> {
   console.log("=== Nadie Twitter Bot ===")
-  console.log(`Polling cada ${config.bot.pollingIntervalMs / 1000}s`)
+  console.log(`Modo: ${RUN_ONCE ? "single run (GitHub Actions)" : `loop (cada ${config.bot.pollingIntervalMs / 1000}s)`}`)
   console.log(`Max respuestas/dia: ${config.bot.maxDailyReplies}`)
   console.log(`Dry run: ${config.bot.dryRun}`)
   console.log("")
@@ -53,10 +55,16 @@ async function main(): Promise<void> {
   // Procesar batches pendientes de ciclos anteriores
   await processPendingBatches()
 
-  // Primer ciclo inmediato
+  // Ejecutar un ciclo
   await pollCycle()
 
-  // Loop cada 30 min
+  // Si es modo single run (GitHub Actions), salir
+  if (RUN_ONCE) {
+    console.log("[Main] Modo single run completado. Saliendo.")
+    return
+  }
+
+  // Si no, loop cada 30 min (modo VM)
   setInterval(async () => {
     try {
       await pollCycle()
