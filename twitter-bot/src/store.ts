@@ -16,6 +16,8 @@ const DEFAULT_STATE: BotState = {
 const MAX_REPLIED_IDS = 5000
 
 let state: BotState = { ...DEFAULT_STATE }
+// Set para lookups O(1) en vez de Array.includes() O(n) con hasta 5000 elementos
+let repliedSet = new Set<string>()
 
 export function loadState(): void {
   const path = config.bot.stateFile
@@ -23,6 +25,7 @@ export function loadState(): void {
     try {
       const raw = readFileSync(path, "utf-8")
       state = { ...DEFAULT_STATE, ...JSON.parse(raw) }
+      repliedSet = new Set(state.repliedTweetIds)
       console.log("[Store] Estado cargado:", {
         lastMentionId: state.lastMentionId,
         repliedCount: state.repliedTweetIds.length,
@@ -42,6 +45,7 @@ export function saveState(): void {
   // Limpiar IDs viejos para que no crezca infinito
   if (state.repliedTweetIds.length > MAX_REPLIED_IDS) {
     state.repliedTweetIds = state.repliedTweetIds.slice(-MAX_REPLIED_IDS)
+    repliedSet = new Set(state.repliedTweetIds)
   }
   writeFileSync(config.bot.stateFile, JSON.stringify(state, null, 2))
 }
@@ -51,12 +55,13 @@ export function getState(): BotState {
 }
 
 export function hasRepliedToTweet(tweetId: string): boolean {
-  return state.repliedTweetIds.includes(tweetId)
+  return repliedSet.has(tweetId)
 }
 
 export function markTweetReplied(tweetId: string): void {
-  if (!state.repliedTweetIds.includes(tweetId)) {
+  if (!repliedSet.has(tweetId)) {
     state.repliedTweetIds.push(tweetId)
+    repliedSet.add(tweetId)
   }
   incrementDailyCount()
   saveState()
