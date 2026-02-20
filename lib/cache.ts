@@ -38,18 +38,41 @@ const MONTH_MAP: Record<string, number> = {
 }
 
 /**
- * Parse Spanish date format "DD-mmm" (e.g., "30-ene") to Date object
+ * Parse Spanish date formats to Date object (uses start date for ranges).
+ * Supported formats:
+ *   "17 feb"        → single date
+ *   "30-ene"        → single date (hyphen separator)
+ *   "31 jul - 1 ago" → date range across months (uses 31 jul)
+ *   "1 - 2 ago"     → date range within same month (uses 1 ago)
  */
 export function parseFechaToDate(fecha: string): Date {
-  const parts = fecha.split(/[-\s]+/)
-  if (parts.length !== 2) return new Date()
+  const trimmed = fecha.trim().toLowerCase()
 
-  const day = Number.parseInt(parts[0], 10)
-  const month = MONTH_MAP[parts[1].toLowerCase()]
+  // Try range with two months: "31 jul - 1 ago"
+  const rangeTwo = trimmed.match(/^(\d{1,2})\s+([a-z]+)\s*-\s*\d{1,2}\s+[a-z]+$/)
+  if (rangeTwo) {
+    const day = Number.parseInt(rangeTwo[1], 10)
+    const month = MONTH_MAP[rangeTwo[2]]
+    if (!isNaN(day) && month !== undefined) return new Date(2026, month, day)
+  }
 
-  if (isNaN(day) || month === undefined) return new Date()
+  // Try range within same month: "1 - 2 ago"
+  const rangeSame = trimmed.match(/^(\d{1,2})\s*-\s*\d{1,2}\s+([a-z]+)$/)
+  if (rangeSame) {
+    const day = Number.parseInt(rangeSame[1], 10)
+    const month = MONTH_MAP[rangeSame[2]]
+    if (!isNaN(day) && month !== undefined) return new Date(2026, month, day)
+  }
 
-  return new Date(2026, month, day)
+  // Simple format: "17 feb" or "30-ene"
+  const simple = trimmed.match(/^(\d{1,2})[\s-]+([a-z]+)$/)
+  if (simple) {
+    const day = Number.parseInt(simple[1], 10)
+    const month = MONTH_MAP[simple[2]]
+    if (!isNaN(day) && month !== undefined) return new Date(2026, month, day)
+  }
+
+  return new Date()
 }
 
 /**
