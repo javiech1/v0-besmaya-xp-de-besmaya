@@ -33,14 +33,14 @@ USING (true);
 
 -- Insert initial concert data
 INSERT INTO public.concerts (fecha, ciudad, sala, link) VALUES
-('30-ene', 'Valencia', 'Palau Alameda', 'https://merchandtour.com/besmaya/'),
-('31-ene', 'Zaragoza', 'Sala Oasis', 'https://merchandtour.com/besmaya/'),
-('06-feb', 'A Coruña', 'Sala INN', 'https://merchandtour.com/besmaya/'),
-('07-feb', 'Oviedo', 'Sala Tribeca', 'https://merchandtour.com/besmaya/'),
-('13-feb', 'Madrid', 'Live Las Ventas', 'https://merchandtour.com/besmaya/'),
-('19-feb', 'Murcia', 'Sala REM', 'https://merchandtour.com/besmaya/'),
-('05-mar', 'Granada', 'Sala El tren', 'https://merchandtour.com/besmaya/'),
-('06-mar', 'Córdoba', 'Sala Impala', 'https://merchandtour.com/besmaya/'),
-('19-mar', 'Pamplona', 'Sala Zentral', 'https://merchandtour.com/besmaya/'),
-('21-mar', 'Valladolid', 'Sala Lava', 'https://merchandtour.com/besmaya/')
+('30-ene', 'Valencia', 'Palau Alameda', 'https://acqustic-platform.sumupstore.com/categoria/besmaya'),
+('31-ene', 'Zaragoza', 'Sala Oasis', 'https://acqustic-platform.sumupstore.com/categoria/besmaya'),
+('06-feb', 'A Coruña', 'Sala INN', 'https://acqustic-platform.sumupstore.com/categoria/besmaya'),
+('07-feb', 'Oviedo', 'Sala Tribeca', 'https://acqustic-platform.sumupstore.com/categoria/besmaya'),
+('13-feb', 'Madrid', 'Live Las Ventas', 'https://acqustic-platform.sumupstore.com/categoria/besmaya'),
+('19-feb', 'Murcia', 'Sala REM', 'https://acqustic-platform.sumupstore.com/categoria/besmaya'),
+('05-mar', 'Granada', 'Sala El tren', 'https://acqustic-platform.sumupstore.com/categoria/besmaya'),
+('06-mar', 'Córdoba', 'Sala Impala', 'https://acqustic-platform.sumupstore.com/categoria/besmaya'),
+('19-mar', 'Pamplona', 'Sala Zentral', 'https://acqustic-platform.sumupstore.com/categoria/besmaya'),
+('21-mar', 'Valladolid', 'Sala Lava', 'https://acqustic-platform.sumupstore.com/categoria/besmaya')
 ON CONFLICT DO NOTHING;
