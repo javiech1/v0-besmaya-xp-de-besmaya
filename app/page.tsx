@@ -14,6 +14,7 @@ import { MuroContent } from "@/components/windows/MuroWindow"
 import { Y2KNotificationBanner } from "@/components/Y2KNotificationBanner"
 import { ConcertNotificationBanner } from "@/components/ConcertNotificationBanner"
 import { AlbumNotificationBanner } from "@/components/AlbumNotificationBanner"
+import { Screensaver } from "@/components/Screensaver"
 
 interface WindowState {
   id: string
@@ -66,6 +67,8 @@ export default function BesmayaDesktop() {
   const [initialWindowsCreated, setInitialWindowsCreated] = useState(false)
   const [nadieNotificationVisible, setNadieNotificationVisible] = useState(true)
   const [albumNotificationVisible, setAlbumNotificationVisible] = useState(true)
+  const [isScreensaverActive, setIsScreensaverActive] = useState(false)
+  const screensaverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router = useRouter()
   const iconsContainerRef = useRef<HTMLDivElement>(null)
   const forcedMobileByCollision = useRef(false)
@@ -638,6 +641,45 @@ export default function BesmayaDesktop() {
     return () => document.removeEventListener("click", handleClickOutside)
   }, [isStartMenuOpen])
 
+  // Screensaver: activate after 60s of inactivity (desktop only)
+  useEffect(() => {
+    if (!isDesktop) return
+
+    const IDLE_TIMEOUT = 30_000
+
+    const startTimer = () => {
+      if (screensaverTimerRef.current) clearTimeout(screensaverTimerRef.current)
+      screensaverTimerRef.current = setTimeout(() => setIsScreensaverActive(true), IDLE_TIMEOUT)
+    }
+
+    const onActivity = () => {
+      // Only reset if screensaver is not active (deactivation is handled by the Screensaver component)
+      setIsScreensaverActive(prev => {
+        if (!prev) startTimer()
+        return prev
+      })
+    }
+
+    startTimer()
+    window.addEventListener("mousemove", onActivity)
+    window.addEventListener("keydown", onActivity)
+    window.addEventListener("click", onActivity)
+
+    return () => {
+      if (screensaverTimerRef.current) clearTimeout(screensaverTimerRef.current)
+      window.removeEventListener("mousemove", onActivity)
+      window.removeEventListener("keydown", onActivity)
+      window.removeEventListener("click", onActivity)
+    }
+  }, [isDesktop])
+
+  const handleScreensaverDeactivate = useCallback(() => {
+    setIsScreensaverActive(false)
+    // Restart idle timer
+    if (screensaverTimerRef.current) clearTimeout(screensaverTimerRef.current)
+    screensaverTimerRef.current = setTimeout(() => setIsScreensaverActive(true), 30_000)
+  }, [])
+
   return (
     <div className={`h-screen w-screen relative overflow-hidden ${isLandscapeMobile ? 'landscape-mobile' : ''}`}>
       <img
@@ -904,6 +946,8 @@ export default function BesmayaDesktop() {
         </div>
         )}
       </Taskbar>
+
+      {isScreensaverActive && <Screensaver onDeactivate={handleScreensaverDeactivate} />}
     </div>
   )
 }
