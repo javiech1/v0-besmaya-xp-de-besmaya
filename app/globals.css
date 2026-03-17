@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+
 /* XP-specific styles and custom properties */
 :root {
   --xp-blue-start: #2f6adf;
