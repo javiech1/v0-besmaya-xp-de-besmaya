@@ -15,6 +15,9 @@ import { Y2KNotificationBanner } from "@/components/Y2KNotificationBanner"
 import { ConcertNotificationBanner } from "@/components/ConcertNotificationBanner"
 import { AlbumNotificationBanner } from "@/components/AlbumNotificationBanner"
 import { Screensaver } from "@/components/Screensaver"
+import { BSOD } from "@/components/BSOD"
+import { MiPCContent } from "@/components/windows/MiPCWindow"
+import { PapeleraContent } from "@/components/windows/PapeleraWindow"
 
 interface WindowState {
   id: string
@@ -68,6 +71,7 @@ export default function BesmayaDesktop() {
   const [nadieNotificationVisible, setNadieNotificationVisible] = useState(true)
   const [albumNotificationVisible, setAlbumNotificationVisible] = useState(true)
   const [isScreensaverActive, setIsScreensaverActive] = useState(false)
+  const [bsodTrigger, setBsodTrigger] = useState<string | null>(null)
   const screensaverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router = useRouter()
   const iconsContainerRef = useRef<HTMLDivElement>(null)
@@ -81,6 +85,8 @@ export default function BesmayaDesktop() {
     "muro": { title: "El Muro de Nadie", content: <MuroContent /> },
     "musica": { title: "Música", content: <MusicaContent /> },
     "bio": { title: "Bio", content: <BioContent /> },
+    "mi-pc": { title: "Mi PC", content: <MiPCContent /> },
+    "papelera": { title: "Papelera de reciclaje", content: <PapeleraContent /> },
   } as Record<string, { title: string; content: React.ReactNode }>), [])
 
   useEffect(() => {
@@ -472,16 +478,14 @@ export default function BesmayaDesktop() {
     windowWidth = Math.max(280, windowWidth)
     windowHeight = Math.max(200, windowHeight)
 
-    // Posición con cascade offset adaptativo
-    const cascadeOffset = (windows.length % 5) * (isSmallDesktop ? 20 : 30)
-    const x = Math.max(0, Math.min(
-      50 + cascadeOffset,
-      vw - windowWidth
-    ))
-    const y = Math.max(0, Math.min(
-      50 + cascadeOffset,
-      vh - windowHeight - TASKBAR_HEIGHT
-    ))
+    // Posición centrada con cascade offset para cada ventana nueva
+    const idx = windows.length % 5
+    const centerX = Math.max(0, (vw - windowWidth) / 2)
+    const centerY = Math.max(0, (vh - windowHeight - TASKBAR_HEIGHT) / 2)
+    const offsetX = (idx - 2) * 80  // -160, -80, 0, 80, 160
+    const offsetY = idx * 40
+    const x = Math.max(0, Math.min(centerX + offsetX, vw - windowWidth))
+    const y = Math.max(0, Math.min(centerY + offsetY - 80, vh - windowHeight - TASKBAR_HEIGHT))
 
     const newWindow: WindowState = {
       id,
@@ -555,9 +559,19 @@ export default function BesmayaDesktop() {
       case "videos":
         window.open("https://www.youtube.com/@BESMAYA", "_blank")
         break
+      case "mi-pc":
+        openWindow("mi-pc", "Mi PC", <MiPCContent />)
+        break
+      case "papelera":
+        openWindow("papelera", "Papelera de reciclaje", <PapeleraContent />)
+        break
     }
     setSelectedIcon(null)
   }
+
+  const handleBSODDismiss = useCallback(() => {
+    setBsodTrigger(null)
+  }, [])
 
   const toggleStartMenu = () => {
     setIsStartMenuOpen(!isStartMenuOpen)
@@ -680,6 +694,16 @@ export default function BesmayaDesktop() {
     screensaverTimerRef.current = setTimeout(() => setIsScreensaverActive(true), 30_000)
   }, [])
 
+  // Listen for BSOD events from MuroWindow
+  useEffect(() => {
+    const onBSOD = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      setBsodTrigger(detail)
+    }
+    window.addEventListener("bsod", onBSOD)
+    return () => window.removeEventListener("bsod", onBSOD)
+  }, [])
+
   return (
     <div className={`h-screen w-screen relative overflow-hidden ${isLandscapeMobile ? 'landscape-mobile' : ''}`}>
       <img
@@ -757,6 +781,30 @@ export default function BesmayaDesktop() {
           <span>Bio</span>
         </div>
       </div>
+
+      {/* Bottom-right desktop icons: Mi PC + Papelera */}
+      {isDesktop && (
+        <div className="absolute bottom-12 right-4 flex gap-3">
+          <div
+            className={`desktop-icon ${selectedIcon === "mi-pc" ? "selected" : ""}`}
+            onClick={() => handleIconClick("mi-pc")}
+          >
+            <div className="desktop-icon-image-wrapper">
+              <img src="/icons/mi-pc.svg" alt="Mi PC" />
+            </div>
+            <span>Mi PC</span>
+          </div>
+          <div
+            className={`desktop-icon ${selectedIcon === "papelera" ? "selected" : ""}`}
+            onClick={() => handleIconClick("papelera")}
+          >
+            <div className="desktop-icon-image-wrapper">
+              <img src="/icons/papelera.svg" alt="Papelera" />
+            </div>
+            <span>Papelera</span>
+          </div>
+        </div>
+      )}
 
       {windows
         .filter((w) => !w.isMinimized)
@@ -948,6 +996,7 @@ export default function BesmayaDesktop() {
       </Taskbar>
 
       {isScreensaverActive && <Screensaver onDeactivate={handleScreensaverDeactivate} />}
+      {bsodTrigger && <BSOD trigger={bsodTrigger} onDismiss={handleBSODDismiss} />}
     </div>
   )
 }

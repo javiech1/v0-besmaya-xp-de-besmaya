@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { getFromCache, setToCache } from "@/lib/cache"
+import { checkBSODTrigger } from "@/components/BSOD"
 
 interface MuroComment {
   id: string
@@ -110,6 +111,15 @@ export function MuroContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!message.trim() || isSubmitting) return
+
+    // Check for BSOD easter egg triggers
+    const bsodMatch = checkBSODTrigger(message.trim())
+    if (bsodMatch) {
+      setMessage("")
+      window.dispatchEvent(new CustomEvent("bsod", { detail: bsodMatch }))
+      return
+    }
+
     setError("")
     setIsSubmitting(true)
 
