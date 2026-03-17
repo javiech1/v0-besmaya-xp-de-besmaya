@@ -53,7 +53,7 @@ export function AlbumNotificationBanner({ nadieVisible, onDismiss }: AlbumNotifi
   }, [onDismiss])
 
   const handleBuy = useCallback(() => {
-    window.open("https://acqustic-platform.sumupstore.com/producto/la-vida-de-nadie-besmaya", "_blank")
+    window.open("https://acqustic-platform.sumupstore.com/categoria/besmaya", "_blank")
     handleDismiss()
   }, [handleDismiss])
 

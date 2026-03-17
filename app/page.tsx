@@ -10,7 +10,7 @@ import { BioContent } from "@/components/windows/BioWindow"
 import { WelcomePosterContent } from "@/components/windows/WelcomePosterWindow"
 import { AlbumContent } from "@/components/windows/AlbumWindow"
 import { MuroContent } from "@/components/windows/MuroWindow"
-import { UnderConstructionPage } from "@/components/windows/UnderConstructionPage"
+
 import { Y2KNotificationBanner } from "@/components/Y2KNotificationBanner"
 import { ConcertNotificationBanner } from "@/components/ConcertNotificationBanner"
 import { AlbumNotificationBanner } from "@/components/AlbumNotificationBanner"
@@ -57,7 +57,7 @@ export default function BesmayaDesktop() {
   const [nextZIndex, setNextZIndex] = useState(100)
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null)
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
-  const [isUnderConstruction, setIsUnderConstruction] = useState(false)
+
   const [isDesktop, setIsDesktop] = useState(false)
   const [isDesktopDetermined, setIsDesktopDetermined] = useState(false)
   const [isSmallDesktop, setIsSmallDesktop] = useState(false)
@@ -425,17 +425,6 @@ export default function BesmayaDesktop() {
     sessionStorage.setItem("initialWindowsCreated", "true")
   }, [isDesktop, isDesktopDetermined, initialWindowsCreated])
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === "C") {
-        e.preventDefault()
-        setIsUnderConstruction(!isUnderConstruction)
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [isUnderConstruction])
 
   const openWindow = (id: string, title: string, content: React.ReactNode) => {
     const existingWindow = windows.find((w) => w.id === id)
@@ -540,11 +529,8 @@ export default function BesmayaDesktop() {
 
   const handleIconClick = (iconId: string) => {
     switch (iconId) {
-      case "vinilo":
-        window.open("https://acqustic-platform.sumupstore.com/producto/la-vida-de-nadie-besmaya", "_blank")
-        break
-      case "merchan":
-        window.open("https://merchandtour.com/besmaya/", "_blank")
+      case "tienda":
+        window.open("https://acqustic-platform.sumupstore.com/categoria/besmaya", "_blank")
         break
       case "musica":
         if (!isDesktop) {
@@ -652,10 +638,6 @@ export default function BesmayaDesktop() {
     return () => document.removeEventListener("click", handleClickOutside)
   }, [isStartMenuOpen])
 
-  if (isUnderConstruction) {
-    return <UnderConstructionPage onToggle={() => setIsUnderConstruction(false)} />
-  }
-
   return (
     <div className={`h-screen w-screen relative overflow-hidden ${isLandscapeMobile ? 'landscape-mobile' : ''}`}>
       <img
@@ -684,23 +666,13 @@ export default function BesmayaDesktop() {
         </div>
 
         <div
-          className={`desktop-icon ${selectedIcon === "vinilo" ? "selected" : ""}`}
-          onClick={() => handleIconClick("vinilo")}
+          className={`desktop-icon ${selectedIcon === "tienda" ? "selected" : ""}`}
+          onClick={() => handleIconClick("tienda")}
         >
           <div className="desktop-icon-image-wrapper icon-vinilo">
-            <img src="/icons/vinilo.png" alt="Vinilos y CDs" />
+            <img src="/icons/vinilo.png" alt="Tienda" />
           </div>
-          <span>Vinilos y CDs</span>
-        </div>
-
-        <div
-          className={`desktop-icon ${selectedIcon === "merchan" ? "selected" : ""}`}
-          onClick={() => handleIconClick("merchan")}
-        >
-          <div className="desktop-icon-image-wrapper icon-merchan">
-            <img src="/icons/merchan.png" alt="Merchan" />
-          </div>
-          <span>Merch</span>
+          <span>Tienda</span>
         </div>
 
         <div
@@ -840,12 +812,12 @@ export default function BesmayaDesktop() {
               <div
                 className="start-menu-item flex items-center space-x-2 mb-2 cursor-pointer"
                 onClick={() => {
-                  window.open("https://merchandtour.com/besmaya/", "_blank")
+                  window.open("https://acqustic-platform.sumupstore.com/categoria/besmaya", "_blank")
                   setIsStartMenuOpen(false)
                 }}
               >
-                <img src="/icons/merchan.png" alt="Merchan" width={32} height={32} />
-                <span>Merchan</span>
+                <img src="/icons/vinilo.png" alt="Tienda" width={32} height={32} />
+                <span>Tienda</span>
               </div>
 
               <div
