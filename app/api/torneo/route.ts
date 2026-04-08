@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js"
 import { scoreSubmissionSchema } from "@/lib/torneo/validation"
 import type { RankingEntry } from "@/lib/torneo/types"
 
+export const dynamic = "force-dynamic"
+
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX = 3
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
