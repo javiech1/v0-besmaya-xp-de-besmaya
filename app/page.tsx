@@ -18,6 +18,8 @@ import { Screensaver } from "@/components/Screensaver"
 import { BSOD } from "@/components/BSOD"
 import { MiPCContent } from "@/components/windows/MiPCWindow"
 import { PapeleraContent } from "@/components/windows/PapeleraWindow"
+import dynamic from "next/dynamic"
+const TorneoContent = dynamic(() => import("@/components/windows/TorneoWindow").then(m => m.TorneoContent), { ssr: false })
 
 interface WindowState {
   id: string
@@ -87,6 +89,7 @@ export default function BesmayaDesktop() {
     "bio": { title: "Bio", content: <BioContent /> },
     "mi-pc": { title: "Mi PC", content: <MiPCContent /> },
     "papelera": { title: "Papelera de reciclaje", content: <PapeleraContent /> },
+    "torneo": { title: "Torneo de Nadie", content: <TorneoContent /> },
   } as Record<string, { title: string; content: React.ReactNode }>), [])
 
   useEffect(() => {
@@ -469,6 +472,9 @@ export default function BesmayaDesktop() {
     } else if (id === "muro") {
       windowWidth = Math.min(400, vw * 0.45) * scale
       windowHeight = Math.min(500, vh * 0.65)
+    } else if (id === "torneo") {
+      windowWidth = Math.min(420, vw * 0.45) * scale
+      windowHeight = Math.min(560, vh * 0.72)
     } else {
       windowWidth = Math.min(600, vw * 0.6) * scale
       windowHeight = Math.min(400, vh * 0.55)
@@ -564,6 +570,9 @@ export default function BesmayaDesktop() {
         break
       case "papelera":
         openWindow("papelera", "Papelera de reciclaje", <PapeleraContent />)
+        break
+      case "torneo":
+        openWindow("torneo", "Torneo de Nadie", <TorneoContent />)
         break
     }
     setSelectedIcon(null)
@@ -779,6 +788,16 @@ export default function BesmayaDesktop() {
             <img src="/icons/bio.png" alt="Bio" />
           </div>
           <span>Bio</span>
+        </div>
+
+        <div
+          className={`desktop-icon ${selectedIcon === "torneo" ? "selected" : ""}`}
+          onClick={() => handleIconClick("torneo")}
+        >
+          <div className="desktop-icon-image-wrapper">
+            <img src="/icons/torneo.svg" alt="Torneo de Nadie" />
+          </div>
+          <span>Torneo de Nadie</span>
         </div>
       </div>
 
