@@ -1,22 +1,38 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
 
 export function WelcomePosterContent() {
   const [isLoaded, setIsLoaded] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  const applySpeed = () => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = 15
+    }
+  }
 
   return (
     <div className="flex flex-col items-center p-0 sm:p-2">
       <div className="relative w-full mb-1 sm:mb-4">
         {!isLoaded && (
-          <div className="w-full aspect-[3/4] bg-gray-300 animate-pulse rounded-none sm:rounded-lg" />
+          <div className="w-full aspect-[1072/506] bg-gray-300 animate-pulse rounded-none sm:rounded-lg" />
         )}
-        <img
-          src="/gira.jpg"
-          alt="La gira de Nadie - Besmaya"
+        <video
+          ref={videoRef}
+          src="/videos/festis.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
           className={`w-full h-auto rounded-none sm:rounded-lg transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0 absolute top-0 left-0'}`}
-          onLoad={() => setIsLoaded(true)}
+          onLoadedMetadata={applySpeed}
+          onLoadedData={() => {
+            applySpeed()
+            setIsLoaded(true)
+          }}
+          onPlay={applySpeed}
         />
       </div>
       <Link

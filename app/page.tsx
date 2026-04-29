@@ -215,7 +215,7 @@ export default function BesmayaDesktop() {
           return {
             ...w,
             x: Math.max(20, screenWidth / 2 - windowWidth / 2 - offsetX),
-            y: Math.max(20, screenHeight / 2 - 275 - 80),
+            y: Math.max(20, screenHeight / 2 - 150 - 80),
             width: windowWidth,
           }
         } else if (w.id === "album") {
@@ -303,7 +303,7 @@ export default function BesmayaDesktop() {
                 w = Math.min(384, screenWidth * 0.4) * scale
                 const offsetX = isSmall ? Math.min(100, screenWidth * 0.1) : 200
                 x = Math.max(20, screenWidth / 2 - w / 2 - offsetX)
-                y = Math.max(20, screenHeight / 2 - 275 - 80)
+                y = Math.max(20, screenHeight / 2 - 150 - 80)
                 h = "auto"
               } else if (id === "album") {
                 w = Math.min(384, screenWidth * 0.4) * scale
@@ -366,7 +366,7 @@ export default function BesmayaDesktop() {
     const feedWidth = Math.min(384, screenWidth * 0.4) * scale
     const albumWidth = Math.min(384, screenWidth * 0.4) * scale
     const muroWidth = Math.min(400, screenWidth * 0.45) * scale
-    const feedEstimatedHeight = 550
+    const feedEstimatedHeight = 300
     const albumEstimatedHeight = 460
     const muroEstimatedHeight = 500
 
