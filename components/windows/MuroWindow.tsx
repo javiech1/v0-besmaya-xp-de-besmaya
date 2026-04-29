@@ -4,6 +4,7 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { getFromCache, setToCache } from "@/lib/cache"
 import { checkBSODTrigger } from "@/components/BSOD"
+import { createClient } from "@/lib/supabase/client"
 
 interface MuroComment {
   id: string
@@ -20,6 +21,44 @@ export function MuroContent() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [waitingForNadie, setWaitingForNadie] = useState(false)
+  const waitingSinceRef = useRef<number>(0)
+  const waitingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [highlightedReplyId, setHighlightedReplyId] = useState<string | null>(null)
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const unseenCountRef = useRef(0)
+  const originalTitleRef = useRef<string | null>(null)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const notifiedReplyIdsRef = useRef<Set<string>>(new Set())
+
+  const ensureAudioCtx = () => {
+    if (audioCtxRef.current || typeof window === "undefined") return audioCtxRef.current
+    try {
+      const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      if (Ctor) audioCtxRef.current = new Ctor()
+    } catch {}
+    return audioCtxRef.current
+  }
+
+  const playNadieSound = () => {
+    const ctx = audioCtxRef.current
+    if (!ctx) return
+    try {
+      const t0 = ctx.currentTime
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.type = "sine"
+      osc.frequency.setValueAtTime(880, t0)
+      osc.frequency.exponentialRampToValueAtTime(523, t0 + 0.18)
+      gain.gain.setValueAtTime(0.0001, t0)
+      gain.gain.exponentialRampToValueAtTime(0.08, t0 + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25)
+      osc.start(t0)
+      osc.stop(t0 + 0.28)
+    } catch {}
+  }
   const [sessionUsername] = useState(() => {
     if (typeof window === "undefined") return ""
     const stored = sessionStorage.getItem("muro_username")
@@ -60,7 +99,45 @@ export function MuroContent() {
       .finally(() => setIsLoading(false))
   }, [])
 
-  // Auto-refresh: polling cada 5 segundos para nuevos mensajes
+  // Cleanup waiting timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
+    }
+  }, [])
+
+  // Realtime: subscribe to INSERTs on muro_comments for instant updates
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel("muro_comments_inserts")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "muro_comments" },
+        (payload) => {
+          const newComment = payload.new as MuroComment
+          if (!newComment?.id) return
+          setComments((prev) => {
+            if (prev.some((c) => c.id === newComment.id)) return prev
+            const updated = [...prev, newComment]
+            setToCache("muro_comments", updated)
+            return updated
+          })
+          if (feedRef.current) {
+            const { scrollTop, scrollHeight, clientHeight } = feedRef.current
+            if (scrollHeight - scrollTop - clientHeight < 80) {
+              setTimeout(scrollToBottom, 50)
+            }
+          }
+        }
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  // Fallback polling every 15s in case Realtime drops the connection
   useEffect(() => {
     const interval = setInterval(async () => {
       if (isPostingRef.current) return
@@ -83,7 +160,7 @@ export function MuroContent() {
           })
         }
       } catch {}
-    }, 5000)
+    }, 15000)
     return () => clearInterval(interval)
   }, [])
 
@@ -111,6 +188,7 @@ export function MuroContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!message.trim() || isSubmitting) return
+    ensureAudioCtx()
 
     // Check for BSOD easter egg triggers
     const bsodMatch = checkBSODTrigger(message.trim())
@@ -156,13 +234,12 @@ export function MuroContent() {
         return
       }
 
-      const { userComment, nadieReply } = await res.json()
-      setComments((prev) => {
-        let updated = prev.map((c) => c.id === tempId ? userComment : c)
-        if (nadieReply) updated = [...updated, nadieReply]
-        return updated
-      })
-      if (nadieReply) setTimeout(scrollToBottom, 100)
+      const { userComment } = await res.json()
+      setComments((prev) => prev.map((c) => c.id === tempId ? userComment : c))
+      waitingSinceRef.current = Date.now()
+      setWaitingForNadie(true)
+      if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
+      waitingTimeoutRef.current = setTimeout(() => setWaitingForNadie(false), 15000)
     } catch {
       setError("Error de conexión")
       setComments((prev) => prev.filter((c) => c.id !== tempId))
@@ -184,6 +261,68 @@ export function MuroContent() {
   }
 
   const myUsername = username.trim() || sessionUsername
+
+  // Detect new Nadie replies addressed to me. Each reply id is notified at most once:
+  // hide "está pensando", highlight the reply, bump tab title (if hidden) and play sound.
+  useEffect(() => {
+    if (!myUsername) return
+    const myMention = `@${myUsername} `
+    const since = waitingSinceRef.current
+    const freshReplies = comments.filter(
+      (c) =>
+        c.is_nadie &&
+        c.content.startsWith(myMention) &&
+        since > 0 &&
+        new Date(c.created_at).getTime() >= since,
+    )
+    const newOnes = freshReplies.filter((c) => !notifiedReplyIdsRef.current.has(c.id))
+    if (newOnes.length === 0) return
+
+    for (const reply of newOnes) notifiedReplyIdsRef.current.add(reply.id)
+    // Cap the set so it doesn't grow unboundedly across a long session.
+    if (notifiedReplyIdsRef.current.size > 200) {
+      const arr = Array.from(notifiedReplyIdsRef.current).slice(-100)
+      notifiedReplyIdsRef.current = new Set(arr)
+    }
+
+    if (waitingForNadie) {
+      setWaitingForNadie(false)
+      if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
+    }
+
+    const latest = newOnes[newOnes.length - 1]
+    setHighlightedReplyId(latest.id)
+    if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current)
+    highlightTimeoutRef.current = setTimeout(() => setHighlightedReplyId(null), 5000)
+
+    playNadieSound()
+
+    if (typeof document !== "undefined" && document.hidden) {
+      if (originalTitleRef.current === null) originalTitleRef.current = document.title
+      unseenCountRef.current += newOnes.length
+      document.title = `(${unseenCountRef.current}) Nadie te ha contestado`
+    }
+  }, [comments, waitingForNadie, myUsername])
+
+  // Restore tab title when user returns
+  useEffect(() => {
+    if (typeof document === "undefined") return
+    const onVisible = () => {
+      if (!document.hidden && originalTitleRef.current !== null) {
+        document.title = originalTitleRef.current
+        originalTitleRef.current = null
+        unseenCountRef.current = 0
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    return () => document.removeEventListener("visibilitychange", onVisible)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current)
+    }
+  }, [])
 
   const getUsernameClass = (c: MuroComment) => {
     if (c.is_nadie) return "text-xs font-bold shrink-0"
@@ -234,7 +373,7 @@ export function MuroContent() {
         ) : (
           <div className="divide-y divide-gray-100">
             {comments.map((c) => (
-              <div key={c.id} className={`px-3 py-2 ${c.is_nadie ? "bg-yellow-50/30 hover:bg-yellow-50/50" : "hover:bg-blue-50/50"}`}>
+              <div key={c.id} className={`px-3 py-2 ${c.is_nadie ? "bg-yellow-50/30 hover:bg-yellow-50/50" : "hover:bg-blue-50/50"} ${c.id === highlightedReplyId ? "nadie-reply-highlight" : ""}`}>
                 <div className="flex items-baseline gap-2">
                   <span className={getUsernameClass(c)} style={c.is_nadie ? { color: "#C4A43C" } : undefined}>@{c.username}</span>
                   <span className="text-xs text-gray-400 shrink-0">{timeAgo(c.created_at)}</span>
@@ -242,6 +381,16 @@ export function MuroContent() {
                 <p className="text-xs text-gray-800 mt-0.5 break-words">{renderContent(c)}</p>
               </div>
             ))}
+            {waitingForNadie && (
+              <div className="px-3 py-2 bg-yellow-50/30 italic">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs font-bold shrink-0" style={{ color: "#C4A43C" }}>@Nadie</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  está pensando<span className="nadie-dots" />
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
