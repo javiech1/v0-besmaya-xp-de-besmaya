@@ -1891,3 +1891,34 @@ body {
     box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3), 0 2px 8px rgba(245, 158, 11, 0.15);
   }
 }
+
+.nadie-dots::after {
+  content: '';
+  display: inline-block;
+  width: 0.8em;
+  text-align: left;
+  animation: nadieDots 1.4s steps(4, end) infinite;
+}
+
+@keyframes nadieDots {
+  0%   { content: ''; }
+  25%  { content: '.'; }
+  50%  { content: '..'; }
+  75%  { content: '...'; }
+  100% { content: ''; }
+}
+
+.nadie-reply-highlight {
+  animation: nadieReplyGlow 2.5s ease-out 2;
+}
+
+@keyframes nadieReplyGlow {
+  0% {
+    background-color: rgba(196, 164, 60, 0.35);
+    box-shadow: inset 0 0 0 2px rgba(196, 164, 60, 0.55);
+  }
+  100% {
+    background-color: rgba(254, 252, 232, 0.3);
+    box-shadow: inset 0 0 0 2px rgba(196, 164, 60, 0);
+  }
+}

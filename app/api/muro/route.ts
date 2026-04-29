@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { moderateContent, moderateLocal } from "@/lib/moderation"
-import { generateNadieResponse, NADIE_FALLBACKS } from "@/lib/nadie"
-import { getConcertsAndFestivals, buildDynamicContext } from "@/lib/eventCache"
 
 const isDev = process.env.NODE_ENV === "development"
 
@@ -72,54 +70,29 @@ export async function POST(request: Request) {
   const trimmedUsername = username?.trim() || ""
   const needsUsername = trimmedUsername.length === 0
 
-  const originalContent = trimmedContent
-  const displayUsername = trimmedUsername || "anónimo"
-
   let finalUsername = trimmedUsername || ("user" + Math.random().toString(36).slice(2, 6))
   let finalContent = trimmedContent
 
   const apiKey = process.env.ANTHROPIC_API_KEY
-  const isNadie = finalUsername.toLowerCase() === "nadie"
 
-  // Fetch contexto para Nadie: mensajes recientes + conciertos/festis (en paralelo)
-  const supabase = getSupabase()
-  const [{ data: recentMessages }, eventsData] = await Promise.all([
-    supabase
-      .from("muro_comments")
-      .select("username, content, is_nadie")
-      .order("created_at", { ascending: false })
-      .limit(15),
-    getConcertsAndFestivals(supabase),
-  ])
-  const nadieContext = (recentMessages || []).reverse()
-  const dynamicContext = buildDynamicContext(eventsData.concerts, eventsData.festivals)
-
-  // Ejecutar moderación y respuesta de Nadie EN PARALELO
-  let nadieText: string | null = null
-
+  // Moderación bloquea: el comment del usuario no se publica hasta que se modera
   if (apiKey) {
-    const [moderationResult, nadieResult] = await Promise.allSettled([
-      moderateContent(apiKey, trimmedUsername, trimmedContent, needsUsername),
-      !isNadie ? generateNadieResponse(apiKey, originalContent, displayUsername, nadieContext, dynamicContext) : Promise.resolve(null),
-    ])
-
-    if (moderationResult.status === "fulfilled" && moderationResult.value) {
-      if (moderationResult.value.username) finalUsername = moderationResult.value.username
-      if (moderationResult.value.content) finalContent = moderationResult.value.content
+    const moderation = await moderateContent(apiKey, trimmedUsername, trimmedContent, needsUsername)
+    if (moderation) {
+      if (moderation.username) finalUsername = moderation.username
+      if (moderation.content) finalContent = moderation.content
     } else {
-      // Fallback: si la API de moderación falla, aplicar filtro local
       finalContent = moderateLocal(finalContent)
       finalUsername = moderateLocal(finalUsername)
     }
-
-    if (nadieResult.status === "fulfilled" && nadieResult.value) {
-      nadieText = nadieResult.value
-    } else if (nadieResult.status === "rejected") {
-      console.error("[Nadie] Promise rejected:", nadieResult.reason)
-    }
+  } else {
+    finalContent = moderateLocal(finalContent)
+    finalUsername = moderateLocal(finalUsername)
   }
 
-  // Insertar comment del usuario
+  // Insert user comment. The Database Webhook on muro_comments fires the
+  // Supabase Edge Function `nadie-processor`, which handles batching + reply.
+  const supabase = getSupabase()
   const { data, error } = await supabase
     .from("muro_comments")
     .insert([{ username: finalUsername, content: finalContent, is_nadie: false }])
@@ -131,46 +104,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Error al guardar el mensaje" }, { status: 500 })
   }
 
-  // Fallback si Nadie no respondió
-  if (!nadieText && !isNadie && apiKey) {
-    nadieText = NADIE_FALLBACKS[Math.floor(Math.random() * NADIE_FALLBACKS.length)]
-    isDev && console.log("[Nadie] Usando fallback:", nadieText)
-  }
-
-  // Moderar respuesta de Nadie antes de insertar (filtro local)
-  if (nadieText) {
-    nadieText = moderateLocal(nadieText)
-  }
-
-  // Insertar respuesta de Nadie
-  let nadieReply = null
-  if (nadieText) {
-    try {
-      let cleanText = nadieText.replace(/^(@\S+\s*)+/, "").trim()
-      const prefix = `@${finalUsername} `
-      const budget = 140 - prefix.length
-      if (cleanText.length > budget) {
-        cleanText = cleanText.slice(0, budget)
-        const lastSpace = cleanText.lastIndexOf(' ')
-        if (lastSpace > budget * 0.6) cleanText = cleanText.slice(0, lastSpace)
-      }
-      const nadieContent = prefix + cleanText
-      const { data: nadieData, error: nadieError } = await supabase
-        .from("muro_comments")
-        .insert([{ username: "Nadie", content: nadieContent, is_nadie: true }])
-        .select()
-        .single()
-
-      if (!nadieError && nadieData) {
-        nadieReply = nadieData
-        isDev && console.log("[Nadie] Insertado en DB OK, id:", nadieData.id)
-      } else if (nadieError) {
-        console.error("[Nadie] Error insert Supabase:", nadieError.message)
-      }
-    } catch (err) {
-      console.error("[Nadie] Error insertando (catch):", err instanceof Error ? err.message : err)
-    }
-  }
-
-  return NextResponse.json({ userComment: data, nadieReply })
+  return NextResponse.json({ userComment: data })
 }
