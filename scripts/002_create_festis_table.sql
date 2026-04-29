@@ -17,16 +17,6 @@ CREATE POLICY "Allow public read access to festis"
 ON public.festis FOR SELECT
 USING (true);
 
--- For now, allow anyone to insert/update/delete festivals
--- In production, you might want to restrict this to authenticated users
-CREATE POLICY "Allow public insert access to festis"
-ON public.festis FOR INSERT
-WITH CHECK (true);
-
-CREATE POLICY "Allow public update access to festis"
-ON public.festis FOR UPDATE
-USING (true);
-
-CREATE POLICY "Allow public delete access to festis"
-ON public.festis FOR DELETE
-USING (true);
+-- Writes go through the cron cleanup route using SUPABASE_SERVICE_ROLE_KEY,
+-- which bypasses RLS. No public INSERT/UPDATE/DELETE policies — the anon key
+-- ships to the browser, so opening writes here = anyone can wipe the table.

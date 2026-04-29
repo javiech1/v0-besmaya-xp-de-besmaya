@@ -13,23 +13,13 @@ CREATE TABLE IF NOT EXISTS public.concerts (
 ALTER TABLE public.concerts ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for public read access (anyone can view concerts)
-CREATE POLICY "Allow public read access to concerts" 
-ON public.concerts FOR SELECT 
+CREATE POLICY "Allow public read access to concerts"
+ON public.concerts FOR SELECT
 USING (true);
 
--- For now, allow anyone to insert/update/delete concerts
--- In production, you might want to restrict this to authenticated users
-CREATE POLICY "Allow public insert access to concerts" 
-ON public.concerts FOR INSERT 
-WITH CHECK (true);
-
-CREATE POLICY "Allow public update access to concerts" 
-ON public.concerts FOR UPDATE 
-USING (true);
-
-CREATE POLICY "Allow public delete access to concerts" 
-ON public.concerts FOR DELETE 
-USING (true);
+-- Writes go through the cron cleanup route using SUPABASE_SERVICE_ROLE_KEY,
+-- which bypasses RLS. No public INSERT/UPDATE/DELETE policies — the anon key
+-- ships to the browser, so opening writes here = anyone can wipe the table.
 
 -- Insert initial concert data
 INSERT INTO public.concerts (fecha, ciudad, sala, link) VALUES
