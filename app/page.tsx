@@ -8,12 +8,14 @@ import { Taskbar } from "@/components/Taskbar"
 import { MusicaContent } from "@/components/windows/MusicaWindow"
 import { BioContent } from "@/components/windows/BioWindow"
 import { WelcomePosterContent } from "@/components/windows/WelcomePosterWindow"
+import { WinterTourContent } from "@/components/windows/WinterTourWindow"
 import { AlbumContent } from "@/components/windows/AlbumWindow"
 import { MuroContent } from "@/components/windows/MuroWindow"
 
 import { Y2KNotificationBanner } from "@/components/Y2KNotificationBanner"
 import { ConcertNotificationBanner } from "@/components/ConcertNotificationBanner"
 import { AlbumNotificationBanner } from "@/components/AlbumNotificationBanner"
+import { WinterTourNotificationBanner } from "@/components/WinterTourNotificationBanner"
 import { Screensaver } from "@/components/Screensaver"
 import { BSOD } from "@/components/BSOD"
 import { MiPCContent } from "@/components/windows/MiPCWindow"
@@ -47,6 +49,9 @@ const TASKBAR_HEIGHT = 40
 // Key used to persist open window IDs across navigations
 const OPEN_WINDOWS_KEY = "open_window_ids"
 
+// Lanzamiento de la gira de invierno: 21 mayo 2026 12:00 Madrid (CEST, UTC+2)
+const WINTER_TOUR_RELEASE_AT = Date.parse("2026-05-21T12:00:00+02:00")
+
 export default function BesmayaDesktop() {
   const [windows, setWindows] = useState<WindowState[]>([])
   const [dragState, setDragState] = useState<DragState>({
@@ -72,6 +77,7 @@ export default function BesmayaDesktop() {
   const [albumNotificationVisible, setAlbumNotificationVisible] = useState(true)
   const [isScreensaverActive, setIsScreensaverActive] = useState(false)
   const [bsodTrigger, setBsodTrigger] = useState<string | null>(null)
+  const [isWinterTourReleased, setIsWinterTourReleased] = useState(false)
   const screensaverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router = useRouter()
   const iconsContainerRef = useRef<HTMLDivElement>(null)
@@ -79,15 +85,65 @@ export default function BesmayaDesktop() {
   const collisionEntryHeight = useRef<number>(0)
 
   // Helper: build window title & content from an ID
-  const windowMeta = useMemo(() => ({
-    "welcome-poster": { title: "La gira de Nadie", content: <WelcomePosterContent /> },
-    "album": { title: "La vida de Nadie", content: <AlbumContent /> },
-    "muro": { title: "El Muro de Nadie", content: <MuroContent /> },
-    "musica": { title: "Música", content: <MusicaContent /> },
-    "bio": { title: "Bio", content: <BioContent /> },
-    "mi-pc": { title: "Mi PC", content: <MiPCContent /> },
-    "papelera": { title: "Papelera de reciclaje", content: <PapeleraContent /> },
-  } as Record<string, { title: string; content: React.ReactNode }>), [])
+  const windowMeta = useMemo(() => {
+    const meta: Record<string, { title: string; content: React.ReactNode }> = {
+      "welcome-poster": { title: "La gira de Nadie", content: <WelcomePosterContent /> },
+      "album": { title: "La vida de Nadie", content: <AlbumContent /> },
+      "muro": { title: "El Muro de Nadie", content: <MuroContent /> },
+      "musica": { title: "Música", content: <MusicaContent /> },
+      "bio": { title: "Bio", content: <BioContent /> },
+      "mi-pc": { title: "Mi PC", content: <MiPCContent /> },
+      "papelera": { title: "Papelera de reciclaje", content: <PapeleraContent /> },
+    }
+    if (isWinterTourReleased) {
+      meta["gira-invierno"] = { title: "La gira de invierno", content: <WinterTourContent /> }
+    }
+    return meta
+  }, [isWinterTourReleased])
+
+  // Time-gate: flip a las 12:00 Madrid del lanzamiento
+  useEffect(() => {
+    if (isWinterTourReleased) return
+    const now = Date.now()
+    if (now >= WINTER_TOUR_RELEASE_AT) {
+      setIsWinterTourReleased(true)
+      return
+    }
+    const delay = WINTER_TOUR_RELEASE_AT - now
+    // setTimeout máximo seguro ~24.8 días; comprobamos por si acaso
+    if (delay > 2_147_483_000) return
+    const timeout = setTimeout(() => setIsWinterTourReleased(true), delay)
+    return () => clearTimeout(timeout)
+  }, [isWinterTourReleased])
+
+  // Si el flip ocurre con el usuario ya en la página, inyectamos la ventana
+  useEffect(() => {
+    if (!isWinterTourReleased || !initialWindowsCreated || !isDesktop) return
+    setWindows(prev => {
+      if (prev.some(w => w.id === "gira-invierno")) return prev
+      const sw = window.innerWidth
+      const sh = window.innerHeight
+      const isSmall = sw < 1024
+      const scale = isSmall ? Math.max(0.75, sw / 1024) : 1
+      const width = Math.min(360, sw * 0.26) * scale
+      return [
+        ...prev,
+        {
+          id: "gira-invierno",
+          title: "La gira de invierno",
+          content: <WinterTourContent />,
+          x: Math.max(20, sw / 2 - width / 2),
+          y: Math.max(20, sh / 2 - 230),
+          width,
+          height: "auto",
+          isMinimized: false,
+          zIndex: nextZIndex,
+          isInitial: true,
+        },
+      ]
+    })
+    setNextZIndex(prev => prev + 1)
+  }, [isWinterTourReleased, initialWindowsCreated, isDesktop, nextZIndex])
 
   useEffect(() => {
     // Detectar capacidad de puntero fino (ratón)
@@ -205,25 +261,43 @@ export default function BesmayaDesktop() {
         // Modo móvil: ancho completo
         return { ...w, x: 0, y: 0, width: screenWidth }
       } else {
-        // Modo desktop: recalcular posiciones
+        // Modo desktop: recalcular posiciones (layout de 4 columnas)
         const isSmall = screenWidth < 1024
         const scale = isSmall ? Math.max(0.75, screenWidth / 1024) : 1
-        const windowWidth = Math.min(384, screenWidth * 0.4) * scale
-        const offsetX = isSmall ? Math.min(100, screenWidth * 0.1) : 200
+        const giraColWidth = Math.min(360, screenWidth * 0.26) * scale
+        const midColWidth = Math.min(260, screenWidth * 0.19) * scale
+        const muroColWidth = Math.min(380, screenWidth * 0.27) * scale
+        const gap = 16
+        const totalWidth = giraColWidth + midColWidth * 2 + muroColWidth + gap * 3
+        const startX = Math.max(gap, (screenWidth - totalWidth) / 2)
 
-        if (w.id === "welcome-poster") {
+        if (w.id === "gira-invierno") {
           return {
             ...w,
-            x: Math.max(20, screenWidth / 2 - windowWidth / 2 - offsetX),
+            x: startX,
+            y: Math.max(20, screenHeight / 2 - 230),
+            width: giraColWidth,
+          }
+        } else if (w.id === "welcome-poster") {
+          return {
+            ...w,
+            x: startX + giraColWidth + gap,
             y: Math.max(20, screenHeight / 2 - 150 - 80),
-            width: windowWidth,
+            width: midColWidth,
           }
         } else if (w.id === "album") {
           return {
             ...w,
-            x: Math.min(screenWidth - windowWidth - 20, screenWidth / 2 - windowWidth / 2 + offsetX),
+            x: startX + giraColWidth + gap + midColWidth + gap,
             y: Math.max(20, screenHeight / 2 - 230 + (isSmall ? 60 : 120)),
-            width: windowWidth,
+            width: midColWidth,
+          }
+        } else if (w.id === "muro") {
+          return {
+            ...w,
+            x: startX + giraColWidth + gap + midColWidth * 2 + gap * 2,
+            y: Math.max(20, (screenHeight - TASKBAR_HEIGHT) / 2 - 250),
+            width: muroColWidth,
           }
         }
         return w
@@ -295,25 +369,28 @@ export default function BesmayaDesktop() {
             .filter(id => windowMeta[id])
             .map((id, i) => {
               const meta = windowMeta[id]
-              const isInitialWindow = id === "welcome-poster" || id === "album" || id === "muro"
+              const isInitialWindow = id === "gira-invierno" || id === "welcome-poster" || id === "album" || id === "muro"
               let w: number, h: number | "auto", x: number, y: number
               if (!isDesktop) {
                 w = screenWidth; h = "auto"; x = 0; y = 0
+              } else if (id === "gira-invierno") {
+                w = Math.min(360, screenWidth * 0.26) * scale
+                x = Math.max(20, screenWidth / 2 - w * 2 - 30)
+                y = Math.max(20, screenHeight / 2 - 220)
+                h = "auto"
               } else if (id === "welcome-poster") {
-                w = Math.min(384, screenWidth * 0.4) * scale
-                const offsetX = isSmall ? Math.min(100, screenWidth * 0.1) : 200
-                x = Math.max(20, screenWidth / 2 - w / 2 - offsetX)
+                w = Math.min(260, screenWidth * 0.19) * scale
+                x = Math.max(20, screenWidth / 2 - w - 10)
                 y = Math.max(20, screenHeight / 2 - 150 - 80)
                 h = "auto"
               } else if (id === "album") {
-                w = Math.min(384, screenWidth * 0.4) * scale
-                const offsetX = isSmall ? Math.min(100, screenWidth * 0.1) : 200
-                x = Math.min(screenWidth - w - 20, screenWidth / 2 - w / 2 + offsetX)
+                w = Math.min(260, screenWidth * 0.19) * scale
+                x = Math.min(screenWidth - w - 20, screenWidth / 2 + 10)
                 y = Math.max(20, screenHeight / 2 - 230 + (isSmall ? 60 : 120))
                 h = "auto"
               } else if (id === "muro") {
-                w = Math.min(400, screenWidth * 0.45) * scale
-                x = Math.max(20, screenWidth / 2 - w / 2)
+                w = Math.min(380, screenWidth * 0.27) * scale
+                x = Math.min(screenWidth - w - 20, screenWidth / 2 + w + 30)
                 y = Math.max(20, (screenHeight - TASKBAR_HEIGHT) / 2 - 250)
                 h = 500
               } else {
@@ -359,77 +436,157 @@ export default function BesmayaDesktop() {
       return
     }
 
-    // Desktop: tres ventanas distribuidas sin solapamiento
+    // Desktop: layout dinámico (3 ventanas pre-lanzamiento, 4 cuando está released)
     const isSmall = screenWidth < 1024
     const scale = isSmall ? Math.max(0.75, screenWidth / 1024) : 1
 
-    const feedWidth = Math.min(384, screenWidth * 0.4) * scale
-    const albumWidth = Math.min(384, screenWidth * 0.4) * scale
-    const muroWidth = Math.min(400, screenWidth * 0.45) * scale
-    const feedEstimatedHeight = 300
-    const albumEstimatedHeight = 460
-    const muroEstimatedHeight = 500
-
-    const gap = 20
-    const totalWidth = feedWidth + albumWidth + muroWidth + gap * 2
-    const fits = totalWidth + gap * 2 <= screenWidth
-
-    let welcomeX: number, albumX: number, muroX: number
-
-    if (fits) {
-      // Distribuir en 3 columnas sin solapamiento
-      const startX = Math.max(gap, (screenWidth - totalWidth) / 2)
-      welcomeX = startX
-      albumX = startX + feedWidth + gap
-      muroX = startX + feedWidth + gap + albumWidth + gap
-    } else {
-      // Cascada para pantallas pequeñas
-      const offsetX = isSmall ? Math.min(100, screenWidth * 0.1) : 200
-      welcomeX = Math.max(20, screenWidth / 2 - feedWidth / 2 - offsetX)
-      albumX = Math.min(screenWidth - albumWidth - 20, screenWidth / 2 - albumWidth / 2 + offsetX)
-      muroX = Math.max(20, screenWidth / 2 - muroWidth / 2)
-    }
-
     const centerY = (screenHeight - TASKBAR_HEIGHT) / 2
 
-    const initialWindows: WindowState[] = [
-      {
-        id: "welcome-poster",
-        title: "La gira de Nadie",
-        content: <WelcomePosterContent />,
-        x: welcomeX,
-        y: Math.max(20, Math.min(centerY - feedEstimatedHeight / 2, screenHeight - feedEstimatedHeight - TASKBAR_HEIGHT - 20)),
-        width: feedWidth,
-        height: "auto",
-        isMinimized: false,
-        zIndex: 101,
-      },
-      {
-        id: "album",
-        title: "La vida de Nadie",
-        content: <AlbumContent />,
-        x: albumX,
-        y: Math.max(20, Math.min(centerY - albumEstimatedHeight / 2, screenHeight - albumEstimatedHeight - TASKBAR_HEIGHT - 20)),
-        width: albumWidth,
-        height: "auto",
-        isMinimized: false,
-        zIndex: 102,
-      },
-      {
-        id: "muro",
-        title: "El Muro de Nadie",
-        content: <MuroContent />,
-        x: muroX,
-        y: Math.max(20, Math.min(centerY - muroEstimatedHeight / 2, screenHeight - muroEstimatedHeight - TASKBAR_HEIGHT - 20)),
-        width: muroWidth,
-        height: muroEstimatedHeight,
-        isMinimized: false,
-        zIndex: 103,
-      },
-    ]
+    let initialWindows: WindowState[]
+
+    if (isWinterTourReleased) {
+      // Layout de 4 columnas
+      const giraWidth = Math.min(360, screenWidth * 0.26) * scale
+      const feedWidth = Math.min(260, screenWidth * 0.19) * scale
+      const albumWidth = Math.min(260, screenWidth * 0.19) * scale
+      const muroWidth = Math.min(380, screenWidth * 0.27) * scale
+      const giraEstimatedHeight = 460
+      const feedEstimatedHeight = 300
+      const albumEstimatedHeight = 460
+      const muroEstimatedHeight = 500
+
+      const gap = 16
+      const totalWidth = giraWidth + feedWidth + albumWidth + muroWidth + gap * 3
+      const fits = totalWidth + gap * 2 <= screenWidth
+
+      let giraX: number, welcomeX: number, albumX: number, muroX: number
+
+      if (fits) {
+        const startX = Math.max(gap, (screenWidth - totalWidth) / 2)
+        giraX = startX
+        welcomeX = startX + giraWidth + gap
+        albumX = startX + giraWidth + gap + feedWidth + gap
+        muroX = startX + giraWidth + gap + feedWidth + gap + albumWidth + gap
+      } else {
+        const offsetX = isSmall ? Math.min(70, screenWidth * 0.07) : 130
+        giraX = Math.max(20, screenWidth / 2 - giraWidth / 2 - offsetX * 1.5)
+        welcomeX = Math.max(20, screenWidth / 2 - feedWidth / 2 - offsetX * 0.5)
+        albumX = Math.min(screenWidth - albumWidth - 20, screenWidth / 2 - albumWidth / 2 + offsetX * 0.5)
+        muroX = Math.min(screenWidth - muroWidth - 20, screenWidth / 2 - muroWidth / 2 + offsetX * 1.5)
+      }
+
+      initialWindows = [
+        {
+          id: "gira-invierno",
+          title: "La gira de invierno",
+          content: <WinterTourContent />,
+          x: giraX,
+          y: Math.max(20, Math.min(centerY - giraEstimatedHeight / 2, screenHeight - giraEstimatedHeight - TASKBAR_HEIGHT - 20)),
+          width: giraWidth,
+          height: "auto",
+          isMinimized: false,
+          zIndex: 101,
+        },
+        {
+          id: "welcome-poster",
+          title: "La gira de Nadie",
+          content: <WelcomePosterContent />,
+          x: welcomeX,
+          y: Math.max(20, Math.min(centerY - feedEstimatedHeight / 2, screenHeight - feedEstimatedHeight - TASKBAR_HEIGHT - 20)),
+          width: feedWidth,
+          height: "auto",
+          isMinimized: false,
+          zIndex: 102,
+        },
+        {
+          id: "album",
+          title: "La vida de Nadie",
+          content: <AlbumContent />,
+          x: albumX,
+          y: Math.max(20, Math.min(centerY - albumEstimatedHeight / 2, screenHeight - albumEstimatedHeight - TASKBAR_HEIGHT - 20)),
+          width: albumWidth,
+          height: "auto",
+          isMinimized: false,
+          zIndex: 103,
+        },
+        {
+          id: "muro",
+          title: "El Muro de Nadie",
+          content: <MuroContent />,
+          x: muroX,
+          y: Math.max(20, Math.min(centerY - muroEstimatedHeight / 2, screenHeight - muroEstimatedHeight - TASKBAR_HEIGHT - 20)),
+          width: muroWidth,
+          height: muroEstimatedHeight,
+          isMinimized: false,
+          zIndex: 104,
+        },
+      ]
+    } else {
+      // Layout original de 3 columnas (pre-lanzamiento)
+      const feedWidth = Math.min(384, screenWidth * 0.4) * scale
+      const albumWidth = Math.min(384, screenWidth * 0.4) * scale
+      const muroWidth = Math.min(400, screenWidth * 0.45) * scale
+      const feedEstimatedHeight = 300
+      const albumEstimatedHeight = 460
+      const muroEstimatedHeight = 500
+
+      const gap = 20
+      const totalWidth = feedWidth + albumWidth + muroWidth + gap * 2
+      const fits = totalWidth + gap * 2 <= screenWidth
+
+      let welcomeX: number, albumX: number, muroX: number
+
+      if (fits) {
+        const startX = Math.max(gap, (screenWidth - totalWidth) / 2)
+        welcomeX = startX
+        albumX = startX + feedWidth + gap
+        muroX = startX + feedWidth + gap + albumWidth + gap
+      } else {
+        const offsetX = isSmall ? Math.min(100, screenWidth * 0.1) : 200
+        welcomeX = Math.max(20, screenWidth / 2 - feedWidth / 2 - offsetX)
+        albumX = Math.min(screenWidth - albumWidth - 20, screenWidth / 2 - albumWidth / 2 + offsetX)
+        muroX = Math.max(20, screenWidth / 2 - muroWidth / 2)
+      }
+
+      initialWindows = [
+        {
+          id: "welcome-poster",
+          title: "La gira de Nadie",
+          content: <WelcomePosterContent />,
+          x: welcomeX,
+          y: Math.max(20, Math.min(centerY - feedEstimatedHeight / 2, screenHeight - feedEstimatedHeight - TASKBAR_HEIGHT - 20)),
+          width: feedWidth,
+          height: "auto",
+          isMinimized: false,
+          zIndex: 101,
+        },
+        {
+          id: "album",
+          title: "La vida de Nadie",
+          content: <AlbumContent />,
+          x: albumX,
+          y: Math.max(20, Math.min(centerY - albumEstimatedHeight / 2, screenHeight - albumEstimatedHeight - TASKBAR_HEIGHT - 20)),
+          width: albumWidth,
+          height: "auto",
+          isMinimized: false,
+          zIndex: 102,
+        },
+        {
+          id: "muro",
+          title: "El Muro de Nadie",
+          content: <MuroContent />,
+          x: muroX,
+          y: Math.max(20, Math.min(centerY - muroEstimatedHeight / 2, screenHeight - muroEstimatedHeight - TASKBAR_HEIGHT - 20)),
+          width: muroWidth,
+          height: muroEstimatedHeight,
+          isMinimized: false,
+          zIndex: 103,
+        },
+      ]
+    }
 
     setWindows(initialWindows)
-    setNextZIndex(104)
+    setNextZIndex(105)
     setInitialWindowsCreated(true)
     sessionStorage.setItem("initialWindowsCreated", "true")
   }, [isDesktop, isDesktopDetermined, initialWindowsCreated])
@@ -936,11 +1093,18 @@ export default function BesmayaDesktop() {
           onDismiss={handleAlbumDismiss}
         />
       )}
-      <ConcertNotificationBanner
-        nadieVisible={nadieNotificationVisible}
-        albumVisible={!isDesktop && albumNotificationVisible}
-        isMobile={!isDesktop}
-      />
+      {!isDesktop && isWinterTourReleased ? (
+        <WinterTourNotificationBanner
+          nadieVisible={nadieNotificationVisible}
+          albumVisible={albumNotificationVisible}
+        />
+      ) : (
+        <ConcertNotificationBanner
+          nadieVisible={nadieNotificationVisible}
+          albumVisible={!isDesktop && albumNotificationVisible}
+          isMobile={!isDesktop}
+        />
+      )}
 
       <Taskbar time={time} onStartClick={toggleStartMenu} showSocialLinks>
           {/* Indicadores de ventanas en móvil */}

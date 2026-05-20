@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { getFromCache, setToCache, sortByFechaChronologically, parseFechaToDate } from "@/lib/cache"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useClock } from "@/hooks/useClock"
 import { Taskbar } from "@/components/Taskbar"
 import { getUserLocation, findAllNearbyConcerts, checkGeolocationPermission, getBrowserLocation } from "@/lib/geolocation"
@@ -32,8 +32,10 @@ function filterPastEvents<T extends { fecha: string }>(items: T[]): T[] {
 
 export default function ConciertosPage() {
   const time = useClock()
+  const searchParams = useSearchParams()
+  const initialTab: TabType = searchParams?.get('tab') === 'conciertos' ? 'conciertos' : 'festivales'
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<TabType>('festivales')
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab)
   const [concerts, setConcerts] = useState<Concert[]>(sortByFechaChronologically(filterPastEvents(fallbackConcerts)))
   const [isLoading, setIsLoading] = useState(true)
   const [festivals, setFestivals] = useState<Festival[]>([])
