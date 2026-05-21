@@ -33,7 +33,7 @@ function filterPastEvents<T extends { fecha: string }>(items: T[]): T[] {
 export default function ConciertosPage() {
   const time = useClock()
   const searchParams = useSearchParams()
-  const initialTab: TabType = searchParams?.get('tab') === 'conciertos' ? 'conciertos' : 'festivales'
+  const initialTab: TabType = searchParams?.get('tab') === 'festivales' ? 'festivales' : 'conciertos'
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>(initialTab)
   const [concerts, setConcerts] = useState<Concert[]>(sortByFechaChronologically(filterPastEvents(fallbackConcerts)))
