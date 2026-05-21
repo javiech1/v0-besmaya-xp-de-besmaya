@@ -126,6 +126,7 @@ export default function BesmayaDesktop() {
       const isSmall = sw < 1024
       const scale = isSmall ? Math.max(0.75, sw / 1024) : 1
       const width = Math.min(360, sw * 0.26) * scale
+      const newZ = prev.reduce((m, w) => Math.max(m, w.zIndex), 100) + 1
       return [
         ...prev,
         {
@@ -137,13 +138,13 @@ export default function BesmayaDesktop() {
           width,
           height: "auto",
           isMinimized: false,
-          zIndex: nextZIndex,
+          zIndex: newZ,
           isInitial: true,
         },
       ]
     })
-    setNextZIndex(prev => prev + 1)
-  }, [isWinterTourReleased, initialWindowsCreated, isDesktop, nextZIndex])
+    setNextZIndex(z => z + 1)
+  }, [isWinterTourReleased, initialWindowsCreated, isDesktop])
 
   useEffect(() => {
     // Detectar capacidad de puntero fino (ratón)

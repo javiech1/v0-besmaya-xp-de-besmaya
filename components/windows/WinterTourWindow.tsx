@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export function WinterTourContent() {
   const [isLoaded, setIsLoaded] = useState(false)
+  const router = useRouter()
 
   return (
     <div className="flex flex-col items-center p-0 sm:p-2">
@@ -19,13 +20,16 @@ export function WinterTourContent() {
           onLoad={() => setIsLoaded(true)}
         />
       </div>
-      <Link
-        href="/conciertos?tab=conciertos"
-        prefetch={true}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-lg text-center block transition-colors duration-200 text-sm sm:text-base border-transparent"
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          router.push("/conciertos?tab=conciertos")
+        }}
+        className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-lg text-center block transition-colors duration-200 text-sm sm:text-base border-transparent cursor-pointer"
       >
         entradas
-      </Link>
+      </button>
     </div>
   )
 }
