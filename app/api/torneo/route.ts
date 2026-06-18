@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { randomUUID } from "crypto"
 import { createClient } from "@supabase/supabase-js"
 import { scoreSubmissionSchema } from "@/lib/torneo/validation"
 import type { RankingEntry } from "@/lib/torneo/types"
@@ -84,7 +85,13 @@ export async function POST(request: Request) {
   // Ganador = destrona al nº1 (estrictamente mayor). Tablero vacio NO premia.
   const isChampion = currentMax !== null && score > currentMax
 
-  const { error: insertError } = await supabase.from("game_scores").insert({ alias, score })
+  // El esquema heredado de game_scores exige email NOT NULL UNIQUE. Insertamos un
+  // email sintético único para que el guardado funcione sobre el esquema ACTUAL,
+  // sin necesidad de migración DDL. (scripts/004 deja email opcional como limpieza
+  // posterior; mientras tanto este valor es inofensivo y nunca se expone.)
+  const { error: insertError } = await supabase
+    .from("game_scores")
+    .insert({ alias, score, email: `${randomUUID()}@nadie.local` })
   if (insertError) {
     return NextResponse.json({ error: "Error al guardar" }, { status: 500 })
   }
