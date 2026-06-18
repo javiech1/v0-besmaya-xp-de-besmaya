@@ -1,6 +1,11 @@
 import type { GameState, Obstacle } from "./types"
-import { WORLD_W, WORLD_H, GROUND_Y, PLAYER_W, PLAYER_H, GROUND_TILE } from "./gameEngine"
+import { WORLD_H, GROUND_Y, PLAYER_X, PLAYER_W, PLAYER_H, GROUND_TILE } from "./gameEngine"
 import { getSprite } from "./sprites"
+
+// Ancho de mundo visible (zoom): <600 => todo se ve mas grande. El jugador queda
+// fijo a la izquierda (PLAYER_SCREEN_FRAC) dejando pista a la derecha para reaccionar.
+const VIEW_W = 440
+const PLAYER_SCREEN_FRAC = 0.17
 
 // ---- Paleta ----
 const NADIE_FILL = "#FFC81E"
@@ -41,12 +46,13 @@ interface Layout {
 }
 
 function computeLayout(W: number, H: number): Layout {
-  // Escala uniforme (sin deformar el sprite). El suelo se ancla abajo (~82%)
-  // para que haya cielo amplio arriba: aspecto de runner, no banda centrada.
-  const scale = Math.min(W / WORLD_W, H / WORLD_H)
-  const offX = (W - WORLD_W * scale) / 2
-  let groundScreenY = H * 0.82
-  const minG = 120 * scale // deja sitio arriba para el apex del salto
+  // Escala uniforme (sin deformar el sprite) con zoom via VIEW_W: la accion se ve
+  // grande. El suelo se ancla muy abajo (~88%) para que haya poca tierra y mucho
+  // cielo/pista. El jugador se fija a la izquierda dejando pista a la derecha.
+  const scale = Math.min(W / VIEW_W, H / WORLD_H)
+  const offX = PLAYER_SCREEN_FRAC * W - PLAYER_X * scale
+  let groundScreenY = H * 0.88
+  const minG = 118 * scale // deja sitio arriba para el apex del salto
   if (groundScreenY < minG) groundScreenY = minG
   if (groundScreenY > H - 6) groundScreenY = H - 6
   return { scale, offX, groundScreenY }
@@ -142,6 +148,21 @@ export function buildBackground(cssW: number, cssH: number, dpr: number): BgCach
   ctx.fillStyle = sun
   ctx.fillRect(0, 0, cssW, gy)
 
+  // Marca de agua "besmaya" tenue (rellena el cielo, de marca)
+  ctx.save()
+  ctx.globalAlpha = 0.06
+  ctx.fillStyle = "#ffffff"
+  ctx.textAlign = "center"
+  ctx.textBaseline = "middle"
+  ctx.font = `bold ${Math.round(cssW * 0.17)}px Tahoma, sans-serif`
+  ctx.fillText("besmaya", cssW * 0.5, gy * 0.4)
+  ctx.restore()
+
+  // Nubes lejanas estaticas
+  ctx.fillStyle = "rgba(255,255,255,0.5)"
+  drawCloud(ctx, cssW * 0.22, gy * 0.3, lay.scale * 0.85)
+  drawCloud(ctx, cssW * 0.72, gy * 0.17, lay.scale * 0.7)
+
   // Colinas (2 capas)
   hills(ctx, cssW, gy + 2, 26 * lay.scale, cssW * 0.9, 0.6, HILL_BACK)
   hills(ctx, cssW, gy + 2, 16 * lay.scale, cssW * 0.55, 2.1, HILL_FRONT)
@@ -159,6 +180,16 @@ export function buildBackground(cssW: number, cssH: number, dpr: number): BgCach
   ctx.moveTo(0, gy)
   ctx.lineTo(cssW, gy)
   ctx.stroke()
+
+  // Vineta sutil para dar profundidad
+  const vg = ctx.createRadialGradient(
+    cssW * 0.5, cssH * 0.42, Math.min(cssW, cssH) * 0.25,
+    cssW * 0.5, cssH * 0.5, Math.max(cssW, cssH) * 0.72,
+  )
+  vg.addColorStop(0, "rgba(0,0,0,0)")
+  vg.addColorStop(1, "rgba(10,20,40,0.16)")
+  ctx.fillStyle = vg
+  ctx.fillRect(0, 0, cssW, cssH)
 
   return { canvas, w: cssW, h: cssH }
 }
@@ -200,12 +231,13 @@ function leg(ctx: CanvasRenderingContext2D, cx: number, top: number, len: number
 
 function drawNadie(ctx: CanvasRenderingContext2D, lay: Layout, state: GameState) {
   const scale = lay.scale
-  const w = PLAYER_W * scale
-  const h = PLAYER_H * scale
-  const x = lay.offX + state.playerX * scale
-  const topY = wY(lay, state.playerY)
-  const cx = x + w / 2
-  const feet = topY + h
+  // Se dibuja algo mayor que el hitbox: mas protagonismo y colision perdón-friendly.
+  const DRAW = 1.24
+  const w = PLAYER_W * scale * DRAW
+  const h = PLAYER_H * scale * DRAW
+  const cx = lay.offX + (state.playerX + PLAYER_W / 2) * scale
+  const feet = wY(lay, state.playerY + PLAYER_H)
+  const topY = feet - h
 
   let pose: "idle" | "run" | "jump" | "dead" = "run"
   if (state.isGameOver) pose = "dead"
