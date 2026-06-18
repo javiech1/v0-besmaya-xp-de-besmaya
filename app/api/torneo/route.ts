@@ -5,8 +5,14 @@ import type { RankingEntry } from "@/lib/torneo/types"
 
 export const dynamic = "force-dynamic"
 
+// El codigo de descuento vive SOLO en el servidor: nunca se incluye en el
+// bundle cliente; solo viaja en la respuesta cuando hay record real.
+const MERCH_CODE = process.env.TORNEO_MERCH_CODE || "ACQ-STORE/BESMAYA"
+const STORE_URL =
+  process.env.TORNEO_STORE_URL || "https://acqustic-platform.sumupstore.com/categoria/besmaya"
+
 const RATE_LIMIT_WINDOW_MS = 60_000
-const RATE_LIMIT_MAX = 3
+const RATE_LIMIT_MAX = 5
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 
 function isRateLimited(ip: string): boolean {
@@ -19,19 +25,13 @@ function isRateLimited(ip: string): boolean {
   entry.count++
   return entry.count > RATE_LIMIT_MAX
 }
-
-setInterval(() => {
-  const now = Date.now()
-  for (const [ip, entry] of rateLimitMap) {
-    if (now > entry.resetAt) rateLimitMap.delete(ip)
-  }
-}, RATE_LIMIT_WINDOW_MS)
+// Nota: el reset perezoso de arriba ya libera las entradas caducadas al
+// reaccederlas; no hace falta un setInterval de barrido (anti-patron/fuga en
+// serverless, donde la instancia se congela). El rate limit es best-effort
+// por instancia: util contra spam, NO una frontera de seguridad real.
 
 function getServiceSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 }
 
 async function getRanking(supabase: ReturnType<typeof getServiceSupabase>): Promise<RankingEntry[]> {
@@ -39,6 +39,7 @@ async function getRanking(supabase: ReturnType<typeof getServiceSupabase>): Prom
     .from("game_scores")
     .select("alias, score")
     .order("score", { ascending: false })
+    .order("created_at", { ascending: true })
     .limit(10)
   return (data as RankingEntry[]) || []
 }
@@ -50,10 +51,7 @@ export async function POST(request: Request) {
     "unknown"
 
   if (isRateLimited(ip)) {
-    return NextResponse.json(
-      { error: "Demasiados intentos. Espera un momento." },
-      { status: 429 }
-    )
+    return NextResponse.json({ error: "Demasiados intentos. Espera un momento." }, { status: 429 })
   }
 
   let body: unknown
@@ -67,53 +65,50 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.errors[0]?.message || "Datos inválidos" },
-      { status: 400 }
+      { status: 400 },
     )
   }
 
-  const { alias, score, email, concert_id, confirm } = parsed.data
-
+  const { alias, score } = parsed.data
   const supabase = getServiceSupabase()
 
-  // Check if email already exists
-  const { data: existing } = await supabase
+  // Mejor puntuacion actual (el nº1 a destronar)
+  const { data: topRow } = await supabase
     .from("game_scores")
-    .select("alias, concert_id, concerts(fecha, ciudad)")
-    .eq("email", email)
+    .select("score")
+    .order("score", { ascending: false })
+    .limit(1)
     .maybeSingle()
 
-  if (existing && !confirm) {
-    const concertRaw = existing.concerts
-    const concert = (Array.isArray(concertRaw) ? concertRaw[0] : concertRaw) as { fecha: string; ciudad: string } | null
+  const currentMax: number | null = topRow ? (topRow.score as number) : null
+  // Ganador = destrona al nº1 (estrictamente mayor). Tablero vacio NO premia.
+  const isChampion = currentMax !== null && score > currentMax
+
+  const { error: insertError } = await supabase.from("game_scores").insert({ alias, score })
+  if (insertError) {
+    return NextResponse.json({ error: "Error al guardar" }, { status: 500 })
+  }
+
+  // Posicion del jugador = nº de filas con score >= el suyo. Como su fila recien
+  // insertada queda la ULTIMA entre empatados (desempate created_at ASC), este
+  // conteo coincide exactamente con la posicion que ocupa en el ranking mostrado.
+  const { count } = await supabase
+    .from("game_scores")
+    .select("*", { count: "exact", head: true })
+    .gte("score", score)
+  const playerRank = count ?? 1
+
+  const ranking = await getRanking(supabase)
+
+  if (isChampion) {
     return NextResponse.json({
-      existing: true,
-      previousAlias: existing.alias,
-      previousFecha: concert?.fecha || "",
-      previousCiudad: concert?.ciudad || "",
+      ranking,
+      playerRank,
+      isChampion: true,
+      merchCode: MERCH_CODE,
+      storeUrl: STORE_URL,
     })
   }
 
-  if (existing) {
-    // Update existing record
-    const { error } = await supabase
-      .from("game_scores")
-      .update({ alias, score, concert_id })
-      .eq("email", email)
-
-    if (error) {
-      return NextResponse.json({ error: "Error al guardar" }, { status: 500 })
-    }
-  } else {
-    // Insert new record
-    const { error } = await supabase
-      .from("game_scores")
-      .insert({ alias, score, email, concert_id })
-
-    if (error) {
-      return NextResponse.json({ error: "Error al guardar" }, { status: 500 })
-    }
-  }
-
-  const ranking = await getRanking(supabase)
-  return NextResponse.json({ ranking })
+  return NextResponse.json({ ranking, playerRank, isChampion: false })
 }
