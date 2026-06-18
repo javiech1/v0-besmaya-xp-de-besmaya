@@ -1,8 +1,10 @@
 import { z } from "zod"
+import { MAX_PLAUSIBLE_SCORE } from "./gameEngine"
 
 export const aliasSchema = z.object({
   alias: z
     .string()
+    .trim()
     .min(1, "El alias no puede estar vacío")
     .max(20, "Máximo 20 caracteres"),
 })
@@ -10,16 +12,10 @@ export const aliasSchema = z.object({
 export const scoreSubmissionSchema = z.object({
   alias: z
     .string()
+    .trim()
     .min(1, "El alias no puede estar vacío")
     .max(20, "Máximo 20 caracteres"),
-  score: z
-    .number()
-    .int()
-    .min(0)
-    .max(999999),
-  email: z.string().email("Email no válido"),
-  concert_id: z.string().uuid("Selecciona un concierto"),
-  confirm: z.boolean().optional(),
+  score: z.number().int().min(0).max(MAX_PLAUSIBLE_SCORE),
 })
 
 export type AliasInput = z.infer<typeof aliasSchema>

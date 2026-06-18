@@ -18,6 +18,7 @@ export async function GET() {
     .from("game_scores")
     .select("alias, score")
     .order("score", { ascending: false })
+    .order("created_at", { ascending: true })
     .limit(10)
 
   if (error) {
