@@ -119,7 +119,12 @@ export function MuroContent() {
           if (!newComment?.id) return
           setComments((prev) => {
             if (prev.some((c) => c.id === newComment.id)) return prev
-            const updated = [...prev, newComment]
+            // Si es nuestro propio comentario llegando por Realtime antes que la
+            // respuesta del POST, sustituye al optimista temporal en vez de duplicarlo
+            const withoutTemp = prev.filter(
+              (c) => !(String(c.id).startsWith("temp-") && c.content === newComment.content && c.username === newComment.username)
+            )
+            const updated = [...withoutTemp, newComment]
             setToCache("muro_comments", updated)
             return updated
           })
@@ -187,7 +192,9 @@ export function MuroContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!message.trim() || isSubmitting) return
+    // isPostingRef es sincrono: bloquea el doble submit en el mismo frame
+    // (isSubmitting es estado y no se actualiza hasta el siguiente render)
+    if (!message.trim() || isSubmitting || isPostingRef.current) return
     ensureAudioCtx()
 
     // Check for BSOD easter egg triggers
@@ -235,7 +242,13 @@ export function MuroContent() {
       }
 
       const { userComment } = await res.json()
-      setComments((prev) => prev.map((c) => c.id === tempId ? userComment : c))
+      setComments((prev) => {
+        // Si Realtime ya insertó el comentario real, solo retiramos el temporal
+        if (prev.some((c) => c.id === userComment.id)) {
+          return prev.filter((c) => c.id !== tempId)
+        }
+        return prev.map((c) => (c.id === tempId ? userComment : c))
+      })
       waitingSinceRef.current = Date.now()
       setWaitingForNadie(true)
       if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
