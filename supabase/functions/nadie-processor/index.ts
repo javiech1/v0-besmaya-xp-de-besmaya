@@ -315,6 +315,23 @@ async function callAnthropicBatch(
   }
 }
 
+// Alerta a un webhook (Discord/Slack via {content}) cuando algo falla de verdad.
+// Sin NADIE_ALERT_WEBHOOK configurado es un no-op. Nunca rompe el flujo principal.
+async function sendAlert(message: string): Promise<void> {
+  const url = Deno.env.get("NADIE_ALERT_WEBHOOK")
+  if (!url) return
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: message.slice(0, 1900) }),
+      signal: AbortSignal.timeout(5000),
+    })
+  } catch (err) {
+    console.error("[Nadie] alert webhook error:", err instanceof Error ? err.message : err)
+  }
+}
+
 async function fetchPending(supabase: SupabaseClient): Promise<PendingComment[]> {
   const { data, error } = await supabase
     .from("muro_comments")
@@ -586,6 +603,18 @@ Deno.serve(async (req) => {
       // a fresh webhook (or our outer loop) will handle remaining pendings.
       if (lockReleased.value) break
     }
+    // Alertar solo con errores reales (API caida, red, parse). Que Nadie decida
+    // callarse ante relleno (replies=0 sin error) es comportamiento normal.
+    const problems = outcomes.filter(
+      (o) => o.call.networkError || o.call.parseError || (o.call.httpStatus !== undefined && o.call.httpStatus !== 200),
+    )
+    if (problems.length > 0) {
+      const detail = problems
+        .map((o) => `mode=${o.mode} claimed=${o.claimed} http=${o.call.httpStatus ?? "-"} net=${o.call.networkError ?? "-"} parse=${o.call.parseError ?? "-"} api=${(o.call.apiBody ?? "").slice(0, 200)}`)
+        .join("\n")
+      await sendAlert(`⚠️ nadie-processor: ${problems.length} batch(es) con error — fans posiblemente sin respuesta\n${detail}`)
+    }
+
     return new Response(JSON.stringify({ processed: processedTotal, outcomes }), {
       status: 200,
       headers: { "content-type": "application/json" },
