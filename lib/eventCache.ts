@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 interface EventData {
-  concerts: Array<{ fecha: string; ciudad: string; sala: string }> | null
-  festivals: Array<{ fecha: string; ciudad: string; sala: string }> | null
+  concerts: Array<{ fecha: string; ciudad: string; sala: string; link: string | null }> | null
+  festivals: Array<{ fecha: string; ciudad: string; sala: string; link: string | null }> | null
 }
 
 let eventsCache: { data: EventData; ts: number } | null = null
@@ -13,8 +13,8 @@ export async function getConcertsAndFestivals(supabase: SupabaseClient): Promise
     return eventsCache.data
   }
   const [{ data: concerts }, { data: festivals }] = await Promise.all([
-    supabase.from("concerts").select("fecha, ciudad, sala"),
-    supabase.from("festis").select("fecha, ciudad, sala"),
+    supabase.from("concerts").select("fecha, ciudad, sala, link"),
+    supabase.from("festis").select("fecha, ciudad, sala, link"),
   ])
   eventsCache = { data: { concerts, festivals }, ts: Date.now() }
   return { concerts, festivals }
@@ -24,12 +24,16 @@ export function buildDynamicContext(
   concerts: EventData["concerts"],
   festivals: EventData["festivals"],
 ): string {
+  const fmt = (e: { fecha: string; ciudad: string; sala: string; link: string | null }) =>
+    `${e.fecha} ${e.ciudad} ${e.sala}${e.link ? ` [entradas: ${e.link}]` : ""}`
   const parts: string[] = []
   if (concerts && concerts.length > 0) {
-    parts.push("Proximos conciertos: " + concerts.map(c => `${c.fecha} ${c.ciudad} ${c.sala}`).join(" | "))
+    parts.push("Proximos conciertos: " + concerts.map(fmt).join(" | "))
   }
   if (festivals && festivals.length > 0) {
-    parts.push("Proximos festis: " + festivals.map(f => `${f.fecha} ${f.ciudad} ${f.sala}`).join(" | "))
+    parts.push("Proximos festis: " + festivals.map(fmt).join(" | "))
   }
-  return parts.length > 0 ? `[Info actualizada]\n${parts.join("\n")}\n[Fin info]\n\n` : ""
+  if (parts.length === 0) return ""
+  parts.push("Si preguntan por entradas de un concierto o festi, pasa su link. Si el link no cabe en tu respuesta corta, manda a somosbesmaya.com")
+  return `[Info actualizada]\n${parts.join("\n")}\n[Fin info]\n\n`
 }

@@ -81,18 +81,56 @@ export async function POST(request: Request) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   const isNadie = finalUsername.toLowerCase() === "nadie"
 
-  // Fetch contexto para Nadie: mensajes recientes + conciertos/festis (en paralelo)
+  // Fetch contexto para Nadie: mensajes recientes + conciertos/festis + memoria del fan + sus propias respuestas (en paralelo)
   const supabase = getSupabase()
-  const [{ data: recentMessages }, eventsData] = await Promise.all([
+  const hasUsername = trimmedUsername.length > 0 && !isNadie
+  const [{ data: recentMessages }, eventsData, userMsgsRes, nadieToUserRes, { data: nadieReplies }] = await Promise.all([
     supabase
       .from("muro_comments")
       .select("username, content, is_nadie")
       .order("created_at", { ascending: false })
       .limit(15),
     getConcertsAndFestivals(supabase),
+    // Memoria por usuario: mensajes anteriores de este fan
+    hasUsername
+      ? supabase
+          .from("muro_comments")
+          .select("username, content, is_nadie, created_at")
+          .eq("username", trimmedUsername)
+          .eq("is_nadie", false)
+          .order("created_at", { ascending: false })
+          .limit(4)
+      : Promise.resolve({ data: null }),
+    // ...y las respuestas que Nadie le dio
+    hasUsername
+      ? supabase
+          .from("muro_comments")
+          .select("username, content, is_nadie, created_at")
+          .eq("is_nadie", true)
+          .ilike("content", `@${trimmedUsername} %`)
+          .order("created_at", { ascending: false })
+          .limit(4)
+      : Promise.resolve({ data: null }),
+    // Ultimas respuestas de Nadie (para la regla de no repetir muletillas)
+    supabase
+      .from("muro_comments")
+      .select("content")
+      .eq("is_nadie", true)
+      .order("created_at", { ascending: false })
+      .limit(5),
   ])
   const nadieContext = (recentMessages || []).reverse()
   const dynamicContext = buildDynamicContext(eventsData.concerts, eventsData.festivals)
+
+  // Memoria del fan: mezclar sus mensajes y las respuestas de Nadie por fecha,
+  // quitando lo que ya aparece en la conversacion reciente
+  const inRecent = new Set(nadieContext.map(m => `${m.username}|${m.content}`))
+  const userHistory = [...(userMsgsRes.data || []), ...(nadieToUserRes.data || [])]
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    .filter(m => !inRecent.has(`${m.username}|${m.content}`))
+    .map(({ username, content, is_nadie }) => ({ username, content, is_nadie }))
+
+  const nadieLastReplies = (nadieReplies || []).map(r => r.content.replace(/^@\S+\s*/, ""))
 
   // Ejecutar moderación y respuesta de Nadie EN PARALELO
   let nadieText: string | null = null
@@ -100,7 +138,7 @@ export async function POST(request: Request) {
   if (apiKey) {
     const [moderationResult, nadieResult] = await Promise.allSettled([
       moderateContent(apiKey, trimmedUsername, trimmedContent, needsUsername),
-      !isNadie ? generateNadieResponse(apiKey, originalContent, displayUsername, nadieContext, dynamicContext) : Promise.resolve(null),
+      !isNadie ? generateNadieResponse(apiKey, originalContent, displayUsername, nadieContext, dynamicContext, userHistory, nadieLastReplies) : Promise.resolve(null),
     ])
 
     if (moderationResult.status === "fulfilled" && moderationResult.value) {

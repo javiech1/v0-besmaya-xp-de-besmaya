@@ -99,18 +99,53 @@ export const NADIE_FALLBACKS = [
   "ya ves tu",
 ]
 
+// Moods diarios rotativos: deterministas por fecha (sin coste API), dan variedad dia a dia
+const NADIE_MOODS = [
+  "melancolico pero tierno",
+  "con el humor seco a tope, mas ironico que nunca",
+  "filosofico, dandole vueltas a todo",
+  "un poco mas borde de lo normal, pero con chispa",
+  "sonador, con la cabeza en las nubes",
+  "cansado pero entranable",
+  "gamberro, con ganas de vacilar",
+]
+
+function buildNowAndMood(): string {
+  const now = new Date()
+  const fecha = new Intl.DateTimeFormat("es-ES", {
+    timeZone: "Europe/Madrid",
+    weekday: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(now)
+  // Seed determinista por dia (fecha de Madrid) para que el mood sea estable todo el dia
+  const madridDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid" }).format(now)
+  const seed = madridDay.split("-").reduce((acc, part) => acc + parseInt(part, 10), 0)
+  const mood = NADIE_MOODS[seed % NADIE_MOODS.length]
+  return `[Ahora mismo en Espana: ${fecha}. Tu mood de hoy: ${mood}. Dejalo notar sutilmente si encaja, sin mencionarlo de forma literal]`
+}
+
 export async function generateNadieResponse(
   apiKey: string,
   originalContent: string,
   displayUsername: string,
   recentMessages: Array<{ username: string; content: string; is_nadie: boolean }>,
-  dynamicContext: string
+  dynamicContext: string,
+  userHistory: Array<{ username: string; content: string; is_nadie: boolean }> = [],
+  nadieLastReplies: string[] = []
 ): Promise<string | null> {
   isDev && console.log("[Nadie] Generando respuesta para:", `@${displayUsername}: "${originalContent}"`)
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 10000)
 
-  let userMessage = ""
+  let userMessage = buildNowAndMood() + "\n\n"
+  if (nadieLastReplies.length > 0) {
+    userMessage += `Tus ultimas respuestas en el muro (PROHIBIDO repetir muletillas, arranques o estructuras de estas):\n${nadieLastReplies.map(r => `- ${r}`).join("\n")}\n\n`
+  }
+  if (userHistory.length > 0) {
+    userMessage += `Historial previo con @${displayUsername} (interacciones pasadas, por si le reconoces; no lo recites, usalo con naturalidad):\n${userHistory.map(m => `${m.is_nadie ? "Nadie" : m.username}: ${m.content}`).join("\n")}\n\n`
+  }
   if (recentMessages.length > 0) {
     userMessage += `Conversacion reciente del muro:\n${recentMessages.map(m => `${m.is_nadie ? "Nadie" : m.username}: ${m.content}`).join("\n")}\n\n`
   }
@@ -125,8 +160,11 @@ export async function generateNadieResponse(
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 150,
+        model: "claude-sonnet-5",
+        // El thinking cuenta dentro de max_tokens: damos margen para pensar + respuesta corta
+        max_tokens: 1000,
+        thinking: { type: "adaptive" },
+        output_config: { effort: "low" },
         system: [
           {
             type: "text",
