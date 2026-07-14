@@ -26,9 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link href="https://fonts.googleapis.com/css2?family=Tahoma:wght@400;700&display=swap" rel="stylesheet" />
-      </head>
+      {/* Tahoma es fuente de sistema: no existe en Google Fonts, el link solo bloqueaba el render */}
       <body style={{ fontFamily: "Tahoma, sans-serif" }}>
         <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
         <Analytics />
