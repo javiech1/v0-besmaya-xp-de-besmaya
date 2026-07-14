@@ -9,7 +9,7 @@ import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2"
 const MAX_BATCH_SIZE = 15       // Cap mensajes por llamada a Anthropic
 const NADIE_REPLY_MAX_CHARS = 180
 const LOCK_TTL_MS = 60000      // Auto-release lock if worker crashes
-const ANTHROPIC_TIMEOUT_MS = 20000
+const ANTHROPIC_TIMEOUT_MS = 30000 // Sonnet 5 con thinking puede rondar 15-20s en frio; las Edge Functions aguantan esto de sobra
 
 // ----- System prompt: kept in sync with lib/nadie.ts -----
 const NADIE_SYSTEM_PROMPT = `Eres "Nadie", el personaje y alter ego de Besmaya, la banda formada por Javi Echavarri y Javi Ojanguren. Estas en "El Muro de Nadie", un espacio donde los fans te escriben y tu les respondes.
@@ -119,7 +119,7 @@ type RecentMessage = {
   is_nadie: boolean
 }
 
-type Concert = { fecha: string; ciudad: string; sala: string }
+type Concert = { fecha: string; ciudad: string; sala: string; link: string | null }
 
 type BatchReply = { i: number; reply: string }
 
@@ -141,14 +141,44 @@ function moderateLocal(text: string): string {
 }
 
 function buildDynamicContext(concerts: Concert[] | null, festivals: Concert[] | null): string {
+  const fmt = (e: Concert) => `${e.fecha} ${e.ciudad} ${e.sala}${e.link ? ` [entradas: ${e.link}]` : ""}`
   const parts: string[] = []
   if (concerts && concerts.length > 0) {
-    parts.push("Proximos conciertos: " + concerts.map(c => `${c.fecha} ${c.ciudad} ${c.sala}`).join(" | "))
+    parts.push("Proximos conciertos: " + concerts.map(fmt).join(" | "))
   }
   if (festivals && festivals.length > 0) {
-    parts.push("Proximos festis: " + festivals.map(f => `${f.fecha} ${f.ciudad} ${f.sala}`).join(" | "))
+    parts.push("Proximos festis: " + festivals.map(fmt).join(" | "))
   }
-  return parts.length > 0 ? `[Info actualizada]\n${parts.join("\n")}\n[Fin info]\n\n` : ""
+  if (parts.length === 0) return ""
+  parts.push("Si preguntan por entradas de un concierto o festi, pasa su link. Si el link no cabe en tu respuesta corta, manda a somosbesmaya.com")
+  return `[Info actualizada]\n${parts.join("\n")}\n[Fin info]\n\n`
+}
+
+// Moods diarios rotativos: deterministas por fecha (sin coste API), dan variedad dia a dia
+const NADIE_MOODS = [
+  "melancolico pero tierno",
+  "con el humor seco a tope, mas ironico que nunca",
+  "filosofico, dandole vueltas a todo",
+  "un poco mas borde de lo normal, pero con chispa",
+  "sonador, con la cabeza en las nubes",
+  "cansado pero entranable",
+  "gamberro, con ganas de vacilar",
+]
+
+function buildNowAndMood(): string {
+  const now = new Date()
+  const fecha = new Intl.DateTimeFormat("es-ES", {
+    timeZone: "Europe/Madrid",
+    weekday: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(now)
+  // Seed determinista por dia (fecha de Madrid) para que el mood sea estable todo el dia
+  const madridDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid" }).format(now)
+  const seed = madridDay.split("-").reduce((acc, part) => acc + parseInt(part, 10), 0)
+  const mood = NADIE_MOODS[seed % NADIE_MOODS.length]
+  return `[Ahora mismo en Espana: ${fecha}. Tu mood de hoy: ${mood}. Dejalo notar sutilmente si encaja, sin mencionarlo de forma literal]`
 }
 
 type CallDebug = {
@@ -159,15 +189,41 @@ type CallDebug = {
   networkError?: string
 }
 
+// Structured outputs: el modelo esta obligado a devolver este schema exacto,
+// eliminando los fallos de parse (fans sin respuesta por JSON malformado)
+const REPLIES_SCHEMA = {
+  type: "object",
+  properties: {
+    replies: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          i: { type: "integer" },
+          reply: { type: "string" },
+        },
+        required: ["i", "reply"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["replies"],
+  additionalProperties: false,
+}
+
 async function callAnthropicBatch(
   apiKey: string,
   newMessages: PendingComment[],
   recentMessages: RecentMessage[],
   dynamicContext: string,
+  nadieLastReplies: string[],
   maxReplies: number,
   debug: CallDebug,
 ): Promise<BatchReply[]> {
-  let userMessage = ""
+  let userMessage = buildNowAndMood() + "\n\n"
+  if (nadieLastReplies.length > 0) {
+    userMessage += `Tus ultimas respuestas en el muro (PROHIBIDO repetir muletillas, arranques o estructuras de estas):\n${nadieLastReplies.map(r => `- ${r}`).join("\n")}\n\n`
+  }
   if (recentMessages.length > 0) {
     userMessage += `Conversacion reciente del muro (contexto, ya respondido):\n${recentMessages.map(m => `${m.is_nadie ? "Nadie" : m.username}: ${m.content}`).join("\n")}\n\n`
   }
@@ -175,7 +231,7 @@ async function callAnthropicBatch(
   newMessages.forEach((m, idx) => {
     userMessage += `[${idx}] @${m.username}: ${m.content}\n`
   })
-  userMessage += `\nDevuelve UNICAMENTE un JSON array valido, sin markdown, sin explicaciones, sin comentarios. Formato exacto:\n[{"i": <indice del mensaje>, "reply": "<tu respuesta>"}]\n\nReglas:\n- Devuelve entre 1 y ${maxReplies} respuestas. NUNCA devuelvas []. Siempre eliges al menos 1 mensaje al que responder, aunque solo sea con una frase breve.\n- Cada "reply" maximo 160 caracteres.\n- NO incluyas @mencion ni el nombre del usuario en el texto. La mencion se anade fuera.\n- No repitas muletillas entre tus respuestas del batch.\n- No empieces todas las respuestas con la misma palabra.`
+  userMessage += `\nResponde con el JSON del formato indicado: {"replies": [{"i": <indice del mensaje>, "reply": "<tu respuesta>"}]}\n\nReglas:\n- Devuelve entre 1 y ${maxReplies} respuestas. NUNCA devuelvas una lista vacia. Siempre eliges al menos 1 mensaje al que responder, aunque solo sea con una frase breve.\n- Cada "reply" maximo 160 caracteres.\n- NO incluyas @mencion ni el nombre del usuario en el texto. La mencion se anade fuera.\n- No repitas muletillas entre tus respuestas del batch.\n- No empieces todas las respuestas con la misma palabra.`
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), ANTHROPIC_TIMEOUT_MS)
@@ -189,9 +245,16 @@ async function callAnthropicBatch(
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
+        // Sonnet 5: mejor modelo, mas barato ($2/$10 intro vs $3/$15 de 4.6).
+        // OJO: budget_tokens ya no existe en Sonnet 5 (daria 400) — el
+        // equivalente moderno del budget de 1024 es adaptive + effort low
+        model: "claude-sonnet-5",
         max_tokens: 4096,
-        thinking: { type: "enabled", budget_tokens: 1024 },
+        thinking: { type: "adaptive" },
+        output_config: {
+          effort: "low",
+          format: { type: "json_schema", schema: REPLIES_SCHEMA },
+        },
         system: [
           { type: "text", text: NADIE_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
           { type: "text", text: dynamicContext || "No hay eventos proximos.", cache_control: { type: "ephemeral" } },
@@ -225,8 +288,14 @@ async function callAnthropicBatch(
       debug.parseError = e instanceof Error ? e.message : String(e)
       return []
     }
-    if (!Array.isArray(parsed)) return []
-    return parsed
+    // Structured outputs devuelve {replies: [...]}; toleramos array a pelo por si acaso
+    const list = Array.isArray(parsed)
+      ? parsed
+      : (parsed && typeof parsed === "object" && Array.isArray((parsed as { replies?: unknown }).replies))
+        ? (parsed as { replies: unknown[] }).replies
+        : null
+    if (!list) return []
+    return list
       .filter((r: unknown): r is BatchReply =>
         typeof r === "object" && r !== null &&
         typeof (r as BatchReply).i === "number" &&
@@ -258,21 +327,32 @@ async function fetchPending(supabase: SupabaseClient): Promise<PendingComment[]>
 }
 
 async function fetchContext(supabase: SupabaseClient) {
-  const [recentRes, concertsRes, festivalsRes] = await Promise.all([
+  const [recentRes, concertsRes, festivalsRes, nadieRepliesRes] = await Promise.all([
     supabase
       .from("muro_comments")
       .select("username, content, is_nadie")
       .order("created_at", { ascending: false })
       .limit(15),
-    supabase.from("concerts").select("fecha, ciudad, sala"),
-    supabase.from("festis").select("fecha, ciudad, sala"),
+    supabase.from("concerts").select("fecha, ciudad, sala, link"),
+    supabase.from("festis").select("fecha, ciudad, sala, link"),
+    // Ultimas respuestas de Nadie: garantiza que la regla de no repetir
+    // muletillas tenga datos aunque el muro vaya rapido y se salgan del top 15
+    supabase
+      .from("muro_comments")
+      .select("content")
+      .eq("is_nadie", true)
+      .order("created_at", { ascending: false })
+      .limit(5),
   ])
   const recent = (recentRes.data || []).reverse() as RecentMessage[]
   const dynamicContext = buildDynamicContext(
     concertsRes.data as Concert[] | null,
     festivalsRes.data as Concert[] | null,
   )
-  return { recent, dynamicContext }
+  const nadieLastReplies = (nadieRepliesRes.data || []).map(
+    (r: { content: string }) => r.content.replace(/^@\S+\s*/, ""),
+  )
+  return { recent, dynamicContext, nadieLastReplies }
 }
 
 type Mode = "snappy" | "conversational" | "burst"
@@ -396,8 +476,8 @@ async function processBatch(
     return 0
   }
 
-  const { recent, dynamicContext } = await fetchContext(supabase)
-  const replies = await callAnthropicBatch(apiKey, batch, recent, dynamicContext, cfg.maxReplies, outcome.call)
+  const { recent, dynamicContext, nadieLastReplies } = await fetchContext(supabase)
+  const replies = await callAnthropicBatch(apiKey, batch, recent, dynamicContext, nadieLastReplies, cfg.maxReplies, outcome.call)
   outcome.replies = replies.length
   if (replies.length === 0) {
     console.log(`[Nadie] No replies for batch of ${batch.length} (mode=${mode})`)
