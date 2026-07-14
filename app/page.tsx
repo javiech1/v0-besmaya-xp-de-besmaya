@@ -307,26 +307,39 @@ export default function BesmayaDesktop() {
   }, [isDesktop, isDesktopDetermined, initialWindowsCreated])
 
   useEffect(() => {
+    // Un update por frame como maximo: los ratones modernos disparan mousemove
+    // a 120+/s y cada uno provocaba un setState (jank al arrastrar)
+    let rafId: number | null = null
     const handleMouseMove = (e: MouseEvent) => {
       if (!dragState.isDragging || !dragState.windowId) return
 
-      const deltaX = e.clientX - dragState.startX
-      const deltaY = e.clientY - dragState.startY
+      const clientX = e.clientX
+      const clientY = e.clientY
+      if (rafId !== null) return
+      rafId = requestAnimationFrame(() => {
+        rafId = null
+        const deltaX = clientX - dragState.startX
+        const deltaY = clientY - dragState.startY
 
-      setWindows((prev) =>
-        prev.map((windowItem) =>
-          windowItem.id === dragState.windowId
-            ? {
-                ...windowItem,
-                x: Math.max(0, Math.min(window.innerWidth - windowItem.width, dragState.startWindowX + deltaX)),
-                y: Math.max(0, Math.min(window.innerHeight - (typeof windowItem.height === "number" ? windowItem.height : 600) - TASKBAR_HEIGHT, dragState.startWindowY + deltaY)),
-              }
-            : windowItem,
-        ),
-      )
+        setWindows((prev) =>
+          prev.map((windowItem) =>
+            windowItem.id === dragState.windowId
+              ? {
+                  ...windowItem,
+                  x: Math.max(0, Math.min(window.innerWidth - windowItem.width, dragState.startWindowX + deltaX)),
+                  y: Math.max(0, Math.min(window.innerHeight - (typeof windowItem.height === "number" ? windowItem.height : 600) - TASKBAR_HEIGHT, dragState.startWindowY + deltaY)),
+                }
+              : windowItem,
+          ),
+        )
+      })
     }
 
     const handleMouseUp = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+      }
       setDragState((prev) => ({ ...prev, isDragging: false, windowId: null }))
     }
 
@@ -336,6 +349,7 @@ export default function BesmayaDesktop() {
     }
 
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId)
       document.removeEventListener("mousemove", handleMouseMove)
       document.removeEventListener("mouseup", handleMouseUp)
     }
