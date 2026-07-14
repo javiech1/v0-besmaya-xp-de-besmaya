@@ -6,6 +6,11 @@ import { getConcertsAndFestivals, buildDynamicContext } from "@/lib/eventCache"
 
 const isDev = process.env.NODE_ENV === "development"
 
+// Margen para IA (hasta 7s) + inserts: sin esto Vercel corta a los 10s y
+// puede matar la funcion despues de guardar el comentario del fan pero antes
+// de insertar la respuesta de Nadie (fan sin respuesta, ni siquiera fallback)
+export const maxDuration = 30
+
 // Simple in-memory rate limiter: max requests per IP within a time window
 const RATE_LIMIT_WINDOW_MS = 60_000 // 1 minute
 const RATE_LIMIT_MAX = 5 // max 5 posts per minute per IP

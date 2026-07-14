@@ -137,7 +137,9 @@ export async function generateNadieResponse(
 ): Promise<string | null> {
   isDev && console.log("[Nadie] Generando respuesta para:", `@${displayUsername}: "${originalContent}"`)
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 10000)
+  // 7s (antes 10s): deja margen para que el fallback y el insert corran antes
+  // de que Vercel mate la funcion — si no, el fan se queda sin respuesta
+  const timeoutId = setTimeout(() => controller.abort(), 7000)
 
   let userMessage = buildNowAndMood() + "\n\n"
   if (nadieLastReplies.length > 0) {
