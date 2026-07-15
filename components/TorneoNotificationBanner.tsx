@@ -84,7 +84,7 @@ export function TorneoNotificationBanner({ nadieVisible, onOpenTorneo, onDismiss
         <div className="y2k-notification-message">
           <span className="y2k-notification-sender">Torneo de Nadie</span>{" "}
           <span className="y2k-notification-text">
-            destrona al nº1 del ranking y llévate un descuento en merch
+            llega a 1.000 puntos y llévate un descuento en merch
           </span>
         </div>
       </div>

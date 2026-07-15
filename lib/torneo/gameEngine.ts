@@ -18,12 +18,23 @@ const MAX_FALL_VY = 13
 
 // ---- Velocidad / dificultad ----
 const BASE_SPEED = 3.2
-const MAX_SPEED = 7.0
+const MAX_SPEED = 8.0
 const SPEED_INCREMENT = 0.0018
 const SCORE_PER_UNIT = 0.1
 
+// El codigo de merch cae al llegar a esta puntuacion (el server usa el mismo
+// umbral para decidir si la respuesta incluye el codigo).
+export const TORNEO_CODE_SCORE = 1000
+
 // ---- Spawn de obstaculos ----
-const SAFE_GAP_FACTOR = 1.15
+// El margen de seguridad de los gaps se estrecha progresivamente en el
+// endgame: la velocidad toca techo hacia score ~1500, y a partir de ahi la
+// dificultad sigue subiendo por reaccion (menos aire entre clusters) hasta
+// score ~2500. Siempre > 1: el gap nunca baja de lo fisicamente saltable.
+const GAP_FACTOR_START = 1.15
+const GAP_FACTOR_MIN = 1.05
+const GAP_TIGHTEN_FROM = 10000 // distancia (score 1000)
+const GAP_TIGHTEN_SPAN = 15000 // hasta 25000 (score 2500)
 const GAP_RANDOM_RANGE = 220
 // Duracion (en steps) de un salto completo: subida + bajada.
 const JUMP_DURATION_STEPS = (2 * Math.abs(JUMP_VY)) / GRAVITY // ~37
@@ -88,13 +99,22 @@ export function makeObstacle(kind: ObstacleKind, x: number): Obstacle {
   return { x, y: GROUND_Y - (d.yOffset + d.h), w: d.w, h: d.h, kind }
 }
 
-function minGap(speed: number): number {
-  return speed * JUMP_DURATION_STEPS * SAFE_GAP_FACTOR + PLAYER_W
+function gapFactor(distance: number): number {
+  if (distance <= GAP_TIGHTEN_FROM) return GAP_FACTOR_START
+  const t = Math.min(1, (distance - GAP_TIGHTEN_FROM) / GAP_TIGHTEN_SPAN)
+  return GAP_FACTOR_START - (GAP_FACTOR_START - GAP_FACTOR_MIN) * t
 }
 
-function randomGap(speed: number): number {
-  return minGap(speed) + Math.random() * GAP_RANDOM_RANGE
+function minGap(speed: number, distance: number): number {
+  return speed * JUMP_DURATION_STEPS * gapFactor(distance) + PLAYER_W
 }
+
+function randomGap(speed: number, distance: number): number {
+  return minGap(speed, distance) + Math.random() * GAP_RANDOM_RANGE
+}
+
+// En el endgame los clusters grandes son mas frecuentes
+const LATE_GAME_DIST = 12000 // score 1200
 
 /**
  * Encola un "cluster" de obstaculos: el CD suelto, o 1-3 llaveros seguidos.
@@ -102,13 +122,17 @@ function randomGap(speed: number): number {
  */
 function spawnCluster(state: GameState): void {
   const d = state.distance
+  const late = d > LATE_GAME_DIST
   // Merch "grande" suelto (CD o camiseta): se desbloquea al avanzar.
-  if (d > CD_UNLOCK_DIST && Math.random() < 0.25) {
+  if (d > CD_UNLOCK_DIST && Math.random() < (late ? 0.35 : 0.25)) {
     state.obstacles.push(makeObstacle(Math.random() < 0.5 ? "cd" : "camiseta", WORLD_W))
     return
   }
   let count = 1
-  if (d > TRIPLE_UNLOCK_DIST) {
+  if (late) {
+    const r = Math.random()
+    count = r < 0.35 ? 1 : r < 0.7 ? 2 : 3
+  } else if (d > TRIPLE_UNLOCK_DIST) {
     const r = Math.random()
     count = r < 0.5 ? 1 : r < 0.82 ? 2 : 3
   } else if (d > PAIR_UNLOCK_DIST) {
@@ -201,7 +225,7 @@ export function step(state: GameState): GameState {
   const last = obs.length > 0 ? obs[obs.length - 1] : null
   if (!last || last.x + last.w < WORLD_W - state.nextGap) {
     spawnCluster(state)
-    state.nextGap = randomGap(state.speed)
+    state.nextGap = randomGap(state.speed, state.distance)
   }
 
   // --- Colision ---
