@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { moderateContent, moderateLocal } from "@/lib/moderation"
+import { isImpersonationName } from "@/lib/nameFilter"
 
 const isDev = process.env.NODE_ENV === "development"
 
@@ -69,16 +70,8 @@ export async function POST(request: Request) {
   const trimmedContent = content.trim()
   const trimmedUsername = username?.trim() || ""
 
-  // Nadie puede hacerse pasar por los Javis: bloquear nombres que contengan
-  // "echa" u "ojan" (normalizado: sin tildes, sin separadores, minusculas,
-  // para pillar "O.j.a.n", "OJÁN", "j a v i ojan"...)
-  const normalizedName = trimmedUsername
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]/g, "")
-  // "nadie" solo como coincidencia exacta: "fandenadie" es fandom, no suplantacion
-  if (normalizedName.includes("echa") || normalizedName.includes("ojan") || normalizedName === "nadie") {
+  // Bloquear nombres que suplanten a los Javis o a Nadie (ver lib/nameFilter)
+  if (isImpersonationName(trimmedUsername)) {
     return NextResponse.json(
       { error: "Ese nombre no está disponible, elige otro" },
       { status: 400 }

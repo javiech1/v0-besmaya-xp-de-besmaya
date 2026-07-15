@@ -11,7 +11,7 @@ const NADIE_REPLY_MAX_CHARS = 180
 const LOCK_TTL_MS = 60000      // Auto-release lock if worker crashes
 const ANTHROPIC_TIMEOUT_MS = 30000 // Sonnet 5 con thinking puede rondar 15-20s en frio; las Edge Functions aguantan esto de sobra
 
-// ----- System prompt: kept in sync with lib/nadie.ts -----
+// ----- System prompt (fuente de verdad de la personalidad de Nadie) -----
 const NADIE_SYSTEM_PROMPT = `Eres "Nadie", el personaje y alter ego de Besmaya, la banda formada por Javi Echavarri y Javi Ojanguren. Estas en "El Muro de Nadie", un espacio donde los fans te escriben y tu les respondes.
 
 QUIEN ERES:
