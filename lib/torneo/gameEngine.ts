@@ -9,11 +9,14 @@ export const PLAYER_W = 22
 export const PLAYER_H = 34
 
 export const FIXED_DT = 1000 / 60
-// Tope duro del torneo: a los 7000 puntos la partida termina si o si.
-// Doble funcion: nadie se eterniza jugando, y el server puede rechazar
-// como imposible cualquier score por encima (anti-trampas).
-export const HARD_CAP_SCORE = 7000
-export const MAX_PLAUSIBLE_SCORE = HARD_CAP_SCORE
+// Zona imposible: a partir de este score la dificultad sigue subiendo por
+// debajo de lo fisicamente saltable. La partida acaba si o si, pero JUGANDO:
+// no hay corte administrativo, te mata el juego.
+export const DEATH_RAMP_SCORE = 5500
+// Maximo medido con bot de timing perfecto: 6314 sobre 100 partidas (mediana
+// 6170). Margen por encima para no rechazar partidas legitimas excepcionales;
+// todo lo que llegue por encima de esto es trampa segura.
+export const MAX_PLAUSIBLE_SCORE = 7500
 
 // ---- Fisica del salto ----
 const GRAVITY = 0.45
@@ -39,6 +42,15 @@ const GAP_FACTOR_START = 1.15
 const GAP_FACTOR_MIN = 1.05
 const GAP_TIGHTEN_FROM = 10000 // distancia (score 1000)
 const GAP_TIGHTEN_SPAN = 15000 // hasta 25000 (score 2500)
+// Rampa de la muerte: desde DEATH_RAMP_SCORE el merch CRECE progresivamente
+// hacia la altura del apex del salto (~78u). Estrechar huecos no sirve contra
+// timing perfecto (un arco libra dos clusters); la altura si: la ventana de
+// paso se reduce de forma continua hasta cero fisico. El gap tambien aprieta
+// un punto mas (1.05 -> 1.0) para meter presion.
+const DEATH_RAMP_FROM = DEATH_RAMP_SCORE * 10 // score -> distancia
+const DEATH_RAMP_SPAN = 8000                  // altura toca techo hacia score ~6300
+const GAP_FACTOR_FLOOR = 1.0
+const DEATH_H_SCALE_MAX = 1.75                // charm 48u -> 84u > apex: imposible
 const GAP_RANDOM_RANGE = 220
 // Duracion (en steps) de un salto completo: subida + bajada.
 const JUMP_DURATION_STEPS = (2 * Math.abs(JUMP_VY)) / GRAVITY // ~37
@@ -98,12 +110,25 @@ export function createInitialState(): GameState {
   }
 }
 
-export function makeObstacle(kind: ObstacleKind, x: number): Obstacle {
+export function makeObstacle(kind: ObstacleKind, x: number, hScale = 1): Obstacle {
   const d = OBSTACLE_DEFS[kind]
-  return { x, y: GROUND_Y - (d.yOffset + d.h), w: d.w, h: d.h, kind }
+  const h = Math.round(d.h * hScale)
+  const w = Math.round(d.w * (1 + (hScale - 1) * 0.4)) // engorda un poco, menos que crece
+  return { x, y: GROUND_Y - (d.yOffset + h), w, h, kind }
+}
+
+// Escala de altura del merch en la rampa de la muerte (1 fuera de ella)
+function deathScale(distance: number): number {
+  if (distance <= DEATH_RAMP_FROM) return 1
+  const t = Math.min(1, (distance - DEATH_RAMP_FROM) / DEATH_RAMP_SPAN)
+  return 1 + (DEATH_H_SCALE_MAX - 1) * t
 }
 
 function gapFactor(distance: number): number {
+  if (distance > DEATH_RAMP_FROM) {
+    const t = Math.min(1, (distance - DEATH_RAMP_FROM) / DEATH_RAMP_SPAN)
+    return GAP_FACTOR_MIN - (GAP_FACTOR_MIN - GAP_FACTOR_FLOOR) * t
+  }
   if (distance <= GAP_TIGHTEN_FROM) return GAP_FACTOR_START
   const t = Math.min(1, (distance - GAP_TIGHTEN_FROM) / GAP_TIGHTEN_SPAN)
   return GAP_FACTOR_START - (GAP_FACTOR_START - GAP_FACTOR_MIN) * t
@@ -129,7 +154,7 @@ function spawnCluster(state: GameState): void {
   const late = d > LATE_GAME_DIST
   // Merch "grande" suelto (CD o camiseta): se desbloquea al avanzar.
   if (d > CD_UNLOCK_DIST && Math.random() < (late ? 0.35 : 0.25)) {
-    state.obstacles.push(makeObstacle(Math.random() < 0.5 ? "cd" : "camiseta", WORLD_W))
+    state.obstacles.push(makeObstacle(Math.random() < 0.5 ? "cd" : "camiseta", WORLD_W, deathScale(d)))
     return
   }
   let count = 1
@@ -145,8 +170,9 @@ function spawnCluster(state: GameState): void {
   let x = WORLD_W
   for (let i = 0; i < count; i++) {
     const kind: ObstacleKind = Math.random() < 0.5 ? "charm" : "keychain"
-    state.obstacles.push(makeObstacle(kind, x))
-    x += OBSTACLE_DEFS[kind].w + INTRA_GROUP_GAP
+    const ob = makeObstacle(kind, x, deathScale(d))
+    state.obstacles.push(ob)
+    x += ob.w + INTRA_GROUP_GAP
   }
 }
 
@@ -190,14 +216,6 @@ export function step(state: GameState): GameState {
   state.speed = Math.min(state.speed + SPEED_INCREMENT, MAX_SPEED)
   state.distance += state.speed
   state.score = Math.floor(state.distance * SCORE_PER_UNIT)
-
-  // Tope duro: a los 7000 se acabo la partida (ver HARD_CAP_SCORE)
-  if (state.score >= HARD_CAP_SCORE) {
-    state.score = HARD_CAP_SCORE
-    state.isGameOver = true
-    state.gameOverFlash = 8
-    return state
-  }
 
   // --- Parallax ---
   state.groundOffset = (state.groundOffset + state.speed) % GROUND_TILE

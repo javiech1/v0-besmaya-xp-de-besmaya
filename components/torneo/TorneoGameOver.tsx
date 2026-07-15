@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { validateAlias } from "@/lib/torneo/validation"
-import { HARD_CAP_SCORE } from "@/lib/torneo/gameEngine"
+import { DEATH_RAMP_SCORE } from "@/lib/torneo/gameEngine"
 import type { RankingEntry, SubmitScoreResponse } from "@/lib/torneo/types"
 
 interface TorneoGameOverProps {
@@ -94,10 +94,10 @@ export function TorneoGameOver({ score, onPlayAgain }: TorneoGameOverProps) {
         </div>
 
         <p className="text-xs text-center" style={{ color: "#333" }}>
-          {score >= HARD_CAP_SCORE ? (
+          {score >= DEATH_RAMP_SCORE ? (
             <>
-              Has <strong>REVENTADO</strong> el juego: {HARD_CAP_SCORE.toLocaleString()} puntos, el
-              máximo posible.
+              Has sobrevivido hasta la <strong>zona imposible</strong> ({score.toLocaleString()}{" "}
+              puntos). Nadie llega tan lejos.
             </>
           ) : (
             <>
