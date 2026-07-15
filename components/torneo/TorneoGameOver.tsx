@@ -1,9 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { aliasSchema, type AliasInput } from "@/lib/torneo/validation"
+import { validateAlias } from "@/lib/torneo/validation"
 import type { RankingEntry, SubmitScoreResponse } from "@/lib/torneo/types"
 
 interface TorneoGameOverProps {
@@ -26,23 +24,24 @@ export function TorneoGameOver({ score, onPlayAgain }: TorneoGameOverProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState("")
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<AliasInput>({
-    resolver: zodResolver(aliasSchema),
-    defaultValues: { alias: "" },
-  })
+  const [aliasValue, setAliasValue] = useState("")
+  const [aliasError, setAliasError] = useState("")
 
-  const onSubmit = async (data: AliasInput) => {
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const { alias, error } = validateAlias(aliasValue)
+    if (!alias) {
+      setAliasError(error || "Datos inválidos")
+      return
+    }
+    setAliasError("")
     setIsSubmitting(true)
     setSubmitError("")
     try {
       const res = await fetch("/api/torneo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ alias: data.alias.trim(), score }),
+        body: JSON.stringify({ alias, score }),
       })
       const json: SubmitScoreResponse = await res.json()
       if (!res.ok) {
@@ -54,7 +53,7 @@ export function TorneoGameOver({ score, onPlayAgain }: TorneoGameOverProps) {
       setIsChampion(!!json.isChampion)
       setMerchCode(json.merchCode || "")
       setStoreUrl(json.storeUrl || "")
-      setSubmittedAlias(data.alias.trim())
+      setSubmittedAlias(alias)
       setPhase("result")
     } catch {
       setSubmitError("Error de conexión. Intenta de nuevo.")
@@ -262,16 +261,17 @@ export function TorneoGameOver({ score, onPlayAgain }: TorneoGameOverProps) {
         Pon tu nombre para entrar en el ranking:
       </p>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="w-full flex flex-col gap-2">
+      <form onSubmit={onSubmit} className="w-full flex flex-col gap-2">
         <input
           type="text"
-          {...register("alias")}
+          value={aliasValue}
+          onChange={(e) => setAliasValue(e.target.value)}
           maxLength={20}
           placeholder="Tu nombre..."
           autoFocus
           className="w-full px-2 py-1 border"
           style={{
-            borderColor: errors.alias ? "#D4380A" : "#7B9EBD",
+            borderColor: aliasError ? "#D4380A" : "#7B9EBD",
             borderWidth: "2px",
             borderStyle: "inset",
             background: "#fff",
@@ -280,9 +280,9 @@ export function TorneoGameOver({ score, onPlayAgain }: TorneoGameOverProps) {
             fontSize: 16, // >=16px evita el auto-zoom de iOS
           }}
         />
-        {errors.alias && (
+        {aliasError && (
           <p className="text-xs" style={{ color: "#D4380A" }}>
-            {errors.alias.message}
+            {aliasError}
           </p>
         )}
         {submitError && (

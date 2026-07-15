@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { randomUUID } from "crypto"
 import { createClient } from "@supabase/supabase-js"
-import { scoreSubmissionSchema } from "@/lib/torneo/validation"
+import { parseScoreSubmission } from "@/lib/torneo/validation"
 import type { RankingEntry } from "@/lib/torneo/types"
 
 export const dynamic = "force-dynamic"
@@ -62,12 +62,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Petición inválida" }, { status: 400 })
   }
 
-  const parsed = scoreSubmissionSchema.safeParse(body)
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.errors[0]?.message || "Datos inválidos" },
-      { status: 400 },
-    )
+  const parsed = parseScoreSubmission(body)
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: 400 })
   }
 
   const { alias, score } = parsed.data
