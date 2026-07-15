@@ -190,12 +190,16 @@ export function TorneoGameOver({ score, onPlayAgain }: TorneoGameOverProps) {
 
         <p className="text-xs text-center" style={{ color: "#333" }}>
           Eres el <strong>nº {playerRank}</strong> con {score.toLocaleString()} puntos.
-          {topScore > 0 && (
-            <>
-              <br />
-              El nº1 tiene <strong>{topScore.toLocaleString()}</strong>. ¡Supéralo para ganar el
-              código de descuento!
-            </>
+          <br />
+          {playerRank === 1 ? (
+            <>Ya eres el nº1. Aguanta ahí: quien te destrone se lleva el código de descuento.</>
+          ) : (
+            topScore > 0 && (
+              <>
+                El nº1 tiene <strong>{topScore.toLocaleString()}</strong>. ¡Supéralo para ganar el
+                código de descuento!
+              </>
+            )
           )}
         </p>
 
