@@ -24,11 +24,20 @@ const SCORE_PER_UNIT = 0.1
 
 // ---- Spawn de obstaculos ----
 const SAFE_GAP_FACTOR = 1.15
-const GAP_RANDOM_RANGE = 140
+const GAP_RANDOM_RANGE = 220
 // Duracion (en steps) de un salto completo: subida + bajada.
 const JUMP_DURATION_STEPS = (2 * Math.abs(JUMP_VY)) / GRAVITY // ~37
 const JUMP_BUFFER_STEPS = 6
-const WALLET_UNLOCK_DIST = 1600
+// Desbloqueo progresivo: primero llaveros sueltos, luego parejas, luego
+// tríos y el CD. Los grupos rompen el ritmo fijo de "un salto por obstaculo".
+const PAIR_UNLOCK_DIST = 700
+const TRIPLE_UNLOCK_DIST = 1400
+const CD_UNLOCK_DIST = 1600
+// Separacion entre piezas de un grupo (se salta el grupo entero de una vez).
+// Jugabilidad: el trio mas ancho (3x14 + 2x7 = 56u) + jugador (22u) cabe de
+// sobra en el tramo del salto que libra 50u de altura (~72u a velocidad base,
+// ~85u a la velocidad tipica de cuando se desbloquea).
+const INTRA_GROUP_GAP = 7
 
 // ---- Colision (hitbox un poco mas pequena que el sprite: perdon-friendly) ----
 const PLAYER_HITBOX_INSET = 4
@@ -46,9 +55,9 @@ interface ObstacleDef {
 // Dimensiones (mundo) ajustadas al aspecto de cada sprite de merch, con alturas
 // siempre saltables (apex del salto ~78u libra cualquier top >= ~92u).
 const OBSTACLE_DEFS: Record<ObstacleKind, ObstacleDef> = {
-  charm: { w: 14, h: 48, yOffset: 0 },     // figura amarilla de Nadie (alto/fino)
-  keychain: { w: 12, h: 50, yOffset: 0 },  // llavero besmaya (alto/fino)
-  wallet: { w: 60, h: 34, yOffset: 0 },    // cartera + llavero (ancho/bajo)
+  charm: { w: 14, h: 48, yOffset: 0 },     // Llavero Nadie (figura amarilla, alto/fino)
+  keychain: { w: 12, h: 50, yOffset: 0 },  // Llavero Logo besmaya (alto/fino)
+  cd: { w: 46, h: 42, yOffset: 0 },        // CD "La vida de Nadie" (disco, mas ancho)
 }
 
 export function createInitialState(): GameState {
@@ -86,10 +95,30 @@ function randomGap(speed: number): number {
   return minGap(speed) + Math.random() * GAP_RANDOM_RANGE
 }
 
-function pickKind(distance: number): ObstacleKind {
-  // La cartera (ancha, mas dificil) se desbloquea al avanzar.
-  if (distance > WALLET_UNLOCK_DIST && Math.random() < 0.3) return "wallet"
-  return Math.random() < 0.5 ? "charm" : "keychain"
+/**
+ * Encola un "cluster" de obstaculos: el CD suelto, o 1-3 llaveros seguidos.
+ * Los grupos se saltan enteros de una vez (ver INTRA_GROUP_GAP arriba).
+ */
+function spawnCluster(state: GameState): void {
+  const d = state.distance
+  // CD suelto (mas ancho): se desbloquea al avanzar.
+  if (d > CD_UNLOCK_DIST && Math.random() < 0.25) {
+    state.obstacles.push(makeObstacle("cd", WORLD_W))
+    return
+  }
+  let count = 1
+  if (d > TRIPLE_UNLOCK_DIST) {
+    const r = Math.random()
+    count = r < 0.5 ? 1 : r < 0.82 ? 2 : 3
+  } else if (d > PAIR_UNLOCK_DIST) {
+    count = Math.random() < 0.65 ? 1 : 2
+  }
+  let x = WORLD_W
+  for (let i = 0; i < count; i++) {
+    const kind: ObstacleKind = Math.random() < 0.5 ? "charm" : "keychain"
+    state.obstacles.push(makeObstacle(kind, x))
+    x += OBSTACLE_DEFS[kind].w + INTRA_GROUP_GAP
+  }
 }
 
 function collides(state: GameState): boolean {
@@ -170,7 +199,7 @@ export function step(state: GameState): GameState {
   // --- Spawn por separacion (gap fijado una vez por spawn, no por frame) ---
   const last = obs.length > 0 ? obs[obs.length - 1] : null
   if (!last || last.x + last.w < WORLD_W - state.nextGap) {
-    obs.push(makeObstacle(pickKind(state.distance), WORLD_W))
+    spawnCluster(state)
     state.nextGap = randomGap(state.speed)
   }
 

@@ -4,7 +4,7 @@ import type { ObstacleKind } from "./types"
 const SOURCES: Record<ObstacleKind, string> = {
   charm: "/torneo/charm.png",
   keychain: "/torneo/keychain.png",
-  wallet: "/torneo/wallet.png",
+  cd: "/torneo/cd.png",
 }
 
 const cache: Partial<Record<ObstacleKind, HTMLImageElement>> = {}
