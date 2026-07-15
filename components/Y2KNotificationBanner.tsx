@@ -47,6 +47,7 @@ export function Y2KNotificationBanner({ onOpenMuro, onDismiss }: Y2KNotification
     setTimeout(() => {
       setVisible(false)
       setDismissed(true)
+      setSliding("idle")
     }, 350)
   }, [onDismiss])
 

@@ -49,6 +49,7 @@ export function AlbumNotificationBanner({ nadieVisible, onDismiss }: AlbumNotifi
     setTimeout(() => {
       setVisible(false)
       setDismissed(true)
+      setSliding("idle")
     }, 350)
   }, [onDismiss])
 

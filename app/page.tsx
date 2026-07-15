@@ -1269,35 +1269,39 @@ export default function BesmayaDesktop() {
         </div>
       )}
 
-      <Y2KNotificationBanner
-        onOpenMuro={handleOpenMuroFromNotification}
-        onDismiss={handleNadieDismiss}
-      />
-      {/* El torneo ocupa el slot del album mientras este visible; el del album
-          espera su turno (en movil) para no apilar cuatro notificaciones */}
-      <TorneoNotificationBanner
-        nadieVisible={nadieNotificationVisible}
-        onOpenTorneo={handleOpenTorneoFromNotification}
-        onDismiss={handleTorneoDismiss}
-      />
-      {!isDesktop && !torneoNotificationVisible && (
-        <AlbumNotificationBanner
-          nadieVisible={nadieNotificationVisible}
-          onDismiss={handleAlbumDismiss}
+      {/* La pila flex coloca las tarjetas por altura real (los props de
+          visibilidad ya no posicionan, pero siguen controlando el orden) */}
+      <div className="y2k-notification-stack">
+        <Y2KNotificationBanner
+          onOpenMuro={handleOpenMuroFromNotification}
+          onDismiss={handleNadieDismiss}
         />
-      )}
-      {!isDesktop && isWinterTourReleased ? (
-        <WinterTourNotificationBanner
+        {/* El torneo ocupa el slot del album mientras este visible; el del album
+            espera su turno (en movil) para no apilar cuatro notificaciones */}
+        <TorneoNotificationBanner
           nadieVisible={nadieNotificationVisible}
-          albumVisible={torneoNotificationVisible || albumNotificationVisible}
+          onOpenTorneo={handleOpenTorneoFromNotification}
+          onDismiss={handleTorneoDismiss}
         />
-      ) : (
-        <ConcertNotificationBanner
-          nadieVisible={nadieNotificationVisible}
-          albumVisible={torneoNotificationVisible || (!isDesktop && albumNotificationVisible)}
-          isMobile={!isDesktop}
-        />
-      )}
+        {!isDesktop && !torneoNotificationVisible && (
+          <AlbumNotificationBanner
+            nadieVisible={nadieNotificationVisible}
+            onDismiss={handleAlbumDismiss}
+          />
+        )}
+        {!isDesktop && isWinterTourReleased ? (
+          <WinterTourNotificationBanner
+            nadieVisible={nadieNotificationVisible}
+            albumVisible={torneoNotificationVisible || albumNotificationVisible}
+          />
+        ) : (
+          <ConcertNotificationBanner
+            nadieVisible={nadieNotificationVisible}
+            albumVisible={torneoNotificationVisible || (!isDesktop && albumNotificationVisible)}
+            isMobile={!isDesktop}
+          />
+        )}
+      </div>
 
       <Taskbar time={time} onStartClick={toggleStartMenu} showSocialLinks>
           {/* Indicadores de ventanas en móvil */}
