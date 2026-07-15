@@ -34,16 +34,27 @@ interface WindowState {
   isMinimized: boolean
   zIndex: number
   isInitial?: boolean
+  isMaximized?: boolean
+  // Geometria previa a maximizar, para restaurar
+  prevRect?: { x: number; y: number; width: number; height: number | "auto" }
 }
 
-interface DragState {
-  isDragging: boolean
+// "move" arrastra; el resto son las 8 asas de redimensionado (puntos cardinales)
+type InteractMode = "move" | "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw"
+
+interface InteractState {
+  mode: InteractMode | null
   windowId: string | null
   startX: number
   startY: number
-  startWindowX: number
-  startWindowY: number
+  // Geometria de la ventana al empezar (altura ya medida si era "auto")
+  startRect: { x: number; y: number; width: number; height: number }
 }
+
+const RESIZE_HANDLES: Exclude<InteractMode, "move">[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"]
+// En sintonia con el min-width/min-height de .window en globals.css
+const MIN_WINDOW_W = 300
+const MIN_WINDOW_H = 200
 
 // Altura del taskbar XP
 const TASKBAR_HEIGHT = 40
@@ -56,13 +67,12 @@ const WINTER_TOUR_RELEASE_AT = Date.parse("2026-05-21T12:00:00+02:00")
 
 export default function BesmayaDesktop() {
   const [windows, setWindows] = useState<WindowState[]>([])
-  const [dragState, setDragState] = useState<DragState>({
-    isDragging: false,
+  const [interact, setInteract] = useState<InteractState>({
+    mode: null,
     windowId: null,
     startX: 0,
     startY: 0,
-    startWindowX: 0,
-    startWindowY: 0,
+    startRect: { x: 0, y: 0, width: 0, height: 0 },
   })
   const time = useClock()
   const [nextZIndex, setNextZIndex] = useState(100)
@@ -235,6 +245,10 @@ export default function BesmayaDesktop() {
       const vh = window.innerHeight
 
       setWindows(prev => prev.map(w => {
+        // Las maximizadas siguen al viewport
+        if (w.isMaximized) {
+          return { ...w, x: 0, y: 0, width: vw, height: vh - TASKBAR_HEIGHT }
+        }
         const windowHeight = typeof w.height === "number" ? w.height : 400
         const maxX = Math.max(0, vw - w.width)
         const maxY = Math.max(0, vh - windowHeight - TASKBAR_HEIGHT)
@@ -310,53 +324,100 @@ export default function BesmayaDesktop() {
   }, [isDesktop, isDesktopDetermined, initialWindowsCreated])
 
   useEffect(() => {
-    // Un update por frame como maximo: los ratones modernos disparan mousemove
-    // a 120+/s y cada uno provocaba un setState (jank al arrastrar)
+    // Mover y redimensionar comparten bucle. Un update por frame como maximo:
+    // los ratones modernos disparan pointermove a 120+/s y cada uno provocaba
+    // un setState (jank al arrastrar).
     let rafId: number | null = null
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!dragState.isDragging || !dragState.windowId) return
+    const handlePointerMove = (e: PointerEvent) => {
+      const mode = interact.mode
+      if (!mode || !interact.windowId) return
 
       const clientX = e.clientX
       const clientY = e.clientY
       if (rafId !== null) return
       rafId = requestAnimationFrame(() => {
         rafId = null
-        const deltaX = clientX - dragState.startX
-        const deltaY = clientY - dragState.startY
+        const dx = clientX - interact.startX
+        const dy = clientY - interact.startY
+        const { startRect } = interact
+        const vw = window.innerWidth
+        const vh = window.innerHeight - TASKBAR_HEIGHT
 
         setWindows((prev) =>
-          prev.map((windowItem) =>
-            windowItem.id === dragState.windowId
-              ? {
-                  ...windowItem,
-                  x: Math.max(0, Math.min(window.innerWidth - windowItem.width, dragState.startWindowX + deltaX)),
-                  y: Math.max(0, Math.min(window.innerHeight - (typeof windowItem.height === "number" ? windowItem.height : 600) - TASKBAR_HEIGHT, dragState.startWindowY + deltaY)),
-                }
-              : windowItem,
-          ),
+          prev.map((w) => {
+            if (w.id !== interact.windowId) return w
+
+            if (mode === "move") {
+              const h = typeof w.height === "number" ? w.height : startRect.height
+              return {
+                ...w,
+                x: Math.max(0, Math.min(vw - w.width, startRect.x + dx)),
+                y: Math.max(0, Math.min(vh - h, startRect.y + dy)),
+              }
+            }
+
+            // Redimensionado: cada borde mueve su lado; el opuesto queda fijo.
+            let { x, y, width, height } = startRect
+            if (mode.includes("e")) width = startRect.width + dx
+            if (mode.includes("s")) height = startRect.height + dy
+            if (mode.includes("w")) {
+              width = startRect.width - dx
+              x = startRect.x + dx
+            }
+            if (mode.includes("n")) {
+              height = startRect.height - dy
+              y = startRect.y + dy
+            }
+
+            // Minimos: el lado que se esta moviendo cede, el fijo no se toca
+            if (width < MIN_WINDOW_W) {
+              if (mode.includes("w")) x -= MIN_WINDOW_W - width
+              width = MIN_WINDOW_W
+            }
+            if (height < MIN_WINDOW_H) {
+              if (mode.includes("n")) y -= MIN_WINDOW_H - height
+              height = MIN_WINDOW_H
+            }
+
+            // Clamp al viewport (sin empujar el lado fijo)
+            if (x < 0) {
+              width += x
+              x = 0
+            }
+            if (y < 0) {
+              height += y
+              y = 0
+            }
+            width = Math.min(width, vw - x)
+            height = Math.min(height, vh - y)
+
+            return { ...w, x, y, width, height }
+          }),
         )
       })
     }
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       if (rafId !== null) {
         cancelAnimationFrame(rafId)
         rafId = null
       }
-      setDragState((prev) => ({ ...prev, isDragging: false, windowId: null }))
+      setInteract((prev) => ({ ...prev, mode: null, windowId: null }))
     }
 
-    if (dragState.isDragging) {
-      document.addEventListener("mousemove", handleMouseMove)
-      document.addEventListener("mouseup", handleMouseUp)
+    if (interact.mode) {
+      document.addEventListener("pointermove", handlePointerMove)
+      document.addEventListener("pointerup", handlePointerUp)
+      document.addEventListener("pointercancel", handlePointerUp)
     }
 
     return () => {
       if (rafId !== null) cancelAnimationFrame(rafId)
-      document.removeEventListener("mousemove", handleMouseMove)
-      document.removeEventListener("mouseup", handleMouseUp)
+      document.removeEventListener("pointermove", handlePointerMove)
+      document.removeEventListener("pointerup", handlePointerUp)
+      document.removeEventListener("pointercancel", handlePointerUp)
     }
-  }, [dragState])
+  }, [interact])
 
   useEffect(() => {
     // Wait until isDesktop has been properly determined
@@ -694,21 +755,63 @@ export default function BesmayaDesktop() {
     setNextZIndex((prev) => prev + 1)
   }, [nextZIndex])
 
-  const startDrag = (e: React.MouseEvent, windowId: string) => {
-    // Desactivar drag en móvil - las ventanas son fullscreen
+  const startInteraction = (e: React.PointerEvent, windowId: string, mode: InteractMode) => {
+    // En móvil las ventanas son fullscreen: ni drag ni resize
     if (!isDesktop) return
+    // Solo boton principal / toque
+    if (e.button !== 0) return
 
     const windowItem = windows.find((w) => w.id === windowId)
-    if (!windowItem) return
+    if (!windowItem || windowItem.isMaximized) return
 
-    setDragState({
-      isDragging: true,
+    // Altura "auto": medirla del DOM. Para redimensionar hace falta un numero
+    // concreto en el estado; para mover basta con conocerla para el clamp.
+    const el = (e.currentTarget as HTMLElement).closest(".window") as HTMLElement | null
+    const measuredH = typeof windowItem.height === "number" ? windowItem.height : (el?.offsetHeight ?? 400)
+    if (mode !== "move" && typeof windowItem.height !== "number") {
+      setWindows((prev) => prev.map((w) => (w.id === windowId ? { ...w, height: measuredH } : w)))
+    }
+
+    e.preventDefault()
+    setInteract({
+      mode,
       windowId,
       startX: e.clientX,
       startY: e.clientY,
-      startWindowX: windowItem.x,
-      startWindowY: windowItem.y,
+      startRect: { x: windowItem.x, y: windowItem.y, width: windowItem.width, height: measuredH },
     })
+    focusWindow(windowId)
+  }
+
+  const toggleMaximize = (windowId: string) => {
+    if (!isDesktop) return
+    setWindows((prev) =>
+      prev.map((w) => {
+        if (w.id !== windowId) return w
+        if (w.isMaximized) {
+          // Restaurar geometria previa
+          const r = w.prevRect
+          return {
+            ...w,
+            isMaximized: false,
+            x: r?.x ?? w.x,
+            y: r?.y ?? w.y,
+            width: r?.width ?? w.width,
+            height: r?.height ?? w.height,
+            prevRect: undefined,
+          }
+        }
+        return {
+          ...w,
+          isMaximized: true,
+          prevRect: { x: w.x, y: w.y, width: w.width, height: w.height },
+          x: 0,
+          y: 0,
+          width: window.innerWidth,
+          height: window.innerHeight - TASKBAR_HEIGHT,
+        }
+      }),
+    )
     focusWindow(windowId)
   }
 
@@ -1009,7 +1112,7 @@ export default function BesmayaDesktop() {
         .map((windowItem) => (
           <div
             key={windowItem.id}
-            className={`window ${!isDesktop ? (windowItem.isInitial ? `mobile-window-initial mobile-window-${windowItem.id}` : 'mobile-window') : ''}`}
+            className={`window ${windowItem.isMaximized ? 'maximized' : ''} ${!isDesktop ? (windowItem.isInitial ? `mobile-window-initial mobile-window-${windowItem.id}` : 'mobile-window') : ''}`}
             style={isDesktop ? {
               left: windowItem.x,
               top: windowItem.y,
@@ -1025,19 +1128,44 @@ export default function BesmayaDesktop() {
           >
             <div
               className="window-header flex items-center justify-between"
-              onMouseDown={(e) => startDrag(e, windowItem.id)}
+              onPointerDown={(e) => startInteraction(e, windowItem.id, "move")}
+              onDoubleClick={(e) => {
+                // Doble clic en la barra (no en los botones) maximiza/restaura
+                if ((e.target as HTMLElement).closest(".window-controls")) return
+                toggleMaximize(windowItem.id)
+              }}
             >
               <span className="window-title flex-1 truncate pr-2">{windowItem.title}</span>
-              <div className="window-controls flex-shrink-0">
+              <div className="window-controls flex-shrink-0" onPointerDown={(e) => e.stopPropagation()}>
                 <button className="window-control minimize" onClick={() => minimizeWindow(windowItem.id)}>
                   −
                 </button>
+                {isDesktop && (
+                  <button
+                    className="window-control maximize"
+                    title={windowItem.isMaximized ? "Restaurar" : "Maximizar"}
+                    onClick={() => toggleMaximize(windowItem.id)}
+                  >
+                    {windowItem.isMaximized ? "❐" : "□"}
+                  </button>
+                )}
                 <button className="window-control close" onClick={() => closeWindow(windowItem.id)}>
                   ×
                 </button>
               </div>
             </div>
             <div className={windowItem.id === "musica" ? "window-content-musica" : "window-content"}>{windowItem.content}</div>
+            {isDesktop && !windowItem.isMaximized &&
+              RESIZE_HANDLES.map((dir) => (
+                <div
+                  key={dir}
+                  className={`resize-handle resize-${dir}`}
+                  onPointerDown={(e) => {
+                    e.stopPropagation()
+                    startInteraction(e, windowItem.id, dir)
+                  }}
+                />
+              ))}
           </div>
         ))}
 

@@ -1924,3 +1924,33 @@ body {
     box-shadow: inset 0 0 0 2px rgba(196, 164, 60, 0);
   }
 }
+
+/* ---- Gestor de ventanas: redimensionado y maximizar (solo desktop) ---- */
+
+/* Asas invisibles en bordes y esquinas. Las esquinas van despues (encima). */
+.resize-handle {
+  position: absolute;
+  z-index: 10;
+  touch-action: none;
+}
+.resize-n  { top: -3px; left: 8px; right: 8px; height: 7px; cursor: ns-resize; }
+.resize-s  { bottom: -3px; left: 8px; right: 8px; height: 7px; cursor: ns-resize; }
+.resize-e  { right: -3px; top: 8px; bottom: 8px; width: 7px; cursor: ew-resize; }
+.resize-w  { left: -3px; top: 8px; bottom: 8px; width: 7px; cursor: ew-resize; }
+.resize-ne { top: -3px; right: -3px; width: 14px; height: 14px; cursor: nesw-resize; }
+.resize-nw { top: -3px; left: -3px; width: 14px; height: 14px; cursor: nwse-resize; }
+.resize-se { bottom: -3px; right: -3px; width: 14px; height: 14px; cursor: nwse-resize; }
+.resize-sw { bottom: -3px; left: -3px; width: 14px; height: 14px; cursor: nesw-resize; }
+
+/* Arrastre de titulo sin seleccion de texto ni gestos tactiles del navegador */
+.window-header {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Ventana maximizada: sin radios, ocupa el escritorio completo */
+.window.maximized {
+  border-radius: 0;
+  max-height: none;
+}
