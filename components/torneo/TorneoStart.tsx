@@ -32,7 +32,7 @@ export function TorneoStart({ onStart, initialRanking }: TorneoStartProps) {
       <div className="w-full text-xs text-center px-2" style={{ color: "#333" }}>
         Nadie corre sin parar. <strong>Salta</strong> los obstáculos y llega lo más lejos posible.
         <br />
-        Quien <strong>destrone al nº1</strong> gana un código de descuento de merch.
+        Llega a <strong>1.000 puntos</strong> y gana un código de descuento de merch.
       </div>
 
       {/* Controls hint */}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { randomUUID } from "crypto"
 import { createClient } from "@supabase/supabase-js"
 import { parseScoreSubmission } from "@/lib/torneo/validation"
+import { TORNEO_CODE_SCORE } from "@/lib/torneo/gameEngine"
 import type { RankingEntry } from "@/lib/torneo/types"
 
 export const dynamic = "force-dynamic"
@@ -70,17 +71,9 @@ export async function POST(request: Request) {
   const { alias, score } = parsed.data
   const supabase = getServiceSupabase()
 
-  // Mejor puntuacion actual (el nº1 a destronar)
-  const { data: topRow } = await supabase
-    .from("game_scores")
-    .select("score")
-    .order("score", { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  const currentMax: number | null = topRow ? (topRow.score as number) : null
-  // Ganador = destrona al nº1 (estrictamente mayor). Tablero vacio NO premia.
-  const isChampion = currentMax !== null && score > currentMax
+  // Ganador = alcanzar el umbral de puntos. Regla simple y predecible:
+  // no depende de quien sea el nº1 ni de cuando juegues.
+  const isChampion = score >= TORNEO_CODE_SCORE
 
   // El esquema heredado de game_scores exige email NOT NULL UNIQUE. Insertamos un
   // email sintético único para que el guardado funcione sobre el esquema ACTUAL,

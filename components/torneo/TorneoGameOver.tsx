@@ -89,11 +89,11 @@ export function TorneoGameOver({ score, onPlayAgain }: TorneoGameOverProps) {
             textShadow: "0 1px 0 rgba(255,255,255,0.4)",
           }}
         >
-          👑 ¡Has destronado al nº1!
+          👑 ¡{score.toLocaleString()} puntos!
         </div>
 
         <p className="text-xs text-center" style={{ color: "#333" }}>
-          Eres el nuevo número uno con <strong>{score.toLocaleString()}</strong> puntos.
+          Has superado los <strong>1.000 puntos</strong>.
           <br />
           Aquí tienes tu código de descuento para la tienda:
         </p>
@@ -169,7 +169,6 @@ export function TorneoGameOver({ score, onPlayAgain }: TorneoGameOverProps) {
 
   // ---------------- RESULT: NO CAMPEÓN ----------------
   if (phase === "result") {
-    const topScore = ranking[0]?.score ?? 0
     const inTop10 = playerRank > 0 && playerRank <= 10
     return (
       <div
@@ -191,16 +190,8 @@ export function TorneoGameOver({ score, onPlayAgain }: TorneoGameOverProps) {
         <p className="text-xs text-center" style={{ color: "#333" }}>
           Eres el <strong>nº {playerRank}</strong> con {score.toLocaleString()} puntos.
           <br />
-          {playerRank === 1 ? (
-            <>Ya eres el nº1. Aguanta ahí: quien te destrone se lleva el código de descuento.</>
-          ) : (
-            topScore > 0 && (
-              <>
-                El nº1 tiene <strong>{topScore.toLocaleString()}</strong>. ¡Supéralo para ganar el
-                código de descuento!
-              </>
-            )
-          )}
+          A los <strong>1.000 puntos</strong> cae el código de descuento. ¡Te quedan{" "}
+          {(1000 - score).toLocaleString()}!
         </p>
 
         <RankingTable
