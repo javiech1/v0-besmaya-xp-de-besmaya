@@ -9,7 +9,11 @@ export const PLAYER_W = 22
 export const PLAYER_H = 34
 
 export const FIXED_DT = 1000 / 60
-export const MAX_PLAUSIBLE_SCORE = 100000
+// Tope duro del torneo: a los 7000 puntos la partida termina si o si.
+// Doble funcion: nadie se eterniza jugando, y el server puede rechazar
+// como imposible cualquier score por encima (anti-trampas).
+export const HARD_CAP_SCORE = 7000
+export const MAX_PLAUSIBLE_SCORE = HARD_CAP_SCORE
 
 // ---- Fisica del salto ----
 const GRAVITY = 0.45
@@ -186,6 +190,14 @@ export function step(state: GameState): GameState {
   state.speed = Math.min(state.speed + SPEED_INCREMENT, MAX_SPEED)
   state.distance += state.speed
   state.score = Math.floor(state.distance * SCORE_PER_UNIT)
+
+  // Tope duro: a los 7000 se acabo la partida (ver HARD_CAP_SCORE)
+  if (state.score >= HARD_CAP_SCORE) {
+    state.score = HARD_CAP_SCORE
+    state.isGameOver = true
+    state.gameOverFlash = 8
+    return state
+  }
 
   // --- Parallax ---
   state.groundOffset = (state.groundOffset + state.speed) % GROUND_TILE

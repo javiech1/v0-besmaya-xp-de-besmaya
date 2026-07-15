@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { validateAlias } from "@/lib/torneo/validation"
+import { HARD_CAP_SCORE } from "@/lib/torneo/gameEngine"
 import type { RankingEntry, SubmitScoreResponse } from "@/lib/torneo/types"
 
 interface TorneoGameOverProps {
@@ -93,7 +94,16 @@ export function TorneoGameOver({ score, onPlayAgain }: TorneoGameOverProps) {
         </div>
 
         <p className="text-xs text-center" style={{ color: "#333" }}>
-          Has superado los <strong>1.000 puntos</strong>.
+          {score >= HARD_CAP_SCORE ? (
+            <>
+              Has <strong>REVENTADO</strong> el juego: {HARD_CAP_SCORE.toLocaleString()} puntos, el
+              máximo posible.
+            </>
+          ) : (
+            <>
+              Has superado los <strong>1.000 puntos</strong>.
+            </>
+          )}
           <br />
           Aquí tienes tu código de descuento para la tienda:
         </p>
