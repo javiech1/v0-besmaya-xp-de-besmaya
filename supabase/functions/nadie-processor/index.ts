@@ -235,12 +235,16 @@ async function callAnthropicBatch(
   recentMessages: RecentMessage[],
   dynamicContext: string,
   nadieLastReplies: string[],
+  userHistories: Map<string, string[]>,
   maxReplies: number,
   debug: CallDebug,
 ): Promise<BatchReply[]> {
   let userMessage = buildNowAndMood() + "\n\n"
   if (nadieLastReplies.length > 0) {
     userMessage += `Tus ultimas respuestas en el muro (PROHIBIDO repetir muletillas, arranques o estructuras de estas):\n${nadieLastReplies.map(r => `- ${r}`).join("\n")}\n\n`
+  }
+  for (const [username, lines] of userHistories) {
+    userMessage += `Historial previo con @${username} (interacciones pasadas, por si le reconoces; no lo recites, usalo con naturalidad):\n${lines.join("\n")}\n\n`
   }
   if (recentMessages.length > 0) {
     userMessage += `Conversacion reciente del muro (contexto, ya respondido):\n${recentMessages.map(m => `${m.is_nadie ? "Nadie" : m.username}: ${m.content}`).join("\n")}\n\n`
@@ -390,6 +394,55 @@ async function fetchContext(supabase: SupabaseClient) {
   return { recent, dynamicContext, nadieLastReplies }
 }
 
+// Memoria por usuario: Nadie recuerda interacciones pasadas de cada fan del batch.
+// Por cada username, sus mensajes anteriores + las respuestas que Nadie le dio,
+// mezclados por fecha y quitando lo que ya aparece en la conversacion reciente.
+const USER_HISTORY_MAX_USERS = 4
+const USER_HISTORY_PER_QUERY = 4
+const USER_HISTORY_MAX_LINES = 6
+
+async function fetchUserHistories(
+  supabase: SupabaseClient,
+  batch: PendingComment[],
+  recent: RecentMessage[],
+): Promise<Map<string, string[]>> {
+  const usernames = [...new Set(batch.map((m) => m.username))]
+    .filter((u) => u && u.toLowerCase() !== "nadie")
+    .slice(0, USER_HISTORY_MAX_USERS)
+  const histories = new Map<string, string[]>()
+  if (usernames.length === 0) return histories
+
+  const inRecent = new Set(recent.map((m) => `${m.username}|${m.content}`))
+  const batchIds = new Set(batch.map((m) => m.id))
+
+  await Promise.all(usernames.map(async (username) => {
+    const [userMsgsRes, nadieToUserRes] = await Promise.all([
+      supabase
+        .from("muro_comments")
+        .select("id, username, content, is_nadie, created_at")
+        .eq("username", username)
+        .eq("is_nadie", false)
+        .order("created_at", { ascending: false })
+        .limit(USER_HISTORY_PER_QUERY),
+      supabase
+        .from("muro_comments")
+        .select("id, username, content, is_nadie, created_at")
+        .eq("is_nadie", true)
+        .ilike("content", `@${username} %`)
+        .order("created_at", { ascending: false })
+        .limit(USER_HISTORY_PER_QUERY),
+    ])
+    type HistoryRow = { id: string; username: string; content: string; is_nadie: boolean; created_at: string }
+    const lines = ([...(userMsgsRes.data || []), ...(nadieToUserRes.data || [])] as HistoryRow[])
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      .filter((m) => !batchIds.has(m.id) && !inRecent.has(`${m.username}|${m.content}`))
+      .slice(-USER_HISTORY_MAX_LINES)
+      .map((m) => `${m.is_nadie ? "Nadie" : m.username}: ${m.content}`)
+    if (lines.length > 0) histories.set(username, lines)
+  }))
+  return histories
+}
+
 type Mode = "snappy" | "conversational" | "burst"
 
 type BatchOutcome = {
@@ -512,7 +565,8 @@ async function processBatch(
   }
 
   const { recent, dynamicContext, nadieLastReplies } = await fetchContext(supabase)
-  const replies = await callAnthropicBatch(apiKey, batch, recent, dynamicContext, nadieLastReplies, cfg.maxReplies, outcome.call)
+  const userHistories = await fetchUserHistories(supabase, batch, recent)
+  const replies = await callAnthropicBatch(apiKey, batch, recent, dynamicContext, nadieLastReplies, userHistories, cfg.maxReplies, outcome.call)
   outcome.replies = replies.length
   if (replies.length === 0) {
     console.log(`[Nadie] No replies for batch of ${batch.length} (mode=${mode})`)
