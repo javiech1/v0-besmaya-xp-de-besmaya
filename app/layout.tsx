@@ -7,6 +7,9 @@ import "./globals.css"
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // iOS Safari ignora maximumScale en gestos de pinch (desde iOS 10),
+  // pero lo respeta para el auto-zoom al enfocar inputs: lo anula sin romper accesibilidad
+  maximumScale: 1,
   interactiveWidget: 'resizes-content',
 }
 
