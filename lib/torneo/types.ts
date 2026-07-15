@@ -7,7 +7,7 @@ export interface RankingEntry {
 
 // ---- Motor 2D (side-scroller estilo Chrome-dino) ----
 // Los obstaculos son merch real de Besmaya (sprites recortados).
-export type ObstacleKind = "charm" | "keychain" | "cd"
+export type ObstacleKind = "charm" | "keychain" | "cd" | "camiseta"
 
 export interface Obstacle {
   x: number          // borde izquierdo, unidades de mundo

@@ -5,6 +5,7 @@ const SOURCES: Record<ObstacleKind, string> = {
   charm: "/torneo/charm.png",
   keychain: "/torneo/keychain.png",
   cd: "/torneo/cd.png",
+  camiseta: "/torneo/camiseta.png",
 }
 
 const cache: Partial<Record<ObstacleKind, HTMLImageElement>> = {}

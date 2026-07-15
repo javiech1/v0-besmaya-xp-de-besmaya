@@ -58,6 +58,7 @@ const OBSTACLE_DEFS: Record<ObstacleKind, ObstacleDef> = {
   charm: { w: 14, h: 48, yOffset: 0 },     // Llavero Nadie (figura amarilla, alto/fino)
   keychain: { w: 12, h: 50, yOffset: 0 },  // Llavero Logo besmaya (alto/fino)
   cd: { w: 46, h: 42, yOffset: 0 },        // CD "La vida de Nadie" (disco, mas ancho)
+  camiseta: { w: 42, h: 47, yOffset: 0 },  // Camiseta besmaya (ancha y alta, la mas grande)
 }
 
 export function createInitialState(): GameState {
@@ -101,9 +102,9 @@ function randomGap(speed: number): number {
  */
 function spawnCluster(state: GameState): void {
   const d = state.distance
-  // CD suelto (mas ancho): se desbloquea al avanzar.
+  // Merch "grande" suelto (CD o camiseta): se desbloquea al avanzar.
   if (d > CD_UNLOCK_DIST && Math.random() < 0.25) {
-    state.obstacles.push(makeObstacle("cd", WORLD_W))
+    state.obstacles.push(makeObstacle(Math.random() < 0.5 ? "cd" : "camiseta", WORLD_W))
     return
   }
   let count = 1
