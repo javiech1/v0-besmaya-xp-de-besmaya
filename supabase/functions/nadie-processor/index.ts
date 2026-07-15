@@ -173,12 +173,16 @@ function buildDynamicContext(concerts: Concert[] | null, festivals: Concert[] | 
 }
 
 // Moods diarios rotativos: deterministas por fecha (sin coste API), dan variedad dia a dia
+// OJO: los moods son adjetivos de TONO a secas, sin imagenes ni modismos.
+// El modelo convierte cualquier imagen literal en tematica de sus respuestas:
+// "con la cabeza en las nubes" acabo con 18 de 25 respuestas hablando de
+// flotar/nubes y un lore entero de ser volador.
 const NADIE_MOODS = [
   "melancolico pero tierno",
-  "con el humor seco a tope, mas ironico que nunca",
+  "ironico, con el humor mas seco que nunca",
   "filosofico, dandole vueltas a todo",
   "un poco mas borde de lo normal, pero con chispa",
-  "sonador, con la cabeza en las nubes",
+  "sonador y distraido",
   "cansado pero entranable",
   "gamberro, con ganas de vacilar",
 ]
@@ -196,7 +200,7 @@ function buildNowAndMood(): string {
   const madridDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid" }).format(now)
   const seed = madridDay.split("-").reduce((acc, part) => acc + parseInt(part, 10), 0)
   const mood = NADIE_MOODS[seed % NADIE_MOODS.length]
-  return `[Ahora mismo en Espana: ${fecha}. Tu mood de hoy: ${mood}. El mood se nota en el TONO de lo que escribes, NUNCA se dice: PROHIBIDO mencionarlo, parafrasearlo o aludir a el ("hoy ando espeso", "tengo poca paciencia", "con la cabeza en las nubes" = MAL). Nadie va contando su estado de animo a desconocidos]`
+  return `[Ahora mismo en Espana: ${fecha}. Tu mood de hoy: ${mood}. El mood SOLO cambia el tono de lo que escribes, NUNCA el tema: PROHIBIDO mencionarlo, parafrasearlo, o usar sus palabras e imagenes como material de tus respuestas ("hoy ando espeso", "tengo poca paciencia" = MAL; si el mood es sonador, sonar/flotar/nubes NO pueden aparecer en tus textos). Nadie va contando su estado de animo a desconocidos]`
 }
 
 type CallDebug = {
@@ -241,7 +245,7 @@ async function callAnthropicBatch(
 ): Promise<BatchReply[]> {
   let userMessage = buildNowAndMood() + "\n\n"
   if (nadieLastReplies.length > 0) {
-    userMessage += `Tus ultimas respuestas en el muro (PROHIBIDO repetir muletillas, arranques o estructuras de estas):\n${nadieLastReplies.map(r => `- ${r}`).join("\n")}\n\n`
+    userMessage += `Tus ultimas respuestas en el muro (PROHIBIDO repetir muletillas, arranques o estructuras de estas; y si un TEMA, imagen o metafora ya aparece en ellas, NO lo reutilices — cambia de tema aunque el fan te siga el rollo):\n${nadieLastReplies.map(r => `- ${r}`).join("\n")}\n\n`
   }
   for (const [username, lines] of userHistories) {
     userMessage += `Historial previo con @${username} (interacciones pasadas, por si le reconoces; no lo recites, usalo con naturalidad):\n${lines.join("\n")}\n\n`
