@@ -20,6 +20,8 @@ import { Screensaver } from "@/components/Screensaver"
 import { BSOD } from "@/components/BSOD"
 import { MiPCContent } from "@/components/windows/MiPCWindow"
 import { PapeleraContent } from "@/components/windows/PapeleraWindow"
+import dynamic from "next/dynamic"
+const TorneoContent = dynamic(() => import("@/components/windows/TorneoWindow").then(m => m.TorneoContent), { ssr: false })
 
 interface WindowState {
   id: string
@@ -94,6 +96,7 @@ export default function BesmayaDesktop() {
       "bio": { title: "Bio", content: <BioContent /> },
       "mi-pc": { title: "Mi PC", content: <MiPCContent /> },
       "papelera": { title: "Papelera de reciclaje", content: <PapeleraContent /> },
+      "torneo": { title: "Torneo de Nadie", content: <TorneoContent /> },
     }
     if (isWinterTourReleased) {
       meta["gira-invierno"] = { title: "La gira de invierno", content: <WinterTourContent /> }
@@ -641,6 +644,9 @@ export default function BesmayaDesktop() {
     } else if (id === "muro") {
       windowWidth = Math.min(400, vw * 0.45) * scale
       windowHeight = Math.min(500, vh * 0.65)
+    } else if (id === "torneo") {
+      windowWidth = Math.min(420, vw * 0.45) * scale
+      windowHeight = Math.min(560, vh * 0.72)
     } else {
       windowWidth = Math.min(600, vw * 0.6) * scale
       windowHeight = Math.min(400, vh * 0.55)
@@ -737,6 +743,9 @@ export default function BesmayaDesktop() {
       case "papelera":
         openWindow("papelera", "Papelera de reciclaje", <PapeleraContent />)
         break
+      case "torneo":
+        openWindow("torneo", "Torneo de Nadie", <TorneoContent />)
+        break
     }
     setSelectedIcon(null)
   }
@@ -769,9 +778,16 @@ export default function BesmayaDesktop() {
       if (vv) {
         document.documentElement.style.setProperty('--app-height', `${vv.height}px`)
         document.documentElement.style.setProperty('--app-offset-top', `${vv.offsetTop}px`)
+        // Teclado abierto: el visual viewport queda bastante mas bajo que el layout.
+        // La taskbar esta tapada por el teclado, asi que las ventanas no deben
+        // reservar su hueco (si no, queda una franja de escritorio entre la
+        // ventana y el teclado).
+        const kbOpen = vv.height < window.innerHeight - 100
+        document.documentElement.style.setProperty('--taskbar-visible', kbOpen ? '0' : '1')
       } else {
         document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`)
         document.documentElement.style.setProperty('--app-offset-top', '0px')
+        document.documentElement.style.setProperty('--taskbar-visible', '1')
       }
     }
     update()
@@ -952,6 +968,16 @@ export default function BesmayaDesktop() {
           </div>
           <span>Bio</span>
         </div>
+
+        <div
+          className={`desktop-icon ${selectedIcon === "torneo" ? "selected" : ""}`}
+          onClick={() => handleIconClick("torneo")}
+        >
+          <div className="desktop-icon-image-wrapper">
+            <img src="/icons/torneo.svg" alt="Torneo de Nadie" />
+          </div>
+          <span>Torneo de Nadie</span>
+        </div>
       </div>
 
       {/* Bottom-right desktop icons: Mi PC + Papelera */}
@@ -1059,6 +1085,17 @@ export default function BesmayaDesktop() {
               >
                 <img src="/icons/muro.svg" alt="El Muro" width={32} height={32} />
                 <span>El Muro de Nadie</span>
+              </div>
+
+              <div
+                className="start-menu-item flex items-center space-x-2 mb-2 cursor-pointer"
+                onClick={() => {
+                  openWindow("torneo", "Torneo de Nadie", <TorneoContent />)
+                  setIsStartMenuOpen(false)
+                }}
+              >
+                <img src="/icons/torneo.svg" alt="Torneo de Nadie" width={32} height={32} />
+                <span>Torneo de Nadie</span>
               </div>
 
               <div
