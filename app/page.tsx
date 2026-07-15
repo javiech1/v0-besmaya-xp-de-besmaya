@@ -778,9 +778,16 @@ export default function BesmayaDesktop() {
       if (vv) {
         document.documentElement.style.setProperty('--app-height', `${vv.height}px`)
         document.documentElement.style.setProperty('--app-offset-top', `${vv.offsetTop}px`)
+        // Teclado abierto: el visual viewport queda bastante mas bajo que el layout.
+        // La taskbar esta tapada por el teclado, asi que las ventanas no deben
+        // reservar su hueco (si no, queda una franja de escritorio entre la
+        // ventana y el teclado).
+        const kbOpen = vv.height < window.innerHeight - 100
+        document.documentElement.style.setProperty('--taskbar-visible', kbOpen ? '0' : '1')
       } else {
         document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`)
         document.documentElement.style.setProperty('--app-offset-top', '0px')
+        document.documentElement.style.setProperty('--taskbar-visible', '1')
       }
     }
     update()
