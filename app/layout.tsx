@@ -24,11 +24,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL
   return (
     <html lang="en">
-      <head>
-        <link href="https://fonts.googleapis.com/css2?family=Tahoma:wght@400;700&display=swap" rel="stylesheet" />
-      </head>
+      {supabaseOrigin && (
+        <head>
+          {/* El muro habla con Supabase (queries + Realtime) nada mas cargar: adelantar el handshake */}
+          <link rel="preconnect" href={supabaseOrigin} crossOrigin="anonymous" />
+        </head>
+      )}
+      {/* Tahoma es fuente de sistema: no existe en Google Fonts, el link solo bloqueaba el render */}
       <body style={{ fontFamily: "Tahoma, sans-serif" }}>
         <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
         <Analytics />
