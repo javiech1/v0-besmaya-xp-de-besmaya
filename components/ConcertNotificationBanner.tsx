@@ -198,6 +198,7 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
     setTimeout(() => {
       setVisible(false)
       setDismissed(true)
+      setSliding("idle")
     }, 350)
   }, [])
 

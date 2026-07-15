@@ -51,6 +51,7 @@ export function TorneoNotificationBanner({ nadieVisible, onOpenTorneo, onDismiss
     setTimeout(() => {
       setVisible(false)
       setDismissed(true)
+      setSliding("idle")
     }, 350)
   }, [onDismiss])
 

@@ -46,6 +46,7 @@ export function WinterTourNotificationBanner({
     setTimeout(() => {
       setVisible(false)
       setDismissed(true)
+      setSliding("idle")
     }, 350)
   }, [])
 
