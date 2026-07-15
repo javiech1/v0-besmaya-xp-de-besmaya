@@ -15,6 +15,7 @@ import { MuroContent } from "@/components/windows/MuroWindow"
 import { Y2KNotificationBanner } from "@/components/Y2KNotificationBanner"
 import { ConcertNotificationBanner } from "@/components/ConcertNotificationBanner"
 import { AlbumNotificationBanner } from "@/components/AlbumNotificationBanner"
+import { TorneoNotificationBanner } from "@/components/TorneoNotificationBanner"
 import { WinterTourNotificationBanner } from "@/components/WinterTourNotificationBanner"
 import { Screensaver } from "@/components/Screensaver"
 import { BSOD } from "@/components/BSOD"
@@ -87,6 +88,7 @@ export default function BesmayaDesktop() {
   const [initialWindowsCreated, setInitialWindowsCreated] = useState(false)
   const [nadieNotificationVisible, setNadieNotificationVisible] = useState(true)
   const [albumNotificationVisible, setAlbumNotificationVisible] = useState(true)
+  const [torneoNotificationVisible, setTorneoNotificationVisible] = useState(true)
   const [isScreensaverActive, setIsScreensaverActive] = useState(false)
   const [bsodTrigger, setBsodTrigger] = useState<string | null>(null)
   const [isWinterTourReleased, setIsWinterTourReleased] = useState(false)
@@ -869,6 +871,10 @@ export default function BesmayaDesktop() {
   }, [])
   const handleNadieDismiss = useCallback(() => setNadieNotificationVisible(false), [])
   const handleAlbumDismiss = useCallback(() => setAlbumNotificationVisible(false), [])
+  const handleTorneoDismiss = useCallback(() => setTorneoNotificationVisible(false), [])
+  const handleOpenTorneoFromNotification = useCallback(() => {
+    openWindowRef.current("torneo", "Torneo de Nadie", <TorneoContent />)
+  }, [])
 
 
   // Sync --app-height and --app-offset-top with visualViewport for mobile keyboard handling.
@@ -1267,7 +1273,14 @@ export default function BesmayaDesktop() {
         onOpenMuro={handleOpenMuroFromNotification}
         onDismiss={handleNadieDismiss}
       />
-      {!isDesktop && (
+      {/* El torneo ocupa el slot del album mientras este visible; el del album
+          espera su turno (en movil) para no apilar cuatro notificaciones */}
+      <TorneoNotificationBanner
+        nadieVisible={nadieNotificationVisible}
+        onOpenTorneo={handleOpenTorneoFromNotification}
+        onDismiss={handleTorneoDismiss}
+      />
+      {!isDesktop && !torneoNotificationVisible && (
         <AlbumNotificationBanner
           nadieVisible={nadieNotificationVisible}
           onDismiss={handleAlbumDismiss}
@@ -1276,12 +1289,12 @@ export default function BesmayaDesktop() {
       {!isDesktop && isWinterTourReleased ? (
         <WinterTourNotificationBanner
           nadieVisible={nadieNotificationVisible}
-          albumVisible={albumNotificationVisible}
+          albumVisible={torneoNotificationVisible || albumNotificationVisible}
         />
       ) : (
         <ConcertNotificationBanner
           nadieVisible={nadieNotificationVisible}
-          albumVisible={!isDesktop && albumNotificationVisible}
+          albumVisible={torneoNotificationVisible || (!isDesktop && albumNotificationVisible)}
           isMobile={!isDesktop}
         />
       )}
