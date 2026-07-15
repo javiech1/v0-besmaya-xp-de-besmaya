@@ -68,6 +68,22 @@ export async function POST(request: Request) {
 
   const trimmedContent = content.trim()
   const trimmedUsername = username?.trim() || ""
+
+  // Nadie puede hacerse pasar por los Javis: bloquear nombres que contengan
+  // "echa" u "ojan" (normalizado: sin tildes, sin separadores, minusculas,
+  // para pillar "O.j.a.n", "OJÁN", "j a v i ojan"...)
+  const normalizedName = trimmedUsername
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]/g, "")
+  if (normalizedName.includes("echa") || normalizedName.includes("ojan")) {
+    return NextResponse.json(
+      { error: "Ese nombre no está disponible, elige otro" },
+      { status: 400 }
+    )
+  }
+
   const needsUsername = trimmedUsername.length === 0
 
   let finalUsername = trimmedUsername || ("user" + Math.random().toString(36).slice(2, 6))
