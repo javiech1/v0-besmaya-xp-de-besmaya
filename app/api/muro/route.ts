@@ -77,7 +77,8 @@ export async function POST(request: Request) {
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]/g, "")
-  if (normalizedName.includes("echa") || normalizedName.includes("ojan")) {
+  // "nadie" solo como coincidencia exacta: "fandenadie" es fandom, no suplantacion
+  if (normalizedName.includes("echa") || normalizedName.includes("ojan") || normalizedName === "nadie") {
     return NextResponse.json(
       { error: "Ese nombre no está disponible, elige otro" },
       { status: 400 }
