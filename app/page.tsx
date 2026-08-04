@@ -227,6 +227,13 @@ export default function BesmayaDesktop() {
     }
   }, [])
 
+  // El icono y el menú Inicio navegan a /conciertos con router.push, que descarga
+  // el chunk al pulsar. En móvil no hay ventanas (WelcomePosterWindow, que ya usa
+  // <Link prefetch>, no se renderiza), así que sin esto no hay prefetch por ninguna vía.
+  useEffect(() => {
+    router.prefetch("/conciertos")
+  }, [router])
+
   // Persist open window IDs to sessionStorage so they survive navigation to /conciertos
   useEffect(() => {
     if (!initialWindowsCreated) return

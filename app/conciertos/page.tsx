@@ -205,50 +205,6 @@ export default function ConciertosPage() {
     router.push("/")
   }
 
-  if (isLoading) {
-    return (
-      <div className="h-screen w-screen relative overflow-hidden">
-        <img
-          src="/xp-bliss-custom.jpg"
-          alt="Windows XP Bliss Wallpaper"
-          className="absolute inset-0 w-full h-full object-cover -z-10"
-        />
-        <div className="absolute inset-x-0 top-0 bottom-12 sm:bottom-10 p-2 sm:p-8">
-          <div className="h-full bg-white border-2 border-gray-400 shadow-2xl flex flex-col overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-2 sm:p-3 border-b border-blue-400 flex-shrink-0">
-              <h1 className="font-bold text-center text-lg sm:text-2xl">LA GIRA DE NADIE</h1>
-            </div>
-            <div
-              className="p-2 sm:p-3 md:p-6 flex-1 overflow-auto"
-              style={{ containerType: 'inline-size', containerName: 'concert-list' }}
-            >
-              <div className="grid gap-2 sm:gap-3 md:gap-4">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="concert-row animate-pulse">
-                    <div className="h-4 w-12 bg-gray-300 rounded" />
-                    <div className="h-4 w-16 bg-gray-300 rounded" />
-                    <div className="h-4 w-20 bg-gray-200 rounded flex-1" />
-                    <div className="h-6 w-14 bg-green-200 rounded" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="xp-taskbar">
-          <button className="xp-start-btn" disabled>
-            <img src="/icons/sistema-operativo.png" alt="Start" width={16} height={16} className="mr-1" />
-            start
-          </button>
-          <div className="xp-taskbar-buttons">
-            <button className="xp-taskbar-btn active">La gira de Nadie - Tour Dates</button>
-          </div>
-          <div className="xp-clock text-white">--:--</div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="h-screen w-screen relative overflow-hidden">
       <img
@@ -258,7 +214,7 @@ export default function ConciertosPage() {
       />
 
       {/* Full screen concert list */}
-      <div className="absolute inset-x-0 top-0 bottom-12 sm:bottom-10 p-2 sm:p-8">
+      <div className="absolute inset-x-0 top-0 bottom-12 sm:bottom-10 p-1 sm:p-4 md:p-8">
         <div className="h-full bg-white border-2 border-gray-400 shadow-2xl flex flex-col overflow-hidden">
           {/* Window title bar */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-2 sm:p-3 border-b border-blue-400 flex justify-between items-center flex-shrink-0">
@@ -274,7 +230,7 @@ export default function ConciertosPage() {
 
           {/* Tabs and content with container query */}
           <div
-            className="p-2 sm:p-3 md:p-6 pb-0 flex-1 flex flex-col overflow-hidden"
+            className="p-1 sm:p-3 md:p-6 pb-0 flex-1 flex flex-col overflow-hidden"
             style={{ containerType: 'inline-size', containerName: 'concert-list' }}
           >
             {/* XP Tabs */}
@@ -284,12 +240,14 @@ export default function ConciertosPage() {
                 onClick={() => setActiveTab('conciertos')}
               >
                 Conciertos
+                {!isLoading && <span className="xp-tab-count">({displayConcerts.length})</span>}
               </button>
               <button
                 className={`xp-tab ${activeTab === 'festivales' ? 'active' : ''}`}
                 onClick={() => setActiveTab('festivales')}
               >
                 Festivales
+                {!isFestivalsLoading && <span className="xp-tab-count">({displayFestivals.length})</span>}
               </button>
             </div>
 
@@ -297,29 +255,51 @@ export default function ConciertosPage() {
             <div className="xp-tab-content flex-1 overflow-auto">
               {/* Panel de Conciertos */}
               <div className={`xp-tab-panel ${activeTab === 'conciertos' ? 'active' : ''}`}>
-                <div className="grid gap-2 sm:gap-3 md:gap-4">
-                  {displayConcerts.map((concert) => {
-                    const isNearby = nearbyCitiesLower.includes(concert.ciudad.toLowerCase())
-                    return (
-                      <div key={concert.id} className={`concert-row ${isNearby ? 'concert-row-nearby' : ''}`}>
-                        <span className="concert-fecha">{concert.fecha}</span>
-                        <span className="concert-ciudad">
-                          {concert.ciudad}
-                          {isNearby && <span className="concert-nearby-badge">CERCA DE TI</span>}
-                        </span>
-                        <span className="concert-sala">{concert.sala}</span>
-                        <button
-                          className="concert-btn"
-                          onClick={() => window.open(concert.link, "_blank")}
-                        >
-                          Tickets
-                        </button>
+                {isLoading ? (
+                  <div className="grid gap-2 sm:gap-3 md:gap-4">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="concert-row concert-row-skeleton animate-pulse">
+                        <div className="h-4 w-12 bg-gray-300 rounded" />
+                        <div className="h-4 w-16 bg-gray-300 rounded" />
+                        <div className="h-4 w-20 bg-gray-200 rounded flex-1" />
+                        <div className="h-6 w-14 bg-green-200 rounded" />
                       </div>
-                    )
-                  })}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid gap-2 sm:gap-3 md:gap-4">
+                    {displayConcerts.map((concert) => {
+                      const isNearby = nearbyCitiesLower.includes(concert.ciudad.toLowerCase())
+                      return (
+                        <div key={concert.id} className={`concert-row ${isNearby ? 'concert-row-nearby' : ''}`}>
+                          <span className="concert-fecha">{concert.fecha}</span>
+                          <span className="concert-ciudad">
+                            {concert.ciudad}
+                            {isNearby && <span className="concert-nearby-badge">CERCA DE TI</span>}
+                          </span>
+                          <span className="concert-sala">{concert.sala}</span>
+                          <button
+                            className="concert-btn"
+                            onClick={() => window.open(concert.link, "_blank")}
+                          >
+                            Tickets
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
                 <div className="mt-4 sm:mt-6 text-center">
                   <p className="text-gray-600 text-xs sm:text-sm italic">Muchos más por confirmar</p>
+                  {!isFestivalsLoading && displayFestivals.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('festivales')}
+                      className="mt-3 text-blue-700 hover:text-blue-900 underline font-bold text-sm sm:text-base"
+                    >
+                      Ver los {displayFestivals.length} festivales →
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -328,7 +308,7 @@ export default function ConciertosPage() {
                 {isFestivalsLoading ? (
                   <div className="grid gap-2 sm:gap-3 md:gap-4">
                     {[...Array(3)].map((_, i) => (
-                      <div key={i} className="concert-row animate-pulse">
+                      <div key={i} className="concert-row concert-row-skeleton animate-pulse">
                         <div className="h-4 w-12 bg-gray-300 rounded" />
                         <div className="h-4 w-16 bg-gray-300 rounded" />
                         <div className="h-4 w-20 bg-gray-200 rounded flex-1" />
