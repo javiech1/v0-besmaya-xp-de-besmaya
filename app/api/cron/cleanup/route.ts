@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { parseFechaToDate } from "@/lib/cache"
+import { eventDate } from "@/lib/cache"
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization")
@@ -13,32 +13,36 @@ export async function GET(request: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  // Los bolos pasados ya NO se borran al pasar: la pagina los sigue mostrando
+  // atenuados. Solo se purga lo de hace mas de un ano, para que las tablas no
+  // crezcan sin limite (~30 bolos al ano).
+  const cutoff = new Date()
+  cutoff.setHours(0, 0, 0, 0)
+  cutoff.setFullYear(cutoff.getFullYear() - 1)
 
   const deleted: Record<string, number> = { concerts: 0, festivals: 0, muro_comments: 0 }
 
-  const { data: concerts } = await supabase.from("concerts").select("id, fecha")
+  const { data: concerts } = await supabase.from("concerts").select("id, fecha, created_at")
   if (concerts) {
-    const pastIds = concerts
-      .filter((c) => parseFechaToDate(c.fecha) < today)
+    const staleIds = concerts
+      .filter((c) => eventDate(c) < cutoff)
       .map((c) => c.id)
 
-    if (pastIds.length > 0) {
-      const { error } = await supabase.from("concerts").delete().in("id", pastIds)
-      if (!error) deleted.concerts = pastIds.length
+    if (staleIds.length > 0) {
+      const { error } = await supabase.from("concerts").delete().in("id", staleIds)
+      if (!error) deleted.concerts = staleIds.length
     }
   }
 
-  const { data: festivals } = await supabase.from("festis").select("id, fecha")
+  const { data: festivals } = await supabase.from("festis").select("id, fecha, created_at")
   if (festivals) {
-    const pastIds = festivals
-      .filter((f) => parseFechaToDate(f.fecha) < today)
+    const staleIds = festivals
+      .filter((f) => eventDate(f) < cutoff)
       .map((f) => f.id)
 
-    if (pastIds.length > 0) {
-      const { error } = await supabase.from("festis").delete().in("id", pastIds)
-      if (!error) deleted.festivals = pastIds.length
+    if (staleIds.length > 0) {
+      const { error } = await supabase.from("festis").delete().in("id", staleIds)
+      if (!error) deleted.festivals = staleIds.length
     }
   }
 

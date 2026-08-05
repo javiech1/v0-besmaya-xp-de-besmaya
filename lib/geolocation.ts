@@ -17,6 +17,7 @@ const CITY_COORDINATES: Record<string, { lat: number; lon: number }> = {
   "bilbao": { lat: 43.2630, lon: -2.9350 },
   "málaga": { lat: 36.7213, lon: -4.4214 },
   "malaga": { lat: 36.7213, lon: -4.4214 },
+  "marbella": { lat: 36.5101, lon: -4.8825 },
   "alicante": { lat: 38.3452, lon: -0.4810 },
   "san sebastián": { lat: 43.3183, lon: -1.9812 },
   "san sebastian": { lat: 43.3183, lon: -1.9812 },
@@ -28,6 +29,9 @@ const CITY_COORDINATES: Record<string, { lat: number; lon: number }> = {
   "leon": { lat: 42.5987, lon: -5.5671 },
   "gijón": { lat: 43.5322, lon: -5.6611 },
   "gijon": { lat: 43.5322, lon: -5.6611 },
+  "caravia": { lat: 43.4736, lon: -5.1897 },
+  // el dato en Supabase lleva la provincia; el match es por nombre exacto
+  "caravia (asturias)": { lat: 43.4736, lon: -5.1897 },
   "vigo": { lat: 42.2406, lon: -8.7207 },
   "santiago de compostela": { lat: 42.8782, lon: -8.5448 },
   "burgos": { lat: 42.3440, lon: -3.6969 },
@@ -39,6 +43,7 @@ const CITY_COORDINATES: Record<string, { lat: number; lon: number }> = {
   "logrono": { lat: 42.4627, lon: -2.4445 },
   "cádiz": { lat: 36.5271, lon: -6.2886 },
   "cadiz": { lat: 36.5271, lon: -6.2886 },
+  "barbate": { lat: 36.1919, lon: -5.9217 },
   "huelva": { lat: 37.2614, lon: -6.9447 },
   "jaén": { lat: 37.7796, lon: -3.7849 },
   "jaen": { lat: 37.7796, lon: -3.7849 },
@@ -70,6 +75,7 @@ const CITY_COORDINATES: Record<string, { lat: number; lon: number }> = {
   "mérida": { lat: 38.9160, lon: -6.3437 },
   "merida": { lat: 38.9160, lon: -6.3437 },
   "zamora": { lat: 41.5034, lon: -5.7467 },
+  "benavente": { lat: 42.0028, lon: -5.6778 },
   "palencia": { lat: 42.0096, lon: -4.5288 },
 }
 

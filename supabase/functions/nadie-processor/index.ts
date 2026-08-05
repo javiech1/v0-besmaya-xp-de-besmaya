@@ -137,7 +137,13 @@ type RecentMessage = {
   is_nadie: boolean
 }
 
-type Concert = { fecha: string; ciudad: string; sala: string; link: string | null }
+type Concert = {
+  fecha: string
+  ciudad: string
+  sala: string
+  link: string | null
+  created_at?: string | null
+}
 
 type BatchReply = { i: number; reply: string }
 
@@ -158,16 +164,69 @@ function moderateLocal(text: string): string {
   return result
 }
 
+// Las fechas se guardan sin año ("13 ago"). Copia autocontenida de la logica de
+// lib/cache.ts (esta funcion se despliega sola en Deno y no puede importar del
+// repo). Fuente de verdad: lib/cache.ts — si cambia alli, cambiar aqui.
+const MONTH_MAP: Record<string, number> = {
+  ene: 0, feb: 1, mar: 2, abr: 3, may: 4, jun: 5,
+  jul: 6, ago: 7, sep: 8, oct: 9, nov: 10, dic: 11,
+}
+const GRACE_DAYS = 30
+
+function eventDate(e: Concert): Date {
+  const ref = e.created_at ? new Date(e.created_at) : new Date()
+  const reference = isNaN(ref.getTime()) ? new Date() : ref
+  const trimmed = e.fecha.trim().toLowerCase()
+  const m =
+    trimmed.match(/^(\d{1,2})\s+([a-z]+)\s*-\s*\d{1,2}\s+[a-z]+$/) ||
+    trimmed.match(/^(\d{1,2})\s*-\s*\d{1,2}\s+([a-z]+)$/) ||
+    trimmed.match(/^(\d{1,2})[\s-]+([a-z]+)$/)
+  if (!m) return new Date()
+  const day = Number.parseInt(m[1], 10)
+  const month = MONTH_MAP[m[2]]
+  if (isNaN(day) || month === undefined) return new Date()
+  const windowStart = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate() - GRACE_DAYS)
+  const year = windowStart.getFullYear()
+  return new Date(new Date(year, month, day) < windowStart ? year + 1 : year, month, day)
+}
+
+function splitByDate(events: Concert[] | null): { upcoming: Concert[]; past: Concert[] } {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const upcoming: Concert[] = []
+  const past: Concert[] = []
+  for (const e of events || []) {
+    if (eventDate(e) >= today) upcoming.push(e)
+    else past.push(e)
+  }
+  // de los pasados solo interesan los ultimos, para no inflar el prompt
+  past.reverse()
+  return { upcoming, past: past.slice(0, 8) }
+}
+
 function buildDynamicContext(concerts: Concert[] | null, festivals: Concert[] | null): string {
   const fmt = (e: Concert) => `${e.fecha} ${e.ciudad} ${e.sala}${e.link ? ` [entradas: ${e.link}]` : ""}`
+  // sin link: de un bolo pasado no se venden entradas y no debe repartir el enlace
+  const fmtPast = (e: Concert) => `${e.fecha} ${e.ciudad} ${e.sala}`
+  const c = splitByDate(concerts)
+  const f = splitByDate(festivals)
   const parts: string[] = []
-  if (concerts && concerts.length > 0) {
-    parts.push("Proximos conciertos: " + concerts.map(fmt).join(" | "))
+  if (c.upcoming.length > 0) {
+    parts.push("Proximos conciertos: " + c.upcoming.map(fmt).join(" | "))
   }
-  if (festivals && festivals.length > 0) {
-    parts.push("Proximos festis: " + festivals.map(fmt).join(" | "))
+  if (f.upcoming.length > 0) {
+    parts.push("Proximos festis: " + f.upcoming.map(fmt).join(" | "))
+  }
+  if (c.past.length > 0) {
+    parts.push("Conciertos que YA PASARON: " + c.past.map(fmtPast).join(" | "))
+  }
+  if (f.past.length > 0) {
+    parts.push("Festis que YA PASARON: " + f.past.map(fmtPast).join(" | "))
   }
   if (parts.length === 0) return ""
+  if (c.past.length > 0 || f.past.length > 0) {
+    parts.push("Los de 'YA PASARON' son recuerdos, NO los anuncies como proximos ni des entradas de ellos: si preguntan, di que eso ya fue y recuerdalo con cariño.")
+  }
   parts.push("Si preguntan por entradas de un concierto o festi, pasa su link. Si el link no cabe en tu respuesta corta, manda a somosbesmaya.com")
   return `[Info actualizada]\n${parts.join("\n")}\n[Fin info]\n\n`
 }
@@ -376,8 +435,8 @@ async function fetchContext(supabase: SupabaseClient) {
       .select("username, content, is_nadie")
       .order("created_at", { ascending: false })
       .limit(15),
-    supabase.from("concerts").select("fecha, ciudad, sala, link"),
-    supabase.from("festis").select("fecha, ciudad, sala, link"),
+    supabase.from("concerts").select("fecha, ciudad, sala, link, created_at"),
+    supabase.from("festis").select("fecha, ciudad, sala, link, created_at"),
     // Ultimas respuestas de Nadie: garantiza que la regla de no repetir
     // muletillas tenga datos aunque el muro vaya rapido y se salgan del top 15
     supabase

@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { getFromCache, setToCache, sortByFechaChronologically, parseFechaToDate } from "@/lib/cache"
+import { getFromCache, setToCache, sortByFechaChronologically, eventDate } from "@/lib/cache"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useClock } from "@/hooks/useClock"
@@ -14,6 +14,8 @@ interface Event {
   ciudad: string
   sala: string
   link: string
+  // ancla para saber de qué año es la fecha; ver eventDate en lib/cache
+  created_at?: string | null
 }
 
 type Concert = Event
@@ -24,10 +26,65 @@ const fallbackConcerts: Concert[] = []
 
 const fallbackFestivals: Festival[] = []
 
-function filterPastEvents<T extends { fecha: string }>(items: T[]): T[] {
+/**
+ * Separa los eventos en próximos y ya pasados. Las fechas pasadas ya no se
+ * borran: se siguen mostrando al final, atenuadas y sin venta de entradas.
+ * Las próximas van de más cercana a más lejana; las pasadas al revés, para que
+ * el último bolo quede pegado a la lista de próximos.
+ */
+function splitUpcomingAndPast<T extends Event>(items: T[]): { upcoming: T[]; past: T[] } {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  return items.filter((item) => parseFechaToDate(item.fecha) >= today)
+  const upcoming: T[] = []
+  const past: T[] = []
+  for (const item of items) {
+    if (eventDate(item) >= today) upcoming.push(item)
+    else past.push(item)
+  }
+  return {
+    upcoming: sortByFechaChronologically(upcoming),
+    past: sortByFechaChronologically(past).reverse(),
+  }
+}
+
+function EventRow({ event, isNearby = false }: { event: Event; isNearby?: boolean }) {
+  return (
+    <div className={`concert-row ${isNearby ? 'concert-row-nearby' : ''}`}>
+      <span className="concert-fecha">{event.fecha}</span>
+      <span className="concert-ciudad">
+        {event.ciudad}
+        {isNearby && <span className="concert-nearby-badge">CERCA DE TI</span>}
+      </span>
+      <span className="concert-sala">{event.sala}</span>
+      <button className="concert-btn" onClick={() => window.open(event.link, "_blank")}>
+        Tickets
+      </button>
+    </div>
+  )
+}
+
+/** Bolos que ya pasaron: se siguen viendo, atenuados y sin venta de entradas. */
+function PastEvents({ events, label }: { events: Event[]; label: string }) {
+  if (events.length === 0) return null
+  return (
+    <div className="concert-past-section">
+      <div className="concert-past-divider">
+        <span>{label}</span>
+      </div>
+      <div className="grid gap-2 sm:gap-3 md:gap-4">
+        {events.map((event) => (
+          <div key={event.id} className="concert-row concert-row-past">
+            <span className="concert-fecha">{event.fecha}</span>
+            <span className="concert-ciudad">{event.ciudad}</span>
+            <span className="concert-sala">{event.sala}</span>
+            <button className="concert-btn" disabled aria-label={`${event.ciudad}: ya pasó`}>
+              Tickets
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export default function ConciertosPage() {
@@ -36,9 +93,13 @@ export default function ConciertosPage() {
   const initialTab: TabType = searchParams?.get('tab') === 'festivales' ? 'festivales' : 'conciertos'
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>(initialTab)
-  const [concerts, setConcerts] = useState<Concert[]>(sortByFechaChronologically(filterPastEvents(fallbackConcerts)))
+  // `concerts`/`festivals` son SOLO los próximos: contadores, orden por cercanía
+  // y notificaciones siguen mirando exactamente lo mismo que antes.
+  const [concerts, setConcerts] = useState<Concert[]>([])
+  const [pastConcerts, setPastConcerts] = useState<Concert[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [festivals, setFestivals] = useState<Festival[]>([])
+  const [pastFestivals, setPastFestivals] = useState<Festival[]>([])
   const [isFestivalsLoading, setIsFestivalsLoading] = useState(true)
   const [nearbyCities, setNearbyCities] = useState<string[]>([])
   const router = useRouter()
@@ -157,10 +218,16 @@ export default function ConciertosPage() {
     return () => document.removeEventListener("click", handleClickOutside)
   }, [isStartMenuOpen])
 
+  const applyConcerts = (items: Concert[]) => {
+    const { upcoming, past } = splitUpcomingAndPast(items)
+    setConcerts(upcoming)
+    setPastConcerts(past)
+  }
+
   const fetchConcerts = async () => {
     const cached = getFromCache<Concert[]>('concerts_cache')
     if (cached) {
-      setConcerts(sortByFechaChronologically(filterPastEvents(cached)))
+      applyConcerts(cached)
       setIsLoading(false)
       return
     }
@@ -168,19 +235,25 @@ export default function ConciertosPage() {
     try {
       const { data, error } = await supabase.from("concerts").select("*")
       const result = error ? fallbackConcerts : (data || fallbackConcerts)
-      setConcerts(sortByFechaChronologically(filterPastEvents(result)))
+      applyConcerts(result)
       setToCache('concerts_cache', result)
     } catch {
-      setConcerts(sortByFechaChronologically(filterPastEvents(fallbackConcerts)))
+      applyConcerts(fallbackConcerts)
     } finally {
       setIsLoading(false)
     }
   }
 
+  const applyFestivals = (items: Festival[]) => {
+    const { upcoming, past } = splitUpcomingAndPast(items)
+    setFestivals(upcoming)
+    setPastFestivals(past)
+  }
+
   const fetchFestivals = async () => {
     const cached = getFromCache<Festival[]>('festivals_cache')
     if (cached) {
-      setFestivals(sortByFechaChronologically(filterPastEvents(cached)))
+      applyFestivals(cached)
       setIsFestivalsLoading(false)
       return
     }
@@ -188,10 +261,10 @@ export default function ConciertosPage() {
     try {
       const { data, error } = await supabase.from("festis").select("*")
       const result = error ? fallbackFestivals : (data || fallbackFestivals)
-      setFestivals(sortByFechaChronologically(filterPastEvents(result)))
+      applyFestivals(result)
       setToCache('festivals_cache', result)
     } catch {
-      setFestivals(sortByFechaChronologically(filterPastEvents(fallbackFestivals)))
+      applyFestivals(fallbackFestivals)
     } finally {
       setIsFestivalsLoading(false)
     }
@@ -205,50 +278,6 @@ export default function ConciertosPage() {
     router.push("/")
   }
 
-  if (isLoading) {
-    return (
-      <div className="h-screen w-screen relative overflow-hidden">
-        <img
-          src="/xp-bliss-custom.jpg"
-          alt="Windows XP Bliss Wallpaper"
-          className="absolute inset-0 w-full h-full object-cover -z-10"
-        />
-        <div className="absolute inset-x-0 top-0 bottom-12 sm:bottom-10 p-2 sm:p-8">
-          <div className="h-full bg-white border-2 border-gray-400 shadow-2xl flex flex-col overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-2 sm:p-3 border-b border-blue-400 flex-shrink-0">
-              <h1 className="font-bold text-center text-lg sm:text-2xl">LA GIRA DE NADIE</h1>
-            </div>
-            <div
-              className="p-2 sm:p-3 md:p-6 flex-1 overflow-auto"
-              style={{ containerType: 'inline-size', containerName: 'concert-list' }}
-            >
-              <div className="grid gap-2 sm:gap-3 md:gap-4">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="concert-row animate-pulse">
-                    <div className="h-4 w-12 bg-gray-300 rounded" />
-                    <div className="h-4 w-16 bg-gray-300 rounded" />
-                    <div className="h-4 w-20 bg-gray-200 rounded flex-1" />
-                    <div className="h-6 w-14 bg-green-200 rounded" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="xp-taskbar">
-          <button className="xp-start-btn" disabled>
-            <img src="/icons/sistema-operativo.png" alt="Start" width={16} height={16} className="mr-1" />
-            start
-          </button>
-          <div className="xp-taskbar-buttons">
-            <button className="xp-taskbar-btn active">La gira de Nadie - Tour Dates</button>
-          </div>
-          <div className="xp-clock text-white">--:--</div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="h-screen w-screen relative overflow-hidden">
       <img
@@ -258,7 +287,7 @@ export default function ConciertosPage() {
       />
 
       {/* Full screen concert list */}
-      <div className="absolute inset-x-0 top-0 bottom-12 sm:bottom-10 p-2 sm:p-8">
+      <div className="absolute inset-x-0 top-0 bottom-12 sm:bottom-10 p-1 sm:p-4 md:p-8">
         <div className="h-full bg-white border-2 border-gray-400 shadow-2xl flex flex-col overflow-hidden">
           {/* Window title bar */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-2 sm:p-3 border-b border-blue-400 flex justify-between items-center flex-shrink-0">
@@ -274,7 +303,7 @@ export default function ConciertosPage() {
 
           {/* Tabs and content with container query */}
           <div
-            className="p-2 sm:p-3 md:p-6 pb-0 flex-1 flex flex-col overflow-hidden"
+            className="p-1 sm:p-3 md:p-6 pb-0 flex-1 flex flex-col overflow-hidden"
             style={{ containerType: 'inline-size', containerName: 'concert-list' }}
           >
             {/* XP Tabs */}
@@ -284,12 +313,14 @@ export default function ConciertosPage() {
                 onClick={() => setActiveTab('conciertos')}
               >
                 Conciertos
+                {!isLoading && <span className="xp-tab-count">({displayConcerts.length})</span>}
               </button>
               <button
                 className={`xp-tab ${activeTab === 'festivales' ? 'active' : ''}`}
                 onClick={() => setActiveTab('festivales')}
               >
                 Festivales
+                {!isFestivalsLoading && <span className="xp-tab-count">({displayFestivals.length})</span>}
               </button>
             </div>
 
@@ -297,30 +328,41 @@ export default function ConciertosPage() {
             <div className="xp-tab-content flex-1 overflow-auto">
               {/* Panel de Conciertos */}
               <div className={`xp-tab-panel ${activeTab === 'conciertos' ? 'active' : ''}`}>
-                <div className="grid gap-2 sm:gap-3 md:gap-4">
-                  {displayConcerts.map((concert) => {
-                    const isNearby = nearbyCitiesLower.includes(concert.ciudad.toLowerCase())
-                    return (
-                      <div key={concert.id} className={`concert-row ${isNearby ? 'concert-row-nearby' : ''}`}>
-                        <span className="concert-fecha">{concert.fecha}</span>
-                        <span className="concert-ciudad">
-                          {concert.ciudad}
-                          {isNearby && <span className="concert-nearby-badge">CERCA DE TI</span>}
-                        </span>
-                        <span className="concert-sala">{concert.sala}</span>
-                        <button
-                          className="concert-btn"
-                          onClick={() => window.open(concert.link, "_blank")}
-                        >
-                          Tickets
-                        </button>
+                {isLoading ? (
+                  <div className="grid gap-2 sm:gap-3 md:gap-4">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="concert-row concert-row-skeleton animate-pulse">
+                        <div className="h-4 w-12 bg-gray-300 rounded" />
+                        <div className="h-4 w-16 bg-gray-300 rounded" />
+                        <div className="h-4 w-20 bg-gray-200 rounded flex-1" />
+                        <div className="h-6 w-14 bg-green-200 rounded" />
                       </div>
-                    )
-                  })}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid gap-2 sm:gap-3 md:gap-4">
+                    {displayConcerts.map((concert) => (
+                      <EventRow
+                        key={concert.id}
+                        event={concert}
+                        isNearby={nearbyCitiesLower.includes(concert.ciudad.toLowerCase())}
+                      />
+                    ))}
+                  </div>
+                )}
                 <div className="mt-4 sm:mt-6 text-center">
                   <p className="text-gray-600 text-xs sm:text-sm italic">Muchos más por confirmar</p>
+                  {!isFestivalsLoading && displayFestivals.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('festivales')}
+                      className="mt-3 text-blue-700 hover:text-blue-900 underline font-bold text-sm sm:text-base"
+                    >
+                      Ver los {displayFestivals.length} festivales →
+                    </button>
+                  )}
                 </div>
+                {!isLoading && <PastEvents events={pastConcerts} label="Ya pasaron" />}
               </div>
 
               {/* Panel de Festivales */}
@@ -328,7 +370,7 @@ export default function ConciertosPage() {
                 {isFestivalsLoading ? (
                   <div className="grid gap-2 sm:gap-3 md:gap-4">
                     {[...Array(3)].map((_, i) => (
-                      <div key={i} className="concert-row animate-pulse">
+                      <div key={i} className="concert-row concert-row-skeleton animate-pulse">
                         <div className="h-4 w-12 bg-gray-300 rounded" />
                         <div className="h-4 w-16 bg-gray-300 rounded" />
                         <div className="h-4 w-20 bg-gray-200 rounded flex-1" />
@@ -338,25 +380,13 @@ export default function ConciertosPage() {
                   </div>
                 ) : festivals.length > 0 ? (
                   <div className="grid gap-2 sm:gap-3 md:gap-4">
-                    {displayFestivals.map((festival) => {
-                      const isNearby = nearbyCitiesLower.includes(festival.ciudad.toLowerCase())
-                      return (
-                        <div key={festival.id} className={`concert-row ${isNearby ? 'concert-row-nearby' : ''}`}>
-                          <span className="concert-fecha">{festival.fecha}</span>
-                          <span className="concert-ciudad">
-                            {festival.ciudad}
-                            {isNearby && <span className="concert-nearby-badge">CERCA DE TI</span>}
-                          </span>
-                          <span className="concert-sala">{festival.sala}</span>
-                          <button
-                            className="concert-btn"
-                            onClick={() => window.open(festival.link, "_blank")}
-                          >
-                            Tickets
-                          </button>
-                        </div>
-                      )
-                    })}
+                    {displayFestivals.map((festival) => (
+                      <EventRow
+                        key={festival.id}
+                        event={festival}
+                        isNearby={nearbyCitiesLower.includes(festival.ciudad.toLowerCase())}
+                      />
+                    ))}
                   </div>
                 ) : (
                   <div className="text-center py-8">
@@ -366,6 +396,7 @@ export default function ConciertosPage() {
                 <div className="mt-4 sm:mt-6 text-center">
                   <p className="text-gray-600 text-xs sm:text-sm italic">Más festivales por confirmar</p>
                 </div>
+                {!isFestivalsLoading && <PastEvents events={pastFestivals} label="Ya pasaron" />}
               </div>
             </div>
           </div>

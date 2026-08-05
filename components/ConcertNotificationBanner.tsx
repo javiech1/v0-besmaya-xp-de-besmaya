@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { getUserLocation, findAllNearbyConcerts, checkGeolocationPermission, getBrowserLocation } from "@/lib/geolocation"
 import { createClient } from "@/lib/supabase/client"
-import { getFromCache, setToCache, parseFechaToDate } from "@/lib/cache"
+import { getFromCache, setToCache, eventDate } from "@/lib/cache"
 
 interface Event {
   id: string
@@ -12,6 +12,7 @@ interface Event {
   ciudad: string
   sala: string
   link: string
+  created_at?: string | null
 }
 
 const fallbackConcerts: Event[] = []
@@ -69,9 +70,11 @@ export function ConcertNotificationBanner({ nadieVisible, albumVisible = false, 
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
+    // La notificación solo avisa de bolos futuros; los pasados se siguen
+    // guardando pero no se anuncian.
     return {
-      concerts: concerts.filter(c => parseFechaToDate(c.fecha) >= today),
-      festivals: festivals.filter(f => parseFechaToDate(f.fecha) >= today),
+      concerts: concerts.filter(c => eventDate(c) >= today),
+      festivals: festivals.filter(f => eventDate(f) >= today),
     }
   }, [])
 

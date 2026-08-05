@@ -12,10 +12,8 @@ import { WinterTourContent } from "@/components/windows/WinterTourWindow"
 import { AlbumContent } from "@/components/windows/AlbumWindow"
 import { MuroContent } from "@/components/windows/MuroWindow"
 
-import { Y2KNotificationBanner } from "@/components/Y2KNotificationBanner"
 import { ConcertNotificationBanner } from "@/components/ConcertNotificationBanner"
 import { AlbumNotificationBanner } from "@/components/AlbumNotificationBanner"
-import { TorneoNotificationBanner } from "@/components/TorneoNotificationBanner"
 import { WinterTourNotificationBanner } from "@/components/WinterTourNotificationBanner"
 import { Screensaver } from "@/components/Screensaver"
 import { BSOD } from "@/components/BSOD"
@@ -86,9 +84,7 @@ export default function BesmayaDesktop() {
   const [isLandscapeMobile, setIsLandscapeMobile] = useState(false)
   const [hasFinePointer, setHasFinePointer] = useState(false)
   const [initialWindowsCreated, setInitialWindowsCreated] = useState(false)
-  const [nadieNotificationVisible, setNadieNotificationVisible] = useState(true)
   const [albumNotificationVisible, setAlbumNotificationVisible] = useState(true)
-  const [torneoNotificationVisible, setTorneoNotificationVisible] = useState(true)
   const [isScreensaverActive, setIsScreensaverActive] = useState(false)
   const [bsodTrigger, setBsodTrigger] = useState<string | null>(null)
   const [isWinterTourReleased, setIsWinterTourReleased] = useState(false)
@@ -226,6 +222,13 @@ export default function BesmayaDesktop() {
       pointerQuery.removeEventListener('change', updatePointer)
     }
   }, [])
+
+  // El icono y el menú Inicio navegan a /conciertos con router.push, que descarga
+  // el chunk al pulsar. En móvil no hay ventanas (WelcomePosterWindow, que ya usa
+  // <Link prefetch>, no se renderiza), así que sin esto no hay prefetch por ninguna vía.
+  useEffect(() => {
+    router.prefetch("/conciertos")
+  }, [router])
 
   // Persist open window IDs to sessionStorage so they survive navigation to /conciertos
   useEffect(() => {
@@ -864,17 +867,7 @@ export default function BesmayaDesktop() {
   }
 
   // Stable callbacks for notification banners to prevent animation replay
-  const openWindowRef = useRef(openWindow)
-  openWindowRef.current = openWindow
-  const handleOpenMuroFromNotification = useCallback(() => {
-    openWindowRef.current("muro", "El Muro de Nadie", <MuroContent />)
-  }, [])
-  const handleNadieDismiss = useCallback(() => setNadieNotificationVisible(false), [])
   const handleAlbumDismiss = useCallback(() => setAlbumNotificationVisible(false), [])
-  const handleTorneoDismiss = useCallback(() => setTorneoNotificationVisible(false), [])
-  const handleOpenTorneoFromNotification = useCallback(() => {
-    openWindowRef.current("torneo", "Torneo de Nadie", <TorneoContent />)
-  }, [])
 
 
   // Sync --app-height and --app-offset-top with visualViewport for mobile keyboard handling.
@@ -1269,35 +1262,23 @@ export default function BesmayaDesktop() {
         </div>
       )}
 
-      {/* La pila flex coloca las tarjetas por altura real (los props de
-          visibilidad ya no posicionan, pero siguen controlando el orden) */}
+      {/* Solo quedan dos notificaciones: merch y fechas. La pila flex las coloca
+          por altura real; `nadieVisible` va siempre a false porque ya no existe
+          la tarjeta de Nadie encima. */}
       <div className="y2k-notification-stack">
-        <Y2KNotificationBanner
-          onOpenMuro={handleOpenMuroFromNotification}
-          onDismiss={handleNadieDismiss}
+        <AlbumNotificationBanner
+          nadieVisible={false}
+          onDismiss={handleAlbumDismiss}
         />
-        {/* El torneo ocupa el slot del album mientras este visible; el del album
-            espera su turno (en movil) para no apilar cuatro notificaciones */}
-        <TorneoNotificationBanner
-          nadieVisible={nadieNotificationVisible}
-          onOpenTorneo={handleOpenTorneoFromNotification}
-          onDismiss={handleTorneoDismiss}
-        />
-        {!isDesktop && !torneoNotificationVisible && (
-          <AlbumNotificationBanner
-            nadieVisible={nadieNotificationVisible}
-            onDismiss={handleAlbumDismiss}
-          />
-        )}
         {!isDesktop && isWinterTourReleased ? (
           <WinterTourNotificationBanner
-            nadieVisible={nadieNotificationVisible}
-            albumVisible={torneoNotificationVisible || albumNotificationVisible}
+            nadieVisible={false}
+            albumVisible={albumNotificationVisible}
           />
         ) : (
           <ConcertNotificationBanner
-            nadieVisible={nadieNotificationVisible}
-            albumVisible={torneoNotificationVisible || (!isDesktop && albumNotificationVisible)}
+            nadieVisible={false}
+            albumVisible={albumNotificationVisible}
             isMobile={!isDesktop}
           />
         )}
