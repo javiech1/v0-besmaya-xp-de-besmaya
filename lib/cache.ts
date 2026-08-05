@@ -38,23 +38,23 @@ const MONTH_MAP: Record<string, number> = {
 }
 
 /**
- * Las fechas se guardan sin año ("13-ago"), así que hay que inferirlo.
+ * Las fechas se guardan sin año ("13-ago"), así que hay que inferirlo a partir
+ * de un punto de referencia: la fecha se resuelve a la única ocurrencia que
+ * cae en la ventana de 12 meses que empieza GRACE_DAYS antes de esa referencia.
  *
- * Cada fecha se interpreta como la única ocurrencia que cae dentro de la
- * ventana de 12 meses que empieza PAST_GRACE_DAYS antes de hoy. Con eso:
- *   - un evento recién pasado sigue contando como pasado, así que
- *     filterPastEvents lo oculta y el cron diario lo borra;
- *   - una gira anunciada con hasta ~10 meses de antelación cae en el año
- *     correcto en vez de resolverse al año en curso, que ya habría pasado.
+ * La referencia buena es `created_at`, no "hoy" (ver `eventDate`). Anclar en
+ * hoy hace imposible representar un bolo de hace más de GRACE_DAYS: se
+ * empujaría al año siguiente y volvería a contar como próximo. Con `created_at`
+ * la fecha queda fijada para siempre el día que se dio de alta la fila.
  *
- * El margen tiene que ser bastante mayor que el periodo del cron (diario) para
- * que nunca se le escape una fila, pero mucho menor que un año para que las
- * fechas lejanas sigan resolviéndose hacia adelante.
+ * El margen hacia atrás cubre el caso de meter un bolo el mismo día o justo
+ * después de tocarlo; el resto de la ventana va hacia adelante, que es como se
+ * anuncian las giras.
  */
-const PAST_GRACE_DAYS = 60
+const GRACE_DAYS = 30
 
-function resolveYear(month: number, day: number, today: Date): number {
-  const windowStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - PAST_GRACE_DAYS)
+function resolveYear(month: number, day: number, reference: Date): number {
+  const windowStart = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate() - GRACE_DAYS)
   const year = windowStart.getFullYear()
   // Si con el año de inicio de ventana la fecha queda antes de la ventana,
   // pertenece a la vuelta siguiente del calendario.
@@ -70,12 +70,12 @@ function resolveYear(month: number, day: number, today: Date): number {
  *   "31 jul - 1 ago" → date range across months (uses 31 jul)
  *   "1 - 2 ago"     → date range within same month (uses 1 ago)
  *
- * @param today Punto de referencia para inferir el año. Solo para tests;
- *              por defecto la fecha actual.
+ * @param reference Punto de referencia para inferir el año. Para eventos usa
+ *                  `eventDate`, que pasa el `created_at` de la fila.
  */
-export function parseFechaToDate(fecha: string, today: Date = new Date()): Date {
+export function parseFechaToDate(fecha: string, reference: Date = new Date()): Date {
   const trimmed = fecha.trim().toLowerCase()
-  const build = (day: number, month: number) => new Date(resolveYear(month, day, today), month, day)
+  const build = (day: number, month: number) => new Date(resolveYear(month, day, reference), month, day)
 
   // Try range with two months: "31 jul - 1 ago"
   const rangeTwo = trimmed.match(/^(\d{1,2})\s+([a-z]+)\s*-\s*\d{1,2}\s+[a-z]+$/)
@@ -107,13 +107,31 @@ export function parseFechaToDate(fecha: string, today: Date = new Date()): Date 
   return new Date()
 }
 
+/** Un evento tal y como vive en las tablas `concerts` / `festis`. */
+export interface DatedEvent {
+  fecha: string
+  created_at?: string | null
+}
+
+/**
+ * Fecha real de un evento, anclada en cuándo se dio de alta la fila.
+ *
+ * Es la forma correcta de fechar un evento: `created_at` no cambia, así que un
+ * bolo de hace ocho meses se sigue resolviendo a su año de verdad y no
+ * reaparece como próximo. Sin `created_at` (fila antigua o dato corrupto) se
+ * cae a "ahora", que es el comportamiento de antes.
+ */
+export function eventDate(event: DatedEvent): Date {
+  if (event.created_at) {
+    const created = new Date(event.created_at)
+    if (!isNaN(created.getTime())) return parseFechaToDate(event.fecha, created)
+  }
+  return parseFechaToDate(event.fecha)
+}
+
 /**
  * Generic sort function for items with a "fecha" field in Spanish format
  */
-export function sortByFechaChronologically<T extends { fecha: string }>(items: T[]): T[] {
-  return [...items].sort((a, b) => {
-    const dateA = parseFechaToDate(a.fecha)
-    const dateB = parseFechaToDate(b.fecha)
-    return dateA.getTime() - dateB.getTime()
-  })
+export function sortByFechaChronologically<T extends DatedEvent>(items: T[]): T[] {
+  return [...items].sort((a, b) => eventDate(a).getTime() - eventDate(b).getTime())
 }

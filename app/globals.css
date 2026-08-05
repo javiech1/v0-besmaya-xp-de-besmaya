@@ -2004,6 +2004,64 @@ body {
    Visual indicator for concert near user location
    ================================================ */
 
+/* ================================================
+   BOLOS YA PASADOS
+   Ya no se borran: se muestran al final, atenuados y sin venta.
+   Solo tocan color y opacidad, asi que heredan tal cual el escalado
+   y el layout apilado de los @container de la lista.
+   ================================================ */
+
+.concert-past-section {
+  margin-top: 1.5rem;
+}
+
+.concert-past-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  color: #9ca3af;
+  font-size: 0.7rem;
+  font-weight: bold;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.concert-past-divider::before,
+.concert-past-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid #d1d5db;
+}
+
+.concert-row-past {
+  background-color: #f3f4f6;
+  border-color: #e5e7eb;
+  opacity: 0.62;
+}
+
+.concert-row-past:hover {
+  /* sin realce: no hay nada que pulsar */
+  background-color: #f3f4f6;
+}
+
+.concert-row-past .concert-fecha,
+.concert-row-past .concert-ciudad,
+.concert-row-past .concert-sala {
+  color: #6b7280;
+}
+
+.concert-row-past .concert-btn {
+  background-color: #9ca3af;
+  border-color: #6b7280;
+  box-shadow: none;
+  cursor: default;
+}
+
+.concert-row-past .concert-btn:hover {
+  background-color: #9ca3af;
+}
+
 .concert-row-nearby {
   background-color: #fff8e1 !important;
   border-left: 3px solid #f59e0b !important;
